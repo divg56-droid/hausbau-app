@@ -5,3 +5,5 @@ dist/
 *.keystore
 .DS_Store
 assets/
+server/daten/geheim.php
+server/daten/bilder/
