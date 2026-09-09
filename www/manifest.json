@@ -1,0 +1,52 @@
+{
+  "id": "/app/",
+  "name": "Bauzeuge",
+  "short_name": "Bauzeuge",
+  "description": "Bautagebuch, Mängel, Angebote und Baukosten für Bauherren.",
+  "lang": "de",
+  "dir": "ltr",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f5f1",
+  "theme_color": "#f7f5f1",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "symbol-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "symbol-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "symbol-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Tageseintrag",
+      "short_name": "Tagebuch",
+      "url": "/app/#/tagebuch"
+    },
+    {
+      "name": "Mangel erfassen",
+      "short_name": "Mängel",
+      "url": "/app/#/maengel"
+    },
+    {
+      "name": "Baukasse",
+      "short_name": "Baukasse",
+      "url": "/app/#/baukasse"
+    }
+  ]
+}

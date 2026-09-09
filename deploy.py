@@ -181,7 +181,7 @@ def pruefen() -> bool:
             gut = False
 
     print("Stichprobe live:")
-    hole("/app/", 200, "App-Seite", "Hausbau App")
+    hole("/app/", 200, "App-Seite", "Bauzeuge")
     hole("/app/stil.css", 200, "Stylesheet")
     hole("/app/module/tagebuch.js", 200, "ein Modul")
     # GET auf konto.php muss 405 liefern. Das beweist, dass PHP laeuft und

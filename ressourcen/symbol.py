@@ -1,9 +1,10 @@
-"""Erzeugt App-Symbol und Startbild.
+"""Erzeugt App-Symbol, Startbild und die Symbole der Webfassung.
 
     python ressourcen/symbol.py
 
 Schreibt ressourcen/icon.png und ressourcen/splash.png. Daraus macht
-@capacitor/assets im CI die Android-Groessen. Das Motiv ist ein Haus mit
+@capacitor/assets im CI die Android-Groessen. Ausserdem entstehen die
+Symbole fuer das Web-App-Manifest direkt in www/. Das Motiv ist ein Haus mit
 Giebel in Kranbau-Gelb auf dem Papierton der Website - dieselbe Marke wie
 hausbauatlas.de, damit man die App im Startmenue wiedererkennt.
 """
@@ -63,6 +64,17 @@ def symbol(kante: int, ziel: str, rand_faktor: float, hintergrund) -> None:
     print(f"  {ziel}  {kante}x{kante}")
 
 
+WWW = HIER.parent / "www"
+
+
+def websymbol(kante: int, ziel: str, rand_faktor: float) -> None:
+    """Symbol fuer das Web-App-Manifest, direkt nach www/."""
+    bild = Image.new("RGB", (kante, kante), PAPIER)
+    haus(bild, (kante // 2, kante // 2), int(kante * rand_faktor))
+    bild.save(WWW / ziel)
+    print(f"  www/{ziel}  {kante}x{kante}")
+
+
 if __name__ == "__main__":
     # Android beschneidet adaptive Symbole kreisfoermig; deshalb nur 52 Prozent
     # der Kante belegen, sonst wird der Giebel abgeschnitten.
@@ -72,3 +84,13 @@ if __name__ == "__main__":
     haus(splash, (1366, 1366), 620)
     splash.save(HIER / "splash.png")
     print("  splash.png  2732x2732")
+
+    # Symbole fuer die Webfassung.
+    #
+    # "any" wird gezeigt, wie es ist, deshalb darf das Zeichen die Flaeche
+    # gut ausfuellen. "maskable" schneidet das Betriebssystem selbst zu,
+    # meist kreisfoermig; sicher ist dort nur der innere Kreis mit achtzig
+    # Prozent der Kante. Deshalb dasselbe schmale Mass wie beim Android-Symbol.
+    websymbol(192, "symbol-192.png", 0.70)
+    websymbol(512, "symbol-512.png", 0.70)
+    websymbol(512, "symbol-maskable-512.png", 0.52)

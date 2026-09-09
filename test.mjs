@@ -10,6 +10,8 @@ import { simuliere } from './www/module/tilgung.js';
 import { terminePlanen, balkenPlan, tageZwischen } from './www/module/ablauf.js';
 import { Blatt } from './www/pdf.js';
 import { zuZahl } from './www/hilfen.js';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, relative, sep } from 'node:path';
 import { neueKennung, umschreiben } from './www/daten.js';
 import { postenRechnen } from './www/module/baukasse.js';
 import { helferVon, stundenJeHelfer } from './www/module/tagebuch.js';
@@ -456,6 +458,92 @@ console.log('Zusammenfassung nach Hauptgruppen');
     gruppen.filter((g) => g.nr).every((g, i, f) => i === 0 || f[i - 1].nr < g.nr));
   pruef('Nichts geht verloren',
     gruppen.reduce((sum, g) => sum + g.summe, 0) === 187);
+}
+
+// ------------------------------------------------------- Webfassung und Offline
+
+console.log('Web-App-Manifest');
+{
+  const manifest = JSON.parse(readFileSync('./www/manifest.json', 'utf8'));
+
+  // Ohne diese Angaben bietet ein Browser keine Installation an, sondern nur
+  // eine Verknuepfung. Genau daran ist es vorher gescheitert.
+  pruef('Name gesetzt', manifest.name === 'Bauzeuge');
+  pruef('Kurzname hoechstens 12 Zeichen',
+    manifest.short_name.length <= 12, manifest.short_name);
+  pruef('start_url zeigt auf die App', manifest.start_url === '/app/');
+  pruef('Geltungsbereich umschliesst die start_url',
+    manifest.start_url.startsWith(manifest.scope), manifest.scope);
+  pruef('Anzeige ist eigenstaendig',
+    ['standalone', 'fullscreen', 'minimal-ui'].includes(manifest.display), manifest.display);
+  pruef('Hintergrundfarbe passt zum Papierton', manifest.background_color === '#f7f5f1');
+
+  const groessen = manifest.icons.map((i) => i.sizes);
+  pruef('Symbol in 192 vorhanden', groessen.includes('192x192'), groessen.join(' '));
+  pruef('Symbol in 512 vorhanden', groessen.includes('512x512'), groessen.join(' '));
+  pruef('Ein zugeschnittenes Symbol dabei',
+    manifest.icons.some((i) => i.purpose === 'maskable'));
+  pruef('Jede Symboldatei liegt wirklich in www/',
+    manifest.icons.every((i) => { try { statSync('./www/' + i.src); return true; } catch { return false; } }),
+    manifest.icons.map((i) => i.src).join(' '));
+  pruef('Alle Abkuerzungen bleiben im Geltungsbereich',
+    (manifest.shortcuts || []).every((s) => s.url.startsWith(manifest.scope)));
+}
+
+console.log('Service Worker');
+{
+  const quelle = readFileSync('./www/sw.js', 'utf8');
+
+  // Die Liste im Arbeiter gegen den tatsaechlichen Inhalt von www/ halten.
+  // Ohne diese Pruefung fehlt beim naechsten neuen Modul genau dieses in der
+  // Offlineablage, und der Fehler faellt erst auf der Baustelle auf.
+  const liste = quelle.match(/const SCHALE = \[([\s\S]*?)\];/)[1];
+  const eingetragen = new Set(
+    [...liste.matchAll(/'\.\/([^']*)'/g)].map((m) => m[1]).filter(Boolean)
+  );
+
+  const sammle = (ordner) => readdirSync(ordner).flatMap((name) => {
+    const weg = join(ordner, name);
+    return statSync(weg).isDirectory() ? sammle(weg)
+      : [relative('./www', weg).split(sep).join('/')];
+  });
+  // sw.js speichert sich nicht selbst zwischen, der Browser verwaltet ihn.
+  const vorhanden = new Set(sammle('./www').filter((d) => d !== 'sw.js'));
+
+  const fehlend = [...vorhanden].filter((d) => !eingetragen.has(d));
+  const zuviel = [...eingetragen].filter((d) => !vorhanden.has(d));
+
+  pruef('Jede Datei aus www/ steht in der Schale', fehlend.length === 0, fehlend.join(', '));
+  pruef('Keine Karteileiche in der Schale', zuviel.length === 0, zuviel.join(', '));
+  pruef('Die Startseite steht mit drin', quelle.includes("'./'"));
+
+  // Die drei Regeln, an denen ein Service Worker echten Schaden anrichten kann.
+  pruef('Die Schnittstelle wird nicht zwischengespeichert',
+    quelle.includes("ziel.pathname.includes('/api/')"));
+  pruef('Nur GET wird angefasst', quelle.includes("anfrage.method !== 'GET'"));
+  pruef('Fremde Herkuenfte bleiben unberuehrt',
+    quelle.includes('ziel.origin !== self.location.origin'));
+  pruef('Erst das Netz, dann die Ablage',
+    quelle.indexOf('fetch(anfrage)') < quelle.indexOf('caches.match(anfrage)'));
+  pruef('Nur vollstaendige eigene Antworten landen in der Ablage',
+    quelle.includes('antwort.ok') && quelle.includes("antwort.type === 'basic'"));
+  pruef('Alte Ablagen werden beim Aktivieren entfernt',
+    quelle.includes('caches.delete'));
+}
+
+console.log('Anmeldung des Arbeiters');
+{
+  const html = readFileSync('./www/index.html', 'utf8');
+  pruef('Manifest ist verlinkt', /<link[^>]+rel="manifest"/.test(html));
+  pruef('Arbeiter wird angemeldet', html.includes("register('sw.js')"));
+  // Im Paket liegt dieselbe Seite unter https://localhost. Ein Arbeiter wuerde
+  // dort die mitgelieferten Dateien festhalten und nach einer Aktualisierung
+  // die alten ausliefern.
+  pruef('Nur auf den echten Webadressen',
+    html.includes("wirte.indexOf(location.hostname) === -1"));
+  pruef('Nur ueber https', html.includes("location.protocol !== 'https:'"));
+  pruef('localhost ist nicht in der Wirtsliste',
+    !/var wirte = \[[^\]]*localhost/.test(html));
 }
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');

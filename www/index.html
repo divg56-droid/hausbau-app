@@ -8,6 +8,10 @@
 <title>Bauzeuge</title>
 <link rel="stylesheet" href="stil.css" />
 <link rel="icon" href="symbol.svg" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="symbol-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Bauzeuge" />
 </head>
 <body>
 <header id="kopf">
@@ -19,5 +23,31 @@
 <main id="inhalt" aria-live="polite"></main>
 
 <script type="module" src="app.js"></script>
+
+<script>
+/*
+ * Der Service Worker macht die Webfassung offline benutzbar und ist zugleich
+ * die Bedingung dafuer, dass ein Browser "App installieren" anbietet statt
+ * nur eine Verknuepfung.
+ *
+ * Er laeuft ausschliesslich auf den echten Webadressen. Im Android-Paket
+ * liegt dieselbe Seite unter https://localhost; dort wuerde ein Arbeiter die
+ * mitgelieferten Dateien zwischenspeichern und nach einer App-Aktualisierung
+ * womoeglich die alten ausliefern. Beim oertlichen Entwickeln waere er
+ * genauso im Weg: Eine Aenderung an einem Modul kaeme erst nach dem naechsten
+ * Neuladen an, und man sucht den Fehler an der falschen Stelle.
+ */
+(function () {
+  var wirte = ['www.bauzeuge.de', 'bauzeuge.de', 'www.bau-zeuge.de', 'bau-zeuge.de'];
+  if (!('serviceWorker' in navigator)) return;
+  if (location.protocol !== 'https:') return;
+  if (wirte.indexOf(location.hostname) === -1) return;
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function (fehler) {
+      console.warn('Service Worker nicht eingerichtet:', fehler);
+    });
+  });
+})();
+</script>
 </body>
 </html>
