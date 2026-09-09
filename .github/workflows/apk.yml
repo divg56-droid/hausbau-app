@@ -11,6 +11,12 @@ name: APK bauen
 on:
   push:
     branches: [main, master]
+    # Eine Textaenderung soll kein neues Paket erzeugen: sonst waechst die
+    # Buildnummer, und die Veroeffentlichung wird durch ein identisches APK
+    # ersetzt. Greift nur, wenn ausschliesslich solche Dateien betroffen sind.
+    paths-ignore:
+      - '**.md'
+      - 'ressourcen/symbol.py'
   workflow_dispatch:
 
 permissions:

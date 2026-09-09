@@ -102,7 +102,8 @@ Nachprüfen lässt sich das mit jedem APK-Betrachter, etwa:
     python -c "from pyaxmlparser import APK; print(APK('hausbau-app.apk').get_permissions())"
 
 Die Oberfläche liegt im Paket und wird vom WebView direkt daraus bedient,
-deshalb braucht sie keinen Netzzugriff. Fotos kommen über ein gewöhnliches
+deshalb braucht sie keinen Netzzugriff. Auf einem Gerät bestätigt: Die App
+startet ohne die Berechtigung normal. Fotos kommen über ein gewöhnliches
 Dateifeld von der Kamera; auch dafür ist keine Berechtigung nötig, weil der
 Aufruf über die Kamera-App des Systems läuft.
 
