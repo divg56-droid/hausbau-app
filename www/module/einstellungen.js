@@ -20,20 +20,13 @@ async function zeichne(rahmen) {
     value: (await einstellung('projektname')) || '',
     placeholder: 'z. B. Neubau Musterweg 3',
   });
-  const schluessel = el('input', {
-    type: 'password',
-    value: (await einstellung('gemini_schluessel')) || '',
-    placeholder: 'AIza…',
-    autocomplete: 'off',
-  });
-
   const bestand = {};
   for (const name of [...SPEICHER, 'bilder']) {
     bestand[name] = (await daten.alle(name)).length;
   }
 
   rahmen.append(
-    kopfzeile('Einstellungen', 'Projekt, Belegerkennung und Datensicherung.'),
+    kopfzeile('Einstellungen', 'Projekt, Datensicherung und Löschen.'),
 
     karte([
       el('h2', { text: 'Projekt' }),
@@ -42,31 +35,6 @@ async function zeichne(rahmen) {
         await einstellung('projektname', projektname.value.trim());
         melde('Gespeichert.');
       }, 'knopf-haupt'),
-    ]),
-
-    karte([
-      el('h2', { text: 'Belegerkennung' }),
-      el('p', {
-        klasse: 'unterzeile',
-        text:
-          'Ohne Schlüssel bleibt die automatische Erkennung aus, und die Baukasse ' +
-          'bietet nur die manuelle Erfassung an. Mit Schlüssel wird die hochgeladene ' +
-          'Rechnung an Google Gemini übermittelt, um Betrag, Firma und Datum zu lesen.',
-      }),
-      feld('Google-Gemini-Schlüssel', schluessel,
-        'Einen eigenen Schlüssel bekommst du kostenlos unter aistudio.google.com. ' +
-        'Er bleibt auf diesem Gerät.'),
-      el('div', { klasse: 'knopf-reihe' }, [
-        knopf('Entfernen', async () => {
-          schluessel.value = '';
-          await einstellung('gemini_schluessel', '');
-          melde('Schlüssel entfernt.');
-        }, 'knopf-warn'),
-        knopf('Speichern', async () => {
-          await einstellung('gemini_schluessel', schluessel.value.trim());
-          melde(schluessel.value.trim() ? 'Erkennung eingeschaltet.' : 'Erkennung aus.');
-        }, 'knopf-haupt'),
-      ]),
     ]),
 
     karte([
@@ -115,9 +83,11 @@ async function zeichne(rahmen) {
       el('p', {
         klasse: 'unterzeile',
         text:
-          'Hausbau App, Testversion. Die Rechner nutzen dieselbe Datenbasis wie ' +
-          'hausbauatlas.de (Baukosten Stand 08.2026). Ergebnisse sind Prognosen auf ' +
-          'Grundlage realer Marktdaten, keine Angebote.',
+          'Hausbau App, Testversion. Die App sendet nichts und holt nichts: Es gibt ' +
+          'keinen Server, kein Konto und keine Schnittstelle nach außen. ' +
+          'Die Rechner nutzen dieselbe Datenbasis wie hausbauatlas.de ' +
+          '(Baukosten Stand 08.2026). Ergebnisse sind Prognosen auf Grundlage ' +
+          'realer Marktdaten, keine Angebote.',
       }),
     ])
   );
@@ -130,8 +100,6 @@ async function sicherungErstellen() {
   const inhalt = { version: 1, erstellt: heute(), einstellungen: {}, speicher: {}, bilder: [] };
 
   for (const eintrag of await daten.alle('einstellungen')) {
-    // Der Gemini-Schluessel gehoert dem Nutzer, nicht der Sicherung.
-    if (eintrag.name === 'gemini_schluessel') continue;
     inhalt.einstellungen[eintrag.name] = eintrag.wert;
   }
   for (const name of SPEICHER) inhalt.speicher[name] = await daten.alle(name);

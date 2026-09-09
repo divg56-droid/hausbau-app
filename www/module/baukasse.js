@@ -12,8 +12,7 @@ import {
 import { daten, einstellung, bildAblegen, bildUrl, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
 import { finanzierungsstand } from './finanzierung.js';
-import { dateiWaehlen } from '../fotos.js';
-import { belegLesen, erkennungBereit } from '../erkennung.js';
+import { fotofeld } from '../fotos.js';
 
 export async function zeige(rahmen) {
   await zeichne(rahmen);
@@ -77,30 +76,18 @@ async function zeichne(rahmen) {
   }
 
   // Erfassen
-  const scanBereit = await erkennungBereit();
   rahmen.append(
     karte([
       el('h2', { text: 'Rechnung erfassen' }),
-      scanBereit
-        ? dateiWaehlen('\u{1F4C4} Rechnung hochladen & scannen', (datei) =>
-            scannenUndOeffnen(datei, stand, kontakte, neu)
-          )
-        : hinweisKasten(
-            'Die automatische Erkennung ist aus. Du kannst sie in den Einstellungen ' +
-              'einschalten, indem du einen eigenen Google-Gemini-Schlüssel hinterlegst.',
-            'info'
-          ),
-      knopf('Rechnung manuell erfassen', () =>
-        belegBearbeiten({ datum: heute() }, stand, kontakte, neu)
+      knopf('Rechnung hinzufügen', () =>
+        belegBearbeiten({ datum: heute() }, stand, kontakte, neu), 'knopf-haupt'
       ),
       el('p', {
         klasse: 'unterzeile',
         stil: { marginTop: '10px' },
         text:
-          'Beim Scannen wird die hochgeladene Datei zur Erkennung von Betrag, Kontakt und ' +
-          'Beschreibung an Google Gemini übermittelt. Wer keine Übertragung an einen ' +
-          'KI-Dienst möchte, erfasst die Rechnung manuell. Manuell erfasste Belege ' +
-          'verlassen das Gerät nicht.',
+          'Zu jeder Rechnung kannst du ein Foto des Belegs hinterlegen. Es bleibt wie ' +
+          'alles andere auf diesem Gerät.',
       }),
     ])
   );
@@ -140,35 +127,13 @@ async function zeichne(rahmen) {
 
 // ------------------------------------------------------------------ Erfassen
 
-async function scannenUndOeffnen(datei, stand, kontakte, nachher) {
-  const meldung = melde('Beleg wird gelesen …');
-  try {
-    const bildId = await bildAblegen(datei);
-    const erkannt = await belegLesen(datei);
-    belegBearbeiten(
-      {
-        datum: erkannt.datum || heute(),
-        betrag: erkannt.betrag || 0,
-        beschreibung: erkannt.beschreibung || '',
-        kontaktName: erkannt.kontakt || '',
-        bildId,
-        erkannt: true,
-      },
-      stand, kontakte, nachher
-    );
-  } catch (fehler) {
-    console.error(fehler);
-    melde('Erkennung fehlgeschlagen. Bitte manuell erfassen.');
-  }
-}
-
 function belegBearbeiten(beleg, stand, kontakte, nachher) {
   const betrag = zahlfeld({ value: beleg.betrag ? String(beleg.betrag).replace('.', ',') : '' });
   const beschreibung = eingabe({ value: beleg.beschreibung || '', placeholder: 'z. B. Abschlag Rohbau' });
   const datum = el('input', { type: 'date', value: beleg.datum || heute() });
 
-  // Erkannte Firmennamen stehen als Text da; passt einer zu einem Kontakt,
-  // wird er vorgewaehlt, sonst bleibt der Name als Freitext erhalten.
+  // Der Firmenname darf als Freitext stehen bleiben, auch ohne passenden
+  // Kontakt. Gibt es einen mit gleichem Namen, wird er vorgewaehlt.
   const treffer = kontakte.find(
     (k) => beleg.kontaktName && k.name.toLowerCase() === String(beleg.kontaktName).toLowerCase()
   );
@@ -186,17 +151,19 @@ function belegBearbeiten(beleg, stand, kontakte, nachher) {
     beleg.quelleId ?? (stand.posten[0] ? stand.posten[0].id : '')
   );
 
+  const bilder = beleg.bildId ? [beleg.bildId] : [];
+  const fotos = fotofeld(bilder, () => {}, { text: 'Beleg fotografieren', mehrere: false });
+
   const felder = [
-    beleg.erkannt
-      ? el('p', { klasse: 'kasten kasten-gut', text: 'Aus dem Beleg gelesen. Bitte die Werte prüfen.' })
-      : null,
     feld('Betrag in €', betrag),
     feld('Beschreibung', beschreibung),
     feld('Rechnungsdatum', datum),
     feld('Firma laut Rechnung', kontaktName),
     feld('Zugeordneter Kontakt', kontakt, 'Kontakte legst du im Bereich Kontakte an.'),
     feld('Bezahlt aus', quelle, 'Bestimmt, von welchem Budgetposten der Betrag abgeht.'),
-  ].filter(Boolean);
+    el('span', { klasse: 'feld-name', text: 'Beleg' }),
+    fotos,
+  ];
 
   blattOeffnen(
     beleg.id ? 'Rechnung bearbeiten' : 'Rechnung erfassen',
@@ -209,7 +176,7 @@ function belegBearbeiten(beleg, stand, kontakte, nachher) {
         kontaktName: kontaktName.value.trim(),
         kontaktId: kontakt.value ? +kontakt.value : null,
         quelleId: quelle.value ? +quelle.value : null,
-        bildId: beleg.bildId ?? null,
+        bildId: bilder[0] ?? null,
       };
       if (wert.betrag <= 0) throw new Error('Bitte einen Betrag eintragen.');
       if (beleg.id) wert.id = beleg.id;

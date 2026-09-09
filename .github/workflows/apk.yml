@@ -48,6 +48,22 @@ jobs:
       - name: Android-Plattform anlegen
         run: npx --yes cap add android
 
+      # Die App spricht mit nichts. Capacitor traegt die Internet-Berechtigung
+      # standardmaessig ein; ohne sie verbietet Android das Senden auf
+      # Betriebssystemebene und nicht nur im Quelltext. Die Oberflaeche liegt
+      # im Paket und wird vom WebView abgefangen, bevor irgendein Netzzugriff
+      # entstuende - dafuer wird die Berechtigung nicht gebraucht.
+      - name: Internet-Berechtigung entfernen
+        run: |
+          manifest=android/app/src/main/AndroidManifest.xml
+          sed -i '/android.permission.INTERNET/d' "$manifest"
+          if grep -q 'android.permission' "$manifest"; then
+            echo "FEHLER: es sind noch Berechtigungen eingetragen" >&2
+            grep 'android.permission' "$manifest" >&2
+            exit 1
+          fi
+          echo "Manifest ohne jede Berechtigung."
+
       # Nur Kosmetik: schlaegt der Symbolerzeuger fehl, entsteht trotzdem ein
       # brauchbares Paket, dann eben mit dem Capacitor-Standardsymbol.
       - name: Symbole und Startbild erzeugen

@@ -32,7 +32,7 @@ finden, dort allerdings nur nach Anmeldung.
 | Bauablauf | Gewerke in der richtigen Reihenfolge, Termine rechnen sich |
 | Bauhelfertagebuch | Tageseinträge mit Wetter, Helfern und Fotos |
 | Kontakte | Firmen und Helfer, von den anderen Bereichen verlinkt |
-| Einstellungen | Projektname, Belegerkennung, Sicherung, Löschen |
+| Einstellungen | Projektname, Sicherung, alles löschen |
 
 Die Bereiche hängen zusammen: Die Baukasse zieht ihr Budget aus der
 Baufinanzierung, der Tilgungsverlauf lädt dort die Darlehen, aus einem Mangel
@@ -52,7 +52,6 @@ Reines HTML, CSS und JavaScript ohne Bundler. Capacitor verpackt den Ordner
       blatt.js        Eingabeblatt von unten
       fotos.js        Fotoaufnahme über ein Dateifeld
       pdf.js          PDF-Schreiber und Weitergabe ans Telefon
-      erkennung.js    Belegerkennung über Google Gemini
       stil.css        alles Sichtbare
       module/*.js     die zehn Bereiche, je eine Datei
     ressourcen/       App-Symbol und Startbild samt Erzeuger
@@ -84,15 +83,22 @@ Repository, er entsteht bei jedem Lauf neu aus `capacitor.config.json`.
 
 ## Datenschutz
 
-Alles liegt in der IndexedDB des Geräts. Es gibt keinen Server, kein Konto und
-keine Übertragung, mit einer Ausnahme:
+Die App sendet nichts und holt nichts. Es gibt keinen Server, kein Konto,
+keine Anmeldung und keine Schnittstelle nach außen. Alles liegt in der
+IndexedDB des Geräts.
 
-**Belegerkennung.** Wer in den Einstellungen einen eigenen
-Google-Gemini-Schlüssel hinterlegt, kann Rechnungen scannen. Dabei geht die
-hochgeladene Datei an Google. Ohne Schlüssel bietet die Baukasse nur die
-manuelle Erfassung an, und diese Belege verlassen das Gerät nicht. Der
-Schlüssel wird nicht mit der App ausgeliefert; ein mitgeliefertes Kennwort
-wäre aus dem APK auslesbar und ginge auf Kosten des Herausgebers.
+Das ist nicht nur eine Zusage im Quelltext: Das Paket enthält **keine einzige
+Android-Berechtigung**, auch nicht die für Internet. Damit verbietet das
+Betriebssystem jede Verbindung, unabhängig davon, was der Code versucht. Wer
+das nachprüfen will, entpackt das APK und liest `AndroidManifest.xml`.
+
+Die Oberfläche liegt im Paket und wird vom WebView direkt daraus bedient,
+deshalb braucht sie keinen Netzzugriff. Fotos kommen über ein gewöhnliches
+Dateifeld von der Kamera; auch dafür ist keine Berechtigung nötig, weil der
+Aufruf über die Kamera-App des Systems läuft.
+
+Daten verlassen das Gerät nur, wenn du sie selbst weitergibst: über das
+Teilen-Menü beim PDF oder bei der Sicherung.
 
 ## Zahlenbasis
 

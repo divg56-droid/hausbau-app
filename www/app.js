@@ -46,7 +46,7 @@ export const MODULE = [
   },
   {
     weg: 'einstellungen', zeichen: '\u{2699}', titel: 'Einstellungen',
-    text: 'Projektname, Belegerkennung, Daten sichern und löschen.',
+    text: 'Projektname, Daten sichern, alles löschen.',
   },
 ];
 
