@@ -19,6 +19,33 @@ if ($erwartet === '' || !hash_equals($erwartet, $geliefert)) {
 }
 
 /*
+ * Ab hier ist bewiesen, dass der Aufrufer den Schluessel kennt, also der
+ * Betreiber ist. Deshalb darf die echte Meldung der Datenbank heraus - ohne
+ * sie sucht man bei "nicht erreichbar" im Dunkeln. Alle anderen
+ * Schnittstellen schweigen weiterhin, dort koennte jeder fragen.
+ */
+try {
+    $g = geheim();
+    $dsn = empty($g['db_port'])
+        ? sprintf('mysql:host=%s;dbname=%s;charset=utf8mb4', $g['db_host'], $g['db_name'])
+        : sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
+            $g['db_host'], (int)$g['db_port'], $g['db_name']);
+    new PDO($dsn, $g['db_nutzer'], $g['db_passwort'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+} catch (PDOException $ex) {
+    antwort([
+        'fehler' => 'Die Datenbank nimmt die Zugangsdaten nicht an.',
+        'meldung' => $ex->getMessage(),
+        'versucht' => [
+            'host' => (string)($g['db_host'] ?? ''),
+            'port' => $g['db_port'] ?? '(Standard)',
+            'name' => (string)($g['db_name'] ?? ''),
+            'nutzer' => (string)($g['db_nutzer'] ?? ''),
+            'passwort_zeichen' => strlen((string)($g['db_passwort'] ?? '')),
+        ],
+    ], 500);
+}
+
+/*
  * Zum Aufbau:
  *
  * Alle Sachdaten liegen in einer einzigen Tabelle "saetze" als JSON. Die App
