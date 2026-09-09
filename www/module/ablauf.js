@@ -418,7 +418,7 @@ async function balkenPdf(plan) {
     titel: 'Balkenplan',
     untertitel: (projekt ? projekt + ' · ' : '') +
       `${datumLang(plan.von)} bis ${datumLang(plan.bis)}`,
-    fusszeile: 'Bauzeuge · Termine gerechnet aus Dauer und Vorgänger',
+    fusszeile: 'BauZeuge · Termine gerechnet aus Dauer und Vorgänger',
   });
 
   const TITEL_PT = 150;
@@ -605,7 +605,7 @@ async function pdfErzeugen(aufgaben, kontakte) {
   const blatt = new Blatt({
     titel: 'Bauablaufplan',
     untertitel: (projekt ? projekt + ' · ' : '') + 'Stand ' + datumLang(heute()),
-    fusszeile: 'Bauzeuge · Termine gerechnet aus Dauer und Vorgänger',
+    fusszeile: 'BauZeuge · Termine gerechnet aus Dauer und Vorgänger',
   });
 
   blatt.tabelle(

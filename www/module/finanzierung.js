@@ -10,7 +10,7 @@ import {
 import { daten, einstellung } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
 
-// Marktnahe Startwerte je Zinsbindung, wie auf bauzeuge.de. Beim
+// Marktnahe Startwerte je Zinsbindung, wie auf BauZeuge.de. Beim
 // monatlichen Zins-Update dort mitziehen.
 export const ZINS_JE_BINDUNG = { 5: 3.7, 10: 3.8, 15: 4.1, 20: 4.3 };
 

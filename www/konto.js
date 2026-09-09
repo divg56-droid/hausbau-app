@@ -1,4 +1,4 @@
-// Zugang zur Schnittstelle auf bauzeuge.de.
+// Zugang zur Schnittstelle auf BauZeuge.de.
 //
 // Die Marke und der Abgleichsstand liegen in localStorage, nicht in der
 // Datenbank der App. Zwei Gruende: Sie sind an dieses Geraet gebunden und
@@ -20,11 +20,15 @@ const VERWEIS = 'hausbau.freigabe';  // oeffentlicher Verweis aufs Bautagebuch
  * Apex und www sind fuer den Browser zwei verschiedene Herkuenfte mit je
  * eigenem localStorage und eigener IndexedDB. Wer die App einmal unter der
  * einen und einmal unter der anderen Adresse oeffnet, haette zwei getrennte
- * Datenbestaende. Deshalb leitet der Server bauzeuge.de dauerhaft auf
- * www.bauzeuge.de um. Beide stehen hier trotzdem: Faellt die Umleitung
+ * Datenbestaende. Deshalb leitet der Server BauZeuge.de dauerhaft auf
+ * www.BauZeuge.de um. Beide stehen hier trotzdem: Faellt die Umleitung
  * einmal aus, soll die Seite wenigstens nicht zusaetzlich die Schnittstelle
  * verfehlen.
  */
+// Klein geschrieben, und das muss so bleiben: location.hostname liefert
+// den Wirt immer in Kleinbuchstaben. Wer hier auf die Schreibweise der Marke
+// "korrigiert", trifft nie zu, die Seite nimmt die absolute Adresse und
+// scheitert an der Herkunftspruefung. test.mjs wacht darueber.
 const EIGENE_WIRTE = ['www.bauzeuge.de', 'bauzeuge.de'];
 
 /*

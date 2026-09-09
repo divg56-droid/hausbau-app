@@ -1,10 +1,18 @@
-# Bauzeuge
+# BauZeuge
 
 Android-App für Bauherren: Rechner, Kostenaufstellung und die Werkzeuge, die
 man auf der Baustelle braucht. Ohne Konto bleiben alle Daten auf dem Gerät;
-mit Konto gleicht die App sie mit www.bauzeuge.de ab.
+mit Konto gleicht die App sie mit www.BauZeuge.de ab.
 
 Testversion, unsigniert. Nicht im Play Store.
+
+Die Marke wird **BauZeuge** geschrieben, mit grossem Z. Das grosse Z trennt die
+beiden Woerter, ohne dass ein Bindestrich noetig waere. Technische Bezeichner
+bleiben davon unberuehrt und durchgehend klein: die Wirtsnamen im Code, die
+Paketkennung `de.bauzeuge.app`, der Paketname in `package.json` und die
+Dateinamen. Bei den Wirtsnamen ist das Bedingung und keine Geschmacksfrage,
+denn `location.hostname` liefert im Browser immer Kleinbuchstaben. `test.mjs`
+wacht darueber.
 
 ## Der Umzug im September 2026
 
@@ -175,7 +183,7 @@ werden sie nur ueber `bild.php`, und nur an den Eigentuemer.
 
 Die Anmeldung laeuft ueber eine Marke im Anfragekopf statt ueber ein
 Plaetzchen: Die App laeuft unter der Herkunft `https://localhost` und spricht
-mit www.bauzeuge.de; ein Plaetzchen waere dort fremd. In der Datenbank steht
+mit www.BauZeuge.de; ein Plaetzchen waere dort fremd. In der Datenbank steht
 die Marke nur als Pruefsumme.
 
     python server/test_api.py    20 Pruefungen gegen einen laufenden Server
@@ -223,7 +231,7 @@ einzigen Transaktion: Bricht etwas ab, bleiben die alten Daten stehen.
 **Ohne Konto sendet die App nichts.** Alles liegt in der IndexedDB des
 Geräts, es gibt keine Anmeldung und keinen Aufruf nach außen.
 
-**Mit Konto** gehen die Daten zum Abgleich an www.bauzeuge.de: Sätze über
+**Mit Konto** gehen die Daten zum Abgleich an www.BauZeuge.de: Sätze über
 `abgleich.php`, Fotos über `bild.php`, beides nur für das eigene Konto.
 
 Bis zum Abgleich trug das Paket keine Internet-Berechtigung, und Android

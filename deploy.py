@@ -18,7 +18,7 @@ und umgekehrt.
 Zugangsdaten stehen in deploy.env neben dieser Datei. Die Datei ist
 gitignored; dieselben Werte wie in der .env der Website - es ist derselbe
 Server. Nach dem Domainumzug muessen dort FTP_HOST und FTP_DIR auf das
-Verzeichnis von bauzeuge.de zeigen, sonst laedt das Skript weiter an die
+Verzeichnis von BauZeuge.de zeigen, sonst laedt das Skript weiter an die
 alte Stelle.
 
 Uebertragen wird mit curl statt mit ftplib. Grund steht in
@@ -181,7 +181,7 @@ def pruefen() -> bool:
             gut = False
 
     print("Stichprobe live:")
-    hole("/app/", 200, "App-Seite", "Bauzeuge")
+    hole("/app/", 200, "App-Seite", "BauZeuge")
     hole("/app/stil.css", 200, "Stylesheet")
     hole("/app/module/tagebuch.js", 200, "ein Modul")
     # GET auf konto.php muss 405 liefern. Das beweist, dass PHP laeuft und

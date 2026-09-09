@@ -1,4 +1,4 @@
-/* Farben und Schriften von bauzeuge.de, damit App und Seite zusammengehoeren.
+/* Farben und Schriften von BauZeuge.de, damit App und Seite zusammengehoeren.
    Systemschrift statt Webfont: spart Platz im APK und startet ohne Nachladen. */
 :root {
   --papier: #f7f5f1;

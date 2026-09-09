@@ -1,6 +1,6 @@
 {
   "appId": "de.bauzeuge.app",
-  "appName": "Bauzeuge",
+  "appName": "BauZeuge",
   "webDir": "www",
   "android": {
     "allowMixedContent": false

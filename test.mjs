@@ -468,7 +468,7 @@ console.log('Web-App-Manifest');
 
   // Ohne diese Angaben bietet ein Browser keine Installation an, sondern nur
   // eine Verknuepfung. Genau daran ist es vorher gescheitert.
-  pruef('Name gesetzt', manifest.name === 'Bauzeuge');
+  pruef('Name gesetzt', manifest.name === 'BauZeuge', manifest.name);
   pruef('Kurzname hoechstens 12 Zeichen',
     manifest.short_name.length <= 12, manifest.short_name);
   pruef('start_url zeigt auf die App', manifest.start_url === '/app/');
@@ -544,6 +544,44 @@ console.log('Anmeldung des Arbeiters');
   pruef('Nur ueber https', html.includes("location.protocol !== 'https:'"));
   pruef('localhost ist nicht in der Wirtsliste',
     !/var wirte = \[[^\]]*localhost/.test(html));
+}
+
+console.log('Wirtsnamen bleiben kleingeschrieben');
+{
+  const html = readFileSync('./www/index.html', 'utf8');
+
+  // Die Marke wird BauZeuge geschrieben, die Wirtsnamen im Code nicht.
+  // location.hostname liefert immer Kleinbuchstaben. Wer hier auf die
+  // Schreibweise der Marke "korrigiert", trifft nie zu: Die Webfassung nimmt
+  // dann die absolute Adresse statt des Pfades und scheitert an der
+  // Herkunftspruefung des Servers. Der Fehler waere still.
+  const listen = [
+    ['www/konto.js', /const EIGENE_WIRTE = \[([^\]]*)\]/],
+    ['www/index.html', /var wirte = \[([^\]]*)\]/],
+  ];
+  for (const [datei, muster] of listen) {
+    const treffer = readFileSync('./' + datei, 'utf8').match(muster);
+    pruef(datei + ' hat eine Wirtsliste', Boolean(treffer));
+    if (!treffer) continue;
+    const wirte = [...treffer[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
+    pruef(datei + ': jeder Wirt ist kleingeschrieben',
+      wirte.every((w) => w === w.toLowerCase()), wirte.join(' '));
+    pruef(datei + ': die Hauptadresse steht drin',
+      wirte.includes('www.bauzeuge.de'), wirte.join(' '));
+  }
+
+  // Die Paketkennung von Android muss ebenfalls klein bleiben. Eine Aenderung
+  // daran macht aus der App eine andere und leert die Datenbank auf dem Geraet.
+  const cap = JSON.parse(readFileSync('./capacitor.config.json', 'utf8'));
+  pruef('Paketkennung bleibt kleingeschrieben',
+    cap.appId === cap.appId.toLowerCase() && cap.appId === 'de.bauzeuge.app', cap.appId);
+  pruef('Angezeigter Name ist BauZeuge', cap.appName === 'BauZeuge', cap.appName);
+
+  // Die Live-Probe sucht diesen Text im ausgelieferten HTML.
+  const dep = readFileSync('./deploy.py', 'utf8');
+  const gesucht = dep.match(/hole\("\/app\/", 200, "App-Seite", "([^"]+)"\)/);
+  pruef('Die Live-Probe sucht den Titel, der wirklich im HTML steht',
+    Boolean(gesucht) && html.includes(gesucht[1]), gesucht && gesucht[1]);
 }
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');

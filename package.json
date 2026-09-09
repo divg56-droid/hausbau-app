@@ -2,7 +2,7 @@
   "name": "bauzeuge",
   "version": "0.1.0",
   "private": true,
-  "description": "Bauzeuge - Bautagebuch, Maengel und Baukosten fuer Bauherren (Android)",
+  "description": "BauZeuge - Bautagebuch, Maengel und Baukosten fuer Bauherren (Android)",
   "scripts": {
     "start": "npx --yes http-server www -p 4300 -c-1",
     "sync": "cap sync android",

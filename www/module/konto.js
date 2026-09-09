@@ -2,7 +2,7 @@
 //
 // Freiwillig: Ohne Anmeldung arbeitet die App wie bisher, alles bleibt auf
 // dem Geraet. Wer sich anmeldet, bekommt dieselben Daten in der App und auf
-// bauzeuge.de/app/ und kann aufs neue Telefon umziehen.
+// BauZeuge.de/app/ und kann aufs neue Telefon umziehen.
 
 import {
   el, feld, eingabe, knopf, karte, kopfzeile, wertzeile,
@@ -208,7 +208,7 @@ function zeigeAnmeldung(rahmen, art, nachher) {
         klasse: 'unterzeile',
         text:
           'Mit Konto liegen dieselben Daten in der App und auf ' +
-          'bauzeuge.de/app/. Du entscheidest, wo du sie pflegst, und ein ' +
+          'BauZeuge.de/app/. Du entscheidest, wo du sie pflegst, und ein ' +
           'Umzug aufs neue Telefon ist nur ein Anmelden.',
       }),
       el('p', {

@@ -81,7 +81,7 @@ if ($tun === 'anlegen') {
         $db->commit();
     } catch (Throwable $ex) {
         $db->rollBack();
-        error_log('Bauzeuge-Freigabe: ' . $ex->getMessage());
+        error_log('BauZeuge-Freigabe: ' . $ex->getMessage());
         fehler(500, 'Die Freigabe ließ sich nicht anlegen.');
     }
 

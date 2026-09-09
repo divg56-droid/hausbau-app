@@ -1,7 +1,7 @@
 {
   "id": "/app/",
-  "name": "Bauzeuge",
-  "short_name": "Bauzeuge",
+  "name": "BauZeuge",
+  "short_name": "BauZeuge",
   "description": "Bautagebuch, Mängel, Angebote und Baukosten für Bauherren.",
   "lang": "de",
   "dir": "ltr",

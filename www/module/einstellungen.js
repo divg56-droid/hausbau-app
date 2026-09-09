@@ -182,9 +182,9 @@ async function zeichne(rahmen) {
       el('p', {
         klasse: 'unterzeile',
         text:
-          'Bauzeuge, Testversion. Ohne Konto bleibt alles auf diesem Gerät ' +
+          'BauZeuge, Testversion. Ohne Konto bleibt alles auf diesem Gerät ' +
           'und nichts wird übertragen. Mit Konto gehen die Daten zum Abgleich ' +
-          'an bauzeuge.de, und nur dorthin. Die Baukosten haben den ' +
+          'an BauZeuge.de, und nur dorthin. Die Baukosten haben den ' +
           'Stand 08.2026. ' +
           'Ergebnisse sind Prognosen auf Grundlage realer Marktdaten, keine Angebote.',
       }),

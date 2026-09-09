@@ -556,7 +556,7 @@ export class Blatt {
  * gewoehnlichen Download zurueck, damit sich dieselbe Datei am Rechner
  * pruefen laesst.
  */
-export async function pdfTeilen(blob, dateiname, titel = 'Bauzeuge') {
+export async function pdfTeilen(blob, dateiname, titel = 'BauZeuge') {
   // Ohne Bundler gibt es kein "import '@capacitor/share'": Capacitor haengt
   // die nativen Erweiterungen zur Laufzeit unter Capacitor.Plugins ein.
   const bruecke = window.Capacitor;

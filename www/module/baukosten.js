@@ -1,6 +1,6 @@
 // Baukostenrechner.
 //
-// Dieselbe Formel wie auf bauzeuge.de/hausbau/baukostenrechner/ und in
+// Dieselbe Formel wie auf BauZeuge.de/hausbau/baukostenrechner/ und in
 // public/hausbau-assistent-anfordern.php. Aendert sich dort etwas, muss es
 // hier mitgezogen werden - deshalb stehen die Zahlen offen im Kopf der Datei
 // und nicht verstreut im Code.
@@ -9,7 +9,7 @@ import { el, eur, zahl, feld, zahlfeld, auswahl, knopf, karte, kopfzeile, wertze
 import { einstellung } from '../daten.js';
 
 // Baukosten je m2 (schluesselfertig, Stand 08.2026) und Grunderwerbsteuer.
-// Quelle: bauzeuge.de/hausbau/kosten-pro-qm/ und /hausbau/grunderwerbsteuer/.
+// Quelle: BauZeuge.de/hausbau/kosten-pro-qm/ und /hausbau/grunderwerbsteuer/.
 const LAENDER = [
   { slug: 'baden-wuerttemberg', name: 'Baden-Württemberg', min: 2900, max: 3600, grest: 5.0 },
   { slug: 'bayern', name: 'Bayern', min: 2900, max: 3700, grest: 3.5 },
@@ -151,7 +151,7 @@ export async function zeige(rahmen) {
       el('p', {
         klasse: 'unterzeile',
         text:
-          'Die m²-Spannen je Bundesland stammen aus der Baukosten-Übersicht von bauzeuge.de ' +
+          'Die m²-Spannen je Bundesland stammen aus der Baukosten-Übersicht von BauZeuge.de ' +
           '(schlüsselfertig, Stand 08.2026). Der Standard wählt das untere, mittlere oder obere Ende ' +
           'der Spanne. Unter 100 m² greift eine Untergrenze, ab 145 m² sinkt der Satz. ' +
           'Die ermittelten Werte sind eine auf realen Marktdaten beruhende Prognose, kein Angebot.',

@@ -389,7 +389,7 @@ async function pdfErzeugen(jePosten, kontakte) {
   const blatt = new Blatt({
     titel: 'Angebotsvergleich',
     untertitel: (projekt ? projekt + ' · ' : '') + 'Stand ' + datumLang(heute()),
-    fusszeile: 'Bauzeuge · Angebotsvergleich',
+    fusszeile: 'BauZeuge · Angebotsvergleich',
   });
 
   const gesamt = jePosten.reduce((s, g) => s + g.ersparnis, 0);

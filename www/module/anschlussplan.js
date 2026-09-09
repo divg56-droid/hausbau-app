@@ -291,7 +291,7 @@ async function pdfErzeugen(geschosse) {
   const blatt = new Blatt({
     titel: 'Anschlussplan',
     untertitel: (projekt ? projekt + ' · ' : '') + 'Stand ' + datumLang(heute()),
-    fusszeile: 'Bauzeuge · Höhen in cm über Fertigfußboden',
+    fusszeile: 'BauZeuge · Höhen in cm über Fertigfußboden',
   });
 
   let ohneBild = 0;

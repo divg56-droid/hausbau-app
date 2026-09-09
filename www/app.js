@@ -70,7 +70,7 @@ const inhalt = document.getElementById('inhalt');
 // Die Kopfzeile gehoert dem Gehaeuse. Module melden hier an, was rechts oben
 // stehen soll, statt sich eine eigene Leiste zu bauen.
 export function setzeKopf({ titel, aktion }) {
-  kopftitel.textContent = titel || 'Bauzeuge';
+  kopftitel.textContent = titel || 'BauZeuge';
   kopfaktion.hidden = !aktion;
   if (aktion) {
     kopfaktion.textContent = aktion.text;
@@ -88,7 +88,7 @@ zurueckKnopf.addEventListener('click', () => {
 });
 
 function startseite() {
-  setzeKopf({ titel: 'Bauzeuge' });
+  setzeKopf({ titel: 'BauZeuge' });
   zurueckKnopf.hidden = true;
 
   inhalt.append(

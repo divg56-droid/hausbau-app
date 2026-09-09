@@ -252,6 +252,6 @@ foreach ($sichtbar as $e) {
     echo '</article>';
 }
 
-echo '<footer>Geführt mit <a href="https://bauzeuge.de">Bauzeuge</a>. '
+echo '<footer>Geführt mit <a href="https://www.bauzeuge.de">BauZeuge</a>. '
    . 'Namen und Arbeitszeiten der Helfer werden hier nicht veröffentlicht.</footer>';
 echo '</main></body></html>';

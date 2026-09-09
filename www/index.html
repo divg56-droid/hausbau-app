@@ -5,18 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="light" />
 <meta name="theme-color" content="#f7f5f1" />
-<title>Bauzeuge</title>
+<title>BauZeuge</title>
 <link rel="stylesheet" href="stil.css" />
 <link rel="icon" href="symbol.svg" />
 <link rel="manifest" href="manifest.json" />
 <link rel="apple-touch-icon" href="symbol-192.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-title" content="Bauzeuge" />
+<meta name="apple-mobile-web-app-title" content="BauZeuge" />
 </head>
 <body>
 <header id="kopf">
   <button class="zurueck" id="zurueck" aria-label="Zurück" hidden>&#8249;</button>
-  <span class="titel" id="kopftitel">Bauzeuge</span>
+  <span class="titel" id="kopftitel">BauZeuge</span>
   <button class="kopf-aktion" id="kopfaktion" hidden></button>
 </header>
 
@@ -38,6 +38,7 @@
  * Neuladen an, und man sucht den Fehler an der falschen Stelle.
  */
 (function () {
+  // Klein geschrieben, und das muss so bleiben: location.hostname ist immer klein.
   var wirte = ['www.bauzeuge.de', 'bauzeuge.de', 'www.bau-zeuge.de', 'bau-zeuge.de'];
   if (!('serviceWorker' in navigator)) return;
   if (location.protocol !== 'https:') return;
