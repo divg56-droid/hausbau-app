@@ -83,11 +83,11 @@ async function zeichne(rahmen) {
       el('p', {
         klasse: 'unterzeile',
         text:
-          'Hausbau App, Testversion. Die App sendet nichts und holt nichts: Es gibt ' +
-          'keinen Server, kein Konto und keine Schnittstelle nach außen. ' +
-          'Die Rechner nutzen dieselbe Datenbasis wie hausbauatlas.de ' +
-          '(Baukosten Stand 08.2026). Ergebnisse sind Prognosen auf Grundlage ' +
-          'realer Marktdaten, keine Angebote.',
+          'Hausbau App, Testversion. Ohne Konto bleibt alles auf diesem Gerät ' +
+          'und nichts wird übertragen. Mit Konto gehen die Daten zum Abgleich ' +
+          'an hausbauatlas.de, und nur dorthin. Die Rechner nutzen dieselbe ' +
+          'Datenbasis wie hausbauatlas.de (Baukosten Stand 08.2026). ' +
+          'Ergebnisse sind Prognosen auf Grundlage realer Marktdaten, keine Angebote.',
       }),
     ])
   );

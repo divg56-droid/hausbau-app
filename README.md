@@ -168,27 +168,29 @@ einzigen Transaktion: Bricht etwas ab, bleiben die alten Daten stehen.
 
 ## Datenschutz
 
-Die App sendet nichts und holt nichts. Es gibt keinen Server, kein Konto,
-keine Anmeldung und keine Schnittstelle nach außen. Alles liegt in der
-IndexedDB des Geräts.
+**Ohne Konto sendet die App nichts.** Alles liegt in der IndexedDB des
+Geräts, es gibt keine Anmeldung und keinen Aufruf nach außen.
 
-Das ist nicht nur eine Zusage im Quelltext: Das Paket fordert **keine
-Internet-Berechtigung** an. Damit verbietet das Betriebssystem jede
-Verbindung, unabhängig davon, was der Code versucht. Der Bau bricht ab, falls
-doch eine Berechtigung ins Manifest gerät.
+**Mit Konto** gehen die Daten zum Abgleich an hausbauatlas.de: Sätze über
+`abgleich.php`, Fotos über `bild.php`, beides nur für das eigene Konto.
 
-Im Manifest steht genau ein Eintrag, `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`.
-Den legt AndroidX selbst an, er gehört der App und schützt ihre eigenen
-Empfänger vor fremdem Zugriff. Er erlaubt nichts nach außen.
+Bis zum Abgleich trug das Paket keine Internet-Berechtigung, und Android
+verbot das Senden auf Betriebssystemebene. Das gilt nicht mehr, der Abgleich
+braucht den Zugang. Geblieben ist die Prüfung im Bau: **außer INTERNET darf
+keine Berechtigung im Manifest stehen**, sonst bricht er ab. Kamera und
+Standort haben hier nach wie vor nichts zu suchen.
 
 Nachprüfen lässt sich das mit jedem APK-Betrachter, etwa:
 
     python -m pip install pyaxmlparser
     python -c "from pyaxmlparser import APK; print(APK('hausbau-app.apk').get_permissions())"
 
-Die Oberfläche liegt im Paket und wird vom WebView direkt daraus bedient,
-deshalb braucht sie keinen Netzzugriff. Auf einem Gerät bestätigt: Die App
-startet ohne die Berechtigung normal. Fotos kommen über ein gewöhnliches
+Zu sehen sein muss genau INTERNET, dazu
+`DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`. Den legt AndroidX selbst an, er
+gehört der App und erlaubt nichts nach außen.
+
+Die Oberfläche selbst liegt im Paket und wird vom WebView direkt daraus
+bedient; dafür wird nichts geladen. Fotos kommen über ein gewöhnliches
 Dateifeld von der Kamera; auch dafür ist keine Berechtigung nötig, weil der
 Aufruf über die Kamera-App des Systems läuft.
 
