@@ -87,10 +87,19 @@ Die App sendet nichts und holt nichts. Es gibt keinen Server, kein Konto,
 keine Anmeldung und keine Schnittstelle nach außen. Alles liegt in der
 IndexedDB des Geräts.
 
-Das ist nicht nur eine Zusage im Quelltext: Das Paket enthält **keine einzige
-Android-Berechtigung**, auch nicht die für Internet. Damit verbietet das
-Betriebssystem jede Verbindung, unabhängig davon, was der Code versucht. Wer
-das nachprüfen will, entpackt das APK und liest `AndroidManifest.xml`.
+Das ist nicht nur eine Zusage im Quelltext: Das Paket fordert **keine
+Internet-Berechtigung** an. Damit verbietet das Betriebssystem jede
+Verbindung, unabhängig davon, was der Code versucht. Der Bau bricht ab, falls
+doch eine Berechtigung ins Manifest gerät.
+
+Im Manifest steht genau ein Eintrag, `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`.
+Den legt AndroidX selbst an, er gehört der App und schützt ihre eigenen
+Empfänger vor fremdem Zugriff. Er erlaubt nichts nach außen.
+
+Nachprüfen lässt sich das mit jedem APK-Betrachter, etwa:
+
+    python -m pip install pyaxmlparser
+    python -c "from pyaxmlparser import APK; print(APK('hausbau-app.apk').get_permissions())"
 
 Die Oberfläche liegt im Paket und wird vom WebView direkt daraus bedient,
 deshalb braucht sie keinen Netzzugriff. Fotos kommen über ein gewöhnliches
