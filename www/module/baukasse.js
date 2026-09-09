@@ -79,11 +79,12 @@ export async function zeige(rahmen) {
 async function zeichne(rahmen, ansicht = 'uebersicht') {
   rahmen.replaceChildren();
 
-  const [posten, belege, stand, kontakte] = await Promise.all([
+  const [posten, belege, stand, kontakte, raeume] = await Promise.all([
     daten.alle('posten'),
     daten.alle('belege'),
     finanzierungsstand(),
     daten.alle('kontakte'),
+    daten.alle('raeume'),
   ]);
 
   const neu = () => zeichne(rahmen, ansicht);
@@ -111,7 +112,7 @@ async function zeichne(rahmen, ansicht = 'uebersicht') {
     ))
   );
 
-  if (ansicht === 'posten') return zeigePosten(rahmen, gerechnet, kontakte, neu);
+  if (ansicht === 'posten') return zeigePosten(rahmen, gerechnet, kontakte, raeume, neu);
   if (ansicht === 'rechnungen') return zeigeRechnungen(rahmen, belege, posten, stand, kontakte, neu);
   return zeigeUebersicht(rahmen, stand, summe, gerechnet, belege);
 }
@@ -218,7 +219,7 @@ function zeigeUebersicht(rahmen, stand, summe, gerechnet, belege) {
 
 // ----------------------------------------------------------------- Positionen
 
-function zeigePosten(rahmen, gerechnet, kontakte, neu) {
+function zeigePosten(rahmen, gerechnet, kontakte, raeume, neu) {
   if (!gerechnet.length) {
     rahmen.append(
       karte([
@@ -228,7 +229,7 @@ function zeigePosten(rahmen, gerechnet, kontakte, neu) {
             'Dach und so weiter. Sobald ein Angebot vorliegt, kommt die tatsächliche ' +
             'Summe daneben, und die App zeigt dir die Abweichung.'
         ),
-        knopf('Erste Position anlegen', () => postenBearbeiten({}, kontakte, neu), 'knopf-haupt'),
+        knopf('Erste Position anlegen', () => postenBearbeiten({}, kontakte, raeume, neu), 'knopf-haupt'),
         knopf('Übliche Positionen laden', () => vorlageLaden(neu)),
       ]),
       hinweisKasten(
@@ -260,7 +261,7 @@ function zeigePosten(rahmen, gerechnet, kontakte, neu) {
         el('ul', { klasse: 'liste' }, drin.map((p) => {
           const kontakt = kontakte.find((k) => k.id === p.kontaktId);
           return el('li', {}, [
-            el('button', { klasse: 'listenzeile', onclick: () => postenBearbeiten(p, kontakte, neu) }, [
+            el('button', { klasse: 'listenzeile', onclick: () => postenBearbeiten(p, kontakte, raeume, neu) }, [
               el('span', { klasse: 'zeilen-text' }, [
                 el('span', { klasse: 'zeilen-titel', text: p.name }),
                 el('span', {
@@ -286,7 +287,7 @@ function zeigePosten(rahmen, gerechnet, kontakte, neu) {
   }
 
   rahmen.append(
-    knopf('Position hinzufügen', () => postenBearbeiten({}, kontakte, neu), 'knopf-haupt'),
+    knopf('Position hinzufügen', () => postenBearbeiten({}, kontakte, raeume, neu), 'knopf-haupt'),
     knopf('Übliche Positionen ergänzen', () => vorlageLaden(neu), 'knopf-leise')
   );
 }
@@ -338,7 +339,7 @@ async function vorlageLaden(nachher) {
   await nachher();
 }
 
-function postenBearbeiten(posten, kontakte, nachher) {
+function postenBearbeiten(posten, kontakte, raeume, nachher) {
   const name = eingabe({ value: posten.name || '', placeholder: 'z. B. Elektroinstallation' });
   const gewerk = auswahl(GEWERKE.map((g) => [g, g]), posten.gewerk || 'Sonstiges');
   const geplant = zahlfeld({ value: posten.geplant ? String(posten.geplant).replace('.', ',') : '' });
@@ -354,6 +355,13 @@ function postenBearbeiten(posten, kontakte, nachher) {
       .filter((k) => (k.art || 'firma') === 'firma')
       .map((k) => [k.id, k.firma || k.name])],
     posten.kontaktId ?? ''
+  );
+  const raum = auswahl(
+    [['', '– kein Raum –'], ...raeume
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name, 'de'))
+      .map((r) => [r.id, r.name])],
+    posten.raumId ?? ''
   );
   const notiz = el('textarea', {}, [posten.notiz || '']);
 
@@ -387,6 +395,7 @@ function postenBearbeiten(posten, kontakte, nachher) {
       vorschau,
       feld('Status', status, 'Teilgezahlt und Bezahlt rechnet die App aus den Rechnungen.'),
       feld('Firma', kontakt),
+      feld('Raum', raum, 'Damit steht die Position auch beim Raum. Für Gewerke, die das ganze Haus betreffen, leer lassen.'),
       feld('Notiz', notiz),
     ],
     async () => {
@@ -397,6 +406,7 @@ function postenBearbeiten(posten, kontakte, nachher) {
         tatsaechlich: Math.max(0, zuZahl(tatsaechlich.value)),
         status: status.value,
         kontaktId: kontakt.value || null,
+        raumId: raum.value || null,
         notiz: notiz.value.trim(),
       };
       if (!wert.name) throw new Error('Bitte eine Bezeichnung eintragen.');

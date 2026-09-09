@@ -16,7 +16,7 @@
 //              Abgleich vom anderen Geraet zurueck, weil der ihn noch kennt.
 
 const DB_NAME = 'hausbau';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 // Wo Eintraege zu einem Elternobjekt gehoeren (Pins zu einem Geschoss), steht
 // dessen Kennung als Feld drin und bekommt einen Index.
@@ -27,6 +27,8 @@ const SPEICHER = {
   posten: { indizes: ['gewerk'] },
   belege: { indizes: ['datum'] },
   geschosse: { indizes: [] },
+  // Raeume: das, worauf sich Maengel, Kosten und Fotos beziehen.
+  raeume: { indizes: ['geschossId'] },
   pins: { indizes: ['geschossId'] },
   maengel: { indizes: ['status', 'raum'] },
   aufgaben: { indizes: ['phase'] },
@@ -39,15 +41,17 @@ const SPEICHER = {
 const VERWEISE = {
   geschosse: { bildId: 'bilder' },
   pins: { geschossId: 'geschosse', bildId: 'bilder' },
-  posten: { kontaktId: 'kontakte' },
+  raeume: { geschossId: 'geschosse' },
+  posten: { kontaktId: 'kontakte', raumId: 'raeume' },
   belege: { kontaktId: 'kontakte', quelleId: 'darlehen', bildId: 'bilder', postenId: 'posten' },
-  maengel: { kontaktId: 'kontakte' },
+  maengel: { kontaktId: 'kontakte', raumId: 'raeume' },
   aufgaben: { vorgaengerId: 'aufgaben', kontaktId: 'kontakte', mangelId: 'maengel' },
 };
 
 // Verweislisten: Feld enthaelt ein Feld von Kennungen.
 const VERWEISLISTEN = {
   maengel: { bildIds: 'bilder' },
+  raeume: { bildIds: 'bilder' },
   tagebuch: { bildIds: 'bilder', helferIds: 'kontakte' },
 };
 
@@ -84,7 +88,7 @@ function db() {
       // Ab hier reicht Anlegen: anlegen() ueberspringt, was es schon gibt.
       // Die Wanderung auf Fassung 2 legt neue Speicher bereits mit an, ein
       // zweiter Aufruf schadet deshalb nicht.
-      if (ereignis.oldVersion < 3) {
+      if (ereignis.oldVersion < 4) {
         anlegen(d);
       }
     };

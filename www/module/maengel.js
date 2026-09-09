@@ -28,11 +28,8 @@ export const GEWERKE = [
   'Treppe', 'Außenanlagen', 'Sonstiges',
 ];
 
-const RAUM_VORSCHLAEGE = [
-  'Wohnzimmer', 'Küche', 'Esszimmer', 'Flur', 'Bad', 'Gäste-WC',
-  'Schlafzimmer', 'Kinderzimmer', 'Arbeitszimmer', 'Keller', 'Dachboden',
-  'Garage', 'Treppenhaus', 'Außen',
-];
+// Die Vorschlaege stehen im Raum-Modul; hier wird die dortige Liste um die
+// schon angelegten Raeume ergaenzt, sobald das Blatt aufgeht.
 
 export async function zeige(rahmen) {
   await zeichne(rahmen);
@@ -136,7 +133,15 @@ function mangelBearbeiten(mangel, kontakte, nachher) {
   const raum = el('input', {
     type: 'text', value: mangel.raum || '', list: 'raumliste', placeholder: 'z. B. Wohnzimmer',
   });
-  const raumliste = el('datalist', { id: 'raumliste' }, RAUM_VORSCHLAEGE.map((r) => el('option', { value: r })));
+  const raumliste = el('datalist', { id: 'raumliste' });
+  // Erst die schon angelegten Raeume, danach die Vorschlaege. So tippt man
+  // nichts doppelt an und legt nicht versehentlich "Bad " neben "Bad" an.
+  (async () => {
+    const { RAUM_VORSCHLAEGE } = await import('./raeume.js');
+    const vorhanden = (await daten.alle('raeume')).map((r) => r.name);
+    const alle = [...new Set([...vorhanden, ...RAUM_VORSCHLAEGE])];
+    raumliste.replaceChildren(...alle.map((r) => el('option', { value: r })));
+  })();
   const gewerk = auswahl(GEWERKE.map((g) => [g, g]), mangel.gewerk || 'Sonstiges');
   const status = auswahl(Object.entries(STATUS).map(([w, s]) => [w, s.name]), mangel.status || 'offen');
   const beschreibung = el('textarea', {}, [mangel.beschreibung || '']);
@@ -164,9 +169,16 @@ function mangelBearbeiten(mangel, kontakte, nachher) {
       fotos,
     ],
     async () => {
+      // Aus dem Namen wird ein richtiger Raum, falls es ihn noch nicht gibt.
+      // Der Name bleibt zusaetzlich stehen: Die Maengelliste gruppiert danach
+      // und muss dafuer nicht jedes Mal nachschlagen.
+      const { raumHolen } = await import('./raeume.js');
+      const raumId = await raumHolen(raum.value);
+
       const wert = {
         titel: titel.value.trim(),
         raum: raum.value.trim(),
+        raumId,
         gewerk: gewerk.value,
         status: status.value,
         beschreibung: beschreibung.value.trim(),

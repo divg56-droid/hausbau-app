@@ -19,8 +19,8 @@ import {
 
 // Reihenfolge ist egal, der Server nimmt alles in einem Rutsch.
 const SPEICHER = [
-  'einstellungen', 'darlehen', 'posten', 'belege', 'geschosse', 'pins',
-  'maengel', 'aufgaben', 'tagebuch', 'kontakte', 'bilder',
+  'einstellungen', 'darlehen', 'posten', 'belege', 'geschosse', 'raeume',
+  'pins', 'maengel', 'aufgaben', 'tagebuch', 'kontakte', 'bilder',
 ];
 
 // So viele Bilddateien je Runde. Mehr laesst eine wacklige Verbindung

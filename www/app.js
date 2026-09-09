@@ -25,6 +25,10 @@ export const MODULE = [
     text: 'Budget, Rechnungen und Restbudget im Blick behalten.',
   },
   {
+    weg: 'raeume', zeichen: '\u{1F6CB}', titel: 'Räume',
+    text: 'Jeder Raum mit Fotos, Mängeln und dem, was er gekostet hat.',
+  },
+  {
     weg: 'anschlussplan', zeichen: '\u{1F4CD}', titel: 'Anschlussplan',
     text: 'Steckdosen, Schalter und Leitungen auf dem Grundriss markieren.',
   },

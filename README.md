@@ -27,6 +27,7 @@ finden, dort allerdings nur nach Anmeldung.
 | Baufinanzierung | Eigenkapital und Darlehen erfassen, oder erst rechnen lassen |
 | Tilgungsverlauf | Restschuld Jahr für Jahr, mit Sondertilgung, als PDF |
 | Baukasse | Budget, Kostenaufstellung geplant gegen tatsächlich, Rechnungen |
+| Räume | Jeder Raum mit Fotos, Mängeln, Fläche und Kosten je m² |
 | Anschlussplan | Grundriss hochladen, Anschlüsse markieren, als PDF mit Plan |
 | Mängelliste | Mängel je Raum mit Foto und Status, als PDF und als Mängelrüge |
 | Bauablauf | Gewerke in der richtigen Reihenfolge, Termine rechnen sich |
@@ -236,6 +237,25 @@ die App liefert die Zahlen.
 
 Ältere Einträge ohne Stundenangabe bleiben lesbar und zählen mit null Stunden
 mit, damit eine alte Sicherung nichts verliert.
+
+## Räume
+
+Ein Raum war bisher nur ein Wort im Mangel. Als eigener Datensatz wird er die
+Stelle, an der alles zusammenläuft: Fotos vom Zustand, offene Mängel, und was
+er gekostet hat, auch je Quadratmeter.
+
+Vorhandene Daten gehen nicht verloren. Beim ersten Öffnen werden aus den
+Raumnamen der Mängel richtige Räume, und die Mängel bekommen die Zuordnung.
+Das läuft beliebig oft ohne Schaden. Wer in der Mängelmaske einen neuen
+Raumnamen tippt, legt den Raum damit gleich mit an.
+
+Beim Löschen eines Raums bleiben Mängel und Kostenpositionen bestehen und
+verlieren nur die Zuordnung. Sie mitzulöschen wäre falsch: Der Mangel ist ja
+nicht behoben, nur weil der Raum aus der Liste verschwindet.
+
+Die erfasste Fläche ist die Summe der eingetragenen Räume, nicht die
+Wohnfläche nach Wohnflächenverordnung. Die rechnet Dachschrägen und Balkone
+anders; darauf weist die App hin.
 
 ## Kostenaufstellung
 
