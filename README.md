@@ -30,7 +30,7 @@ finden, dort allerdings nur nach Anmeldung.
 | Anschlussplan | Grundriss hochladen, Anschlüsse markieren, als PDF mit Plan |
 | Mängelliste | Mängel je Raum mit Foto, Gewerk, Frist und Status, als PDF mit Bildern |
 | Bauablauf | Gewerke in der richtigen Reihenfolge, Termine rechnen sich |
-| Bauhelfertagebuch | Tageseinträge mit Wetter, Helfern und Fotos |
+| Bauhelfertagebuch | Tageseinträge mit Wetter, Fotos und Helferstunden je Person |
 | Kontakte | Firmen und Helfer, von den anderen Bereichen verlinkt |
 | Einstellungen | Projektname, Sicherung, alles löschen |
 
@@ -134,8 +134,23 @@ noch etwa 600 dpi, und eine Mängelliste mit zwanzig Fotos bleibt unter einem
 Megabyte statt sechs. Ein Bild, das mehrfach vorkommt, liegt trotzdem nur
 einmal im Dokument.
 
+## Helferstunden
+
+Die Stunden stehen je Person und Tag, nicht als Tagessumme: Zwei Leute an
+derselben Baustelle arbeiten selten gleich lang. Beim Anhaken wird die
+Regelarbeitszeit des Tages vorgeschlagen und lässt sich je Person
+überschreiben.
+
+Das Tagebuch summiert daraus die Stunden je Helfer und insgesamt, im
+Bildschirm wie im PDF. Gedacht ist das für die Meldung an die
+Berufsgenossenschaft der Bauwirtschaft, bei der unentgeltliche Helfer
+versichert sind. Was dort genau abgefragt wird, sagt die Berufsgenossenschaft;
+die App liefert die Zahlen.
+
+Ältere Einträge ohne Stundenangabe bleiben lesbar und zählen mit null Stunden
+mit, damit eine alte Sicherung nichts verliert.
+
 ## Was noch fehlt
 
 - Signatur für den Play Store; das Debug-Paket ist nur zum Ausprobieren
 - Maßstab im Anschlussplan, um Abstände in Zentimetern abzulesen
-- Bauhelferstunden je Person summieren, für die Berufsgenossenschaft

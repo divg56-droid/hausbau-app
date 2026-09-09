@@ -3,10 +3,14 @@
 // Zweck ist der Nachweis. Bei Streit mit einer Firma, bei einer Bauverzoegerung
 // oder gegenueber der Bauhelferversicherung zaehlt, was am selben Tag notiert
 // wurde. Deshalb ist das Datum Pflicht und je Tag nur ein Eintrag moeglich.
+//
+// Die Stunden stehen je Person und Tag, nicht als Tagessumme. Die
+// Berufsgenossenschaft fragt nach den geleisteten Stunden der Helfer, und
+// zwei Leute an einem Tag arbeiten selten gleich lang.
 
 import {
   el, feld, auswahl, knopf, karte, kopfzeile, hinweisKasten,
-  leerzustand, melde, datumLang, heute,
+  leerzustand, melde, datumLang, heute, zahl, zuZahl,
 } from '../hilfen.js';
 import { daten, einstellung, bildUrl, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -22,6 +26,38 @@ export const WETTER = {
 // warum das Wetter ueberhaupt im Tagebuch steht.
 const WETTER_STOPP = ['regen', 'sturm', 'schnee', 'frost'];
 
+// Vorbelegung fuer einen normalen Arbeitstag auf der Baustelle.
+const REGELSTUNDEN = 8;
+
+/**
+ * Liefert die Helfer eines Eintrags einheitlich als [{id, stunden}].
+ *
+ * Aeltere Eintraege haben nur helferIds ohne Stunden. Die bleiben lesbar und
+ * zaehlen mit null Stunden mit, damit eine alte Sicherung nichts verliert.
+ */
+export function helferVon(eintrag) {
+  if (Array.isArray(eintrag.helfer)) {
+    return eintrag.helfer.map((h) => ({ id: h.id, stunden: Number(h.stunden) || 0 }));
+  }
+  return (eintrag.helferIds || []).map((id) => ({ id, stunden: 0 }));
+}
+
+/** Summiert die Stunden je Person ueber alle Tage. */
+export function stundenJeHelfer(eintraege, kontakte) {
+  const summe = new Map();
+  for (const e of eintraege) {
+    for (const { id, stunden } of helferVon(e)) {
+      const bisher = summe.get(id) || { id, stunden: 0, tage: 0 };
+      bisher.stunden += stunden;
+      bisher.tage += 1;
+      summe.set(id, bisher);
+    }
+  }
+  return [...summe.values()]
+    .map((s) => ({ ...s, name: (kontakte.find((k) => k.id === s.id) || {}).name || 'Unbekannt' }))
+    .sort((a, b) => b.stunden - a.stunden || a.name.localeCompare(b.name, 'de'));
+}
+
 export async function zeige(rahmen) {
   await zeichne(rahmen);
 }
@@ -32,7 +68,7 @@ async function zeichne(rahmen) {
   const helfer = kontakte.filter((k) => k.art === 'helfer');
   const neu = () => zeichne(rahmen);
 
-  rahmen.append(kopfzeile('Bauhelfertagebuch', 'Täglich festhalten, wer da war und was passiert ist.'));
+  rahmen.append(kopfzeile('Bauhelfertagebuch', 'Täglich festhalten, wer da war und wie lange.'));
 
   if (!helfer.length && !eintraege.length) {
     rahmen.append(
@@ -40,14 +76,16 @@ async function zeichne(rahmen) {
         leerzustand(
           'Lege zuerst deine Helfer an',
           'Wer regelmäßig auf der Baustelle mithilft, gehört in die Kontakte. ' +
-            'Danach hakst du im Tageseintrag nur noch ab, wer da war.'
+            'Danach hakst du im Tageseintrag nur noch ab, wer da war, und trägst die Stunden ein.'
         ),
         knopf('Helfer anlegen', () => { location.hash = '#/kontakte'; }, 'knopf-haupt'),
         knopf('Ohne Helfer beginnen', () => eintragBearbeiten({ datum: heute() }, helfer, eintraege, neu)),
       ]),
       hinweisKasten(
-        'Wichtig für die Bauhelferversicherung: Wer unentgeltlich mithilft, muss bei der ' +
-          'Berufsgenossenschaft gemeldet sein. Das Tagebuch belegt, wer wann im Einsatz war.',
+        'Wichtig für die Bauhelferversicherung: Wer unentgeltlich mithilft, ist über die ' +
+          'Berufsgenossenschaft der Bauwirtschaft versichert. Das Bauvorhaben muss dort ' +
+          'angemeldet werden, und gefragt wird nach den geleisteten Helferstunden. ' +
+          'Genau die summiert dieses Tagebuch.',
         'info'
       )
     );
@@ -55,7 +93,8 @@ async function zeichne(rahmen) {
   }
 
   const sortiert = [...eintraege].sort((a, b) => String(b.datum).localeCompare(String(a.datum)));
-  const stunden = eintraege.reduce((s, e) => s + (e.helferIds || []).length, 0);
+  const jeHelfer = stundenJeHelfer(eintraege, kontakte);
+  const gesamt = jeHelfer.reduce((s, h) => s + h.stunden, 0);
 
   rahmen.append(
     karte([
@@ -63,7 +102,7 @@ async function zeichne(rahmen) {
       el('p', {
         klasse: 'unterzeile',
         text: `${eintraege.length} ${eintraege.length === 1 ? 'Tageseintrag' : 'Tageseinträge'}, ` +
-          `${stunden} ${stunden === 1 ? 'Helfereinsatz' : 'Helfereinsätze'}.` +
+          `${zahl(gesamt, gesamt % 1 ? 1 : 0)} Helferstunden.` +
           (sortiert[0] ? ` Zuletzt ${datumLang(sortiert[0].datum)}.` : ''),
       }),
       knopf('Eintrag für heute', () => {
@@ -73,15 +112,57 @@ async function zeichne(rahmen) {
     ])
   );
 
+  if (jeHelfer.length) {
+    rahmen.append(
+      karte([
+        el('h2', { text: 'Stunden je Helfer' }),
+        el('ul', { klasse: 'liste' }, jeHelfer.map((h) =>
+          el('li', {}, [
+            el('div', { klasse: 'listenzeile', stil: { cursor: 'default' } }, [
+              el('span', { klasse: 'zeilen-text' }, [
+                el('span', { klasse: 'zeilen-titel', text: h.name }),
+                el('span', {
+                  klasse: 'zeilen-unter',
+                  text: `an ${h.tage} ${h.tage === 1 ? 'Tag' : 'Tagen'}`,
+                }),
+              ]),
+              el('span', {
+                klasse: 'zeilen-wert',
+                text: zahl(h.stunden, h.stunden % 1 ? 1 : 0) + ' h',
+              }),
+            ]),
+          ])
+        )),
+        el('div', { klasse: 'wertzeile stark' }, [
+          el('span', { text: 'Zusammen' }),
+          el('strong', { text: zahl(gesamt, gesamt % 1 ? 1 : 0) + ' Stunden' }),
+        ]),
+        gesamt === 0
+          ? hinweisKasten(
+              'Noch keine Stunden erfasst. Trage sie beim jeweiligen Tag ein, dann steht ' +
+                'die Summe für die Meldung an die Berufsgenossenschaft bereit.',
+              'info'
+            )
+          : null,
+      ])
+    );
+  }
+
   if (sortiert.length) {
     rahmen.append(
       karte([
         el('h2', { text: 'Einträge' }),
         el('ul', { klasse: 'liste' }, await Promise.all(sortiert.map(async (e) => {
           const url = e.bildIds && e.bildIds.length ? await bildUrl(e.bildIds[0]) : null;
-          const namen = (e.helferIds || [])
-            .map((id) => (kontakte.find((k) => k.id === id) || {}).name)
+          const drin = helferVon(e);
+          const namen = drin
+            .map(({ id, stunden }) => {
+              const name = (kontakte.find((k) => k.id === id) || {}).name;
+              if (!name) return null;
+              return stunden ? `${name} (${zahl(stunden, stunden % 1 ? 1 : 0)} h)` : name;
+            })
             .filter(Boolean);
+          const tagesstunden = drin.reduce((s, h) => s + h.stunden, 0);
           return el('li', {}, [
             el('button', {
               klasse: 'listenzeile',
@@ -99,8 +180,11 @@ async function zeichne(rahmen) {
                   ].filter(Boolean).join(' · '),
                 }),
               ]),
-              (e.bildIds || []).length
-                ? el('span', { klasse: 'marke', text: (e.bildIds || []).length + ' Fotos' })
+              tagesstunden
+                ? el('span', {
+                    klasse: 'zeilen-wert',
+                    text: zahl(tagesstunden, tagesstunden % 1 ? 1 : 0) + ' h',
+                  })
                 : null,
             ]),
           ]);
@@ -124,24 +208,67 @@ function eintragBearbeiten(eintrag, helfer, alleEintraege, nachher) {
   const gemacht = el('textarea', {}, [eintrag.gemacht || '']);
   const offen = el('textarea', {}, [eintrag.offen || '']);
 
-  const gewaehlt = new Set(eintrag.helferIds || []);
+  // Stand des Eintrags als Karte: id -> Stunden, nur fuer die Angehakten.
+  const stand = new Map(helferVon(eintrag).map((h) => [h.id, h.stunden]));
+
+  const regel = el('input', {
+    type: 'text', inputmode: 'decimal',
+    value: String(REGELSTUNDEN), placeholder: String(REGELSTUNDEN),
+  });
+
+  const summenzeile = el('p', { klasse: 'unterzeile' });
+  function summeZeigen() {
+    const summe = [...stand.values()].reduce((s, w) => s + w, 0);
+    summenzeile.textContent = stand.size
+      ? `${stand.size} angehakt, zusammen ${zahl(summe, summe % 1 ? 1 : 0)} Stunden`
+      : 'Niemand angehakt.';
+  }
+
   const helferliste = helfer.length
-    ? el('div', {}, helfer.map((k) =>
-        el('label', {
-          stil: { display: 'flex', gap: '10px', alignItems: 'center', minHeight: '44px' },
+    ? el('div', {}, helfer.map((k) => {
+        const stundenfeld = el('input', {
+          type: 'text', inputmode: 'decimal',
+          stil: { width: '86px', minHeight: '44px', textAlign: 'right' },
+          value: stand.has(k.id) ? String(stand.get(k.id)).replace('.', ',') : '',
+          placeholder: 'h',
+          disabled: !stand.has(k.id),
+          oninput: () => {
+            if (stand.has(k.id)) stand.set(k.id, zuZahl(stundenfeld.value));
+            summeZeigen();
+          },
+        });
+
+        const haken = el('input', {
+          type: 'checkbox',
+          checked: stand.has(k.id),
+          onchange: (ereignis) => {
+            if (ereignis.target.checked) {
+              // Wer angehakt wird, bekommt die Regelarbeitszeit des Tages;
+              // abweichende Zeiten werden daneben ueberschrieben.
+              const vorgabe = zuZahl(regel.value) || REGELSTUNDEN;
+              stand.set(k.id, vorgabe);
+              stundenfeld.value = String(vorgabe).replace('.', ',');
+              stundenfeld.disabled = false;
+            } else {
+              stand.delete(k.id);
+              stundenfeld.value = '';
+              stundenfeld.disabled = true;
+            }
+            summeZeigen();
+          },
+        });
+
+        return el('label', {
+          stil: { display: 'flex', gap: '10px', alignItems: 'center', minHeight: '48px' },
         }, [
-          el('input', {
-            type: 'checkbox',
-            checked: gewaehlt.has(k.id),
-            onchange: (ereignis) => {
-              if (ereignis.target.checked) gewaehlt.add(k.id);
-              else gewaehlt.delete(k.id);
-            },
-          }),
-          el('span', { text: k.name }),
-        ])
-      ))
+          haken,
+          el('span', { stil: { flex: '1' }, text: k.name }),
+          stundenfeld,
+        ]);
+      }))
     : el('p', { klasse: 'unterzeile', text: 'Noch keine Helfer in den Kontakten angelegt.' });
+
+  summeZeigen();
 
   const bilder = [...(eintrag.bildIds || [])];
   const fotos = fotofeld(bilder, () => {}, { text: 'Foto vom Baufortschritt' });
@@ -152,28 +279,41 @@ function eintragBearbeiten(eintrag, helfer, alleEintraege, nachher) {
       feld('Tag', datum),
       feld('Wetter', wetter, 'Wichtig als Beleg, wenn Arbeiten warten mussten.'),
       feld('Temperatur in °C', temperatur),
-      el('span', { klasse: 'feld-name', text: 'Wer war da?' }),
+      helfer.length
+        ? feld('Regelarbeitszeit in Stunden', regel,
+            'Wird beim Anhaken vorgeschlagen und lässt sich je Person überschreiben.')
+        : null,
+      el('span', { klasse: 'feld-name', text: 'Wer war da, und wie lange?' }),
       helferliste,
+      summenzeile,
       feld('Was wurde gemacht?', gemacht),
       feld('Was ist liegengeblieben?', offen),
       el('span', { klasse: 'feld-name', text: 'Fotos' }),
       fotos,
-    ],
+    ].filter(Boolean),
     async () => {
       const tag = datum.value || heute();
       const doppelt = alleEintraege.find((e) => e.datum === tag && e.id !== eintrag.id);
       if (doppelt) throw new Error('Für diesen Tag gibt es schon einen Eintrag.');
 
+      const helferstand = [...stand.entries()].map(([id, stunden]) => ({ id, stunden }));
+      if (helferstand.some((h) => h.stunden < 0 || h.stunden > 24)) {
+        throw new Error('Die Stunden je Person müssen zwischen 0 und 24 liegen.');
+      }
+
       const wert = {
         datum: tag,
         wetter: wetter.value || null,
         temperatur: temperatur.value.trim() || null,
-        helferIds: [...gewaehlt],
+        helfer: helferstand,
+        // Bleibt als einfache Liste erhalten: aeltere Sicherungen und alles,
+        // was nur wissen will, wer da war, kommen damit weiter aus.
+        helferIds: helferstand.map((h) => h.id),
         gemacht: gemacht.value.trim(),
         offen: offen.value.trim(),
         bildIds: bilder,
       };
-      if (!wert.gemacht && !wert.helferIds.length && !bilder.length) {
+      if (!wert.gemacht && !wert.helfer.length && !bilder.length) {
         throw new Error('Bitte wenigstens eintragen, was gemacht wurde.');
       }
       if (eintrag.id) wert.id = eintrag.id;
@@ -220,16 +360,43 @@ async function pdfErzeugen(eintraege, kontakte) {
     fotos.set(e.id, geladen);
   }
 
-  const einsaetze = chronologisch.reduce((s, e) => s + (e.helferIds || []).length, 0);
+  const jeHelfer = stundenJeHelfer(chronologisch, kontakte);
+  const gesamt = jeHelfer.reduce((s, h) => s + h.stunden, 0);
+  const zeitraum = chronologisch.length
+    ? datumLang(chronologisch[0].datum) + ' bis ' + datumLang(chronologisch[chronologisch.length - 1].datum)
+    : '';
+
   blatt.absatz(
-    `${chronologisch.length} Tage dokumentiert, ${einsaetze} Helfereinsätze erfasst. ` +
+    `${chronologisch.length} Tage dokumentiert, ${zeitraum}. ` +
+    `Insgesamt ${zahl(gesamt, gesamt % 1 ? 1 : 0)} Helferstunden. ` +
     'Die Fotos stehen bei dem Tag, an dem sie aufgenommen wurden.'
   );
 
+  if (jeHelfer.length) {
+    blatt.ueberschrift('Stunden je Helfer');
+    blatt.tabelle(
+      ['Name', 'Tage', 'Stunden'],
+      jeHelfer.map((h) => [h.name, String(h.tage), zahl(h.stunden, h.stunden % 1 ? 1 : 0)]),
+      [3, 1, 1.2],
+      [1, 2]
+    );
+    blatt.wertzeile('Zusammen', zahl(gesamt, gesamt % 1 ? 1 : 0) + ' Stunden', true);
+    blatt.absatz(
+      'Diese Aufstellung ist für die Meldung an die Berufsgenossenschaft der ' +
+      'Bauwirtschaft gedacht. Maßgeblich ist, was dort abgefragt wird; ' +
+      'die Zahlen stammen aus den Tageseinträgen dieses Tagebuchs.',
+      9
+    );
+  }
+
+  blatt.ueberschrift('Tageseinträge');
+
   for (const e of chronologisch) {
-    const namen = (e.helferIds || [])
-      .map((id) => (kontakte.find((k) => k.id === id) || {}).name)
-      .filter(Boolean);
+    const drin = helferVon(e).map((h) => ({
+      ...h,
+      name: (kontakte.find((k) => k.id === h.id) || {}).name,
+    })).filter((h) => h.name);
+    const tagesstunden = drin.reduce((s, h) => s + h.stunden, 0);
 
     blatt.ueberschrift(datumLang(e.datum));
     blatt.wertzeile(
@@ -237,7 +404,15 @@ async function pdfErzeugen(eintraege, kontakte) {
       [e.wetter ? WETTER[e.wetter] : 'keine Angabe', e.temperatur ? e.temperatur + ' °C' : null]
         .filter(Boolean).join(', ')
     );
-    blatt.wertzeile('Anwesend', namen.length ? namen.join(', ') : 'keine Helfer erfasst');
+    blatt.wertzeile(
+      'Anwesend',
+      drin.length
+        ? drin.map((h) => h.stunden ? `${h.name} (${zahl(h.stunden, h.stunden % 1 ? 1 : 0)} h)` : h.name).join(', ')
+        : 'keine Helfer erfasst'
+    );
+    if (tagesstunden) {
+      blatt.wertzeile('Helferstunden am Tag', zahl(tagesstunden, tagesstunden % 1 ? 1 : 0), true);
+    }
     if (e.gemacht) blatt.absatz('Ausgeführt: ' + e.gemacht, 9.5);
     if (e.offen) blatt.absatz('Liegengeblieben: ' + e.offen, 9.5);
 

@@ -10,6 +10,7 @@ import { simuliere } from './www/module/tilgung.js';
 import { terminePlanen } from './www/module/ablauf.js';
 import { Blatt } from './www/pdf.js';
 import { zuZahl } from './www/hilfen.js';
+import { helferVon, stundenJeHelfer } from './www/module/tagebuch.js';
 
 const TEST_JPEG =
   '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAAYACgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDeREjjWONQiKAFVRgADsBQiJHGscahEUAKqjAAHYChESONY41CIoAVVGAAOwFCIkcaxxqERQAqqMAAdgK+DbPpAREjjWONQiKAFVRgADsBQiJHGscahEUAKqjAAHYChESONY41CIoAVVGAAOwFCIkcaxxqERQAqqMAAdgKGwBESONY41CIoAVVGAAOwFFCIkcaxxqERQAqqMAAdgKKGMERI41jjUIigBVUYAA7AUIiRxrHGoRFACqowAB2AooouAIiRxrHGoRFACqowAB2AoREjjWONQiKAFVRgADsBRRRcAREjjWONQiKAFVRgADsBRRRSA//2Q==';
@@ -130,6 +131,37 @@ const viele = new Blatt({ titel: 'Umbruch' });
 viele.bilderreihe(Array.from({ length: 30 }, () => testbild), { hoehe: 108 });
 viele.bytes();
 pruef('Viele Bilder brechen auf mehrere Seiten um', viele.seiten.length >= 2, viele.seiten.length + ' Seiten');
+
+
+console.log('Helferstunden');
+const KONTAKTE = [
+  { id: 1, name: 'Onkel Fritz', art: 'helfer' },
+  { id: 2, name: 'Nachbar Klein', art: 'helfer' },
+  { id: 3, name: 'Schwager Ott', art: 'helfer' },
+];
+const TAGE = [
+  { id: 10, datum: '2026-05-02', helfer: [{ id: 1, stunden: 8 }, { id: 2, stunden: 4.5 }] },
+  { id: 11, datum: '2026-05-03', helfer: [{ id: 1, stunden: 6 }] },
+  // Alter Eintrag ohne Stunden: muss lesbar bleiben und mit 0 zaehlen
+  { id: 12, datum: '2026-05-04', helferIds: [1, 3] },
+];
+
+const norm = helferVon(TAGE[2]);
+pruef('Alter Eintrag wird gelesen', norm.length === 2 && norm[0].stunden === 0, JSON.stringify(norm));
+pruef('Neuer Eintrag behaelt die Stunden', helferVon(TAGE[0])[1].stunden === 4.5);
+
+const summe = stundenJeHelfer(TAGE, KONTAKTE);
+const fritz = summe.find((h) => h.name === 'Onkel Fritz');
+const nachbar = summe.find((h) => h.name === 'Nachbar Klein');
+const ott = summe.find((h) => h.name === 'Schwager Ott');
+pruef('Fritz: 8 + 6 + 0 = 14 Stunden', fritz.stunden === 14, 'ist ' + fritz.stunden);
+pruef('Fritz war an 3 Tagen da', fritz.tage === 3, 'ist ' + fritz.tage);
+pruef("Klein: 4,5 Stunden an 1 Tag", nachbar.stunden === 4.5 && nachbar.tage === 1);
+pruef('Ott aus dem alten Eintrag: 0 Stunden, 1 Tag', ott.stunden === 0 && ott.tage === 1);
+pruef('Absteigend nach Stunden sortiert', summe[0].name === 'Onkel Fritz' && summe[summe.length - 1].stunden === 0);
+pruef('Gesamtsumme 18,5', summe.reduce((s, h) => s + h.stunden, 0) === 18.5);
+pruef('Ohne Eintraege leere Liste', stundenJeHelfer([], KONTAKTE).length === 0);
+pruef('Unbekannte id bekommt einen Platzhalter', stundenJeHelfer([{ helfer: [{ id: 99, stunden: 2 }] }], KONTAKTE)[0].name === 'Unbekannt');
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');
 process.exit(fehler ? 1 : 0);
