@@ -48,12 +48,15 @@ jobs:
       - name: Android-Plattform anlegen
         run: npx --yes cap add android
 
+      # Nur Kosmetik: schlaegt der Symbolerzeuger fehl, entsteht trotzdem ein
+      # brauchbares Paket, dann eben mit dem Capacitor-Standardsymbol.
       - name: Symbole und Startbild erzeugen
+        continue-on-error: true
         run: |
           mkdir -p assets
           cp ressourcen/icon.png assets/icon.png
           cp ressourcen/splash.png assets/splash.png
-          npx --yes @capacitor/assets generate --android
+          npx --yes @capacitor/assets@3 generate --android
 
       - name: Web-Dateien übernehmen
         run: npx --yes cap sync android
