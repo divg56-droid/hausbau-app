@@ -7,3 +7,5 @@ dist/
 assets/
 server/daten/geheim.php
 server/daten/bilder/
+deploy.env
+.deploy-stand.json

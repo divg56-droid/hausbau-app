@@ -68,6 +68,66 @@ Stelle geschaffen, an der etwas kaputtgeht. Capacitor-Erweiterungen liegen
 zur Laufzeit unter `Capacitor.Plugins`, deshalb gibt es im Quelltext keine
 Einfuhr von `@capacitor/...`.
 
+## Server und Abgleich
+
+Die App laeuft doppelt: als APK und als Website unter derselben Adresse.
+
+    hausbauatlas.de/             Astro-Seite, Ratgeber, Rechner
+    hausbauatlas.de/app/         dieselbe App wie im APK
+    hausbauatlas.de/app/api/     PHP fuer Konto und Abgleich
+
+Im Quelltext steht kein absoluter Pfad, und die Navigation laeuft ueber den
+Adress-Anker. Deshalb laeuft derselbe Ordner `www/` unveraendert im Paket wie
+unter einem Unterpfad.
+
+### Hochladen
+
+    python deploy.py             nur was sich geaendert hat
+    python deploy.py --alles     alles neu
+    python deploy.py --nur-web   nur www/
+    python deploy.py --nur-api   nur server/
+    python deploy.py --geheim    zusaetzlich server/daten/geheim.php
+    python deploy.py --pruefen   nur nachsehen, was live ist
+
+Zugangsdaten in `deploy.env`, Vorlage daneben. Dieselben Werte wie in
+`hausbauatlas/.env`, es ist derselbe Server.
+
+Zwei Dinge gehen nie von allein hoch: `server/daten/geheim.php` mit den
+Zugangsdaten der Datenbank, und `server/daten/bilder/` mit den hochgeladenen
+Fotos. Die gehoeren dem Server, ein Deploy darf sie nicht anfassen.
+
+Nach dem Hochladen prueft das Skript von selbst, ob die App antwortet, ob PHP
+laeuft und ob `geheim.php` gesperrt ist.
+
+### Einmalig einrichten
+
+1. `server/daten/geheim.beispiel.php` als `geheim.php` kopieren und ausfuellen
+2. `python deploy.py` und danach `python deploy.py --geheim`
+3. `https://hausbauatlas.de/app/api/einrichten.php?schluessel=...` einmal aufrufen
+
+Der dritte Schritt legt die Tabellen an und laesst sich gefahrlos wiederholen.
+
+### Wie der Abgleich funktioniert
+
+Ein Aufruf schickt, was sich auf dem Geraet geaendert hat, und bekommt
+zurueck, was sich auf dem Server geaendert hat. Je Datensatz gewinnt der
+neuere Zeitpunkt.
+
+Alle Sachdaten liegen serverseitig in einer Tabelle als JSON, daneben Kennung,
+Zeitpunkt und Loeschmarke als Spalten. Eine Tabelle je Bereich hiesse: jedes
+neue Feld in der App zieht eine Wanderung auf dem Server nach sich.
+
+Fotos laufen ueber eine eigene Schnittstelle und liegen als Dateien neben der
+Datenbank, in einem per `.htaccess` gesperrten Verzeichnis. Ausgeliefert
+werden sie nur ueber `bild.php`, und nur an den Eigentuemer.
+
+Die Anmeldung laeuft ueber eine Marke im Anfragekopf statt ueber ein
+Plaetzchen: Die App laeuft unter der Herkunft `https://localhost` und spricht
+mit hausbauatlas.de; ein Plaetzchen waere dort fremd. In der Datenbank steht
+die Marke nur als Pruefsumme.
+
+    python server/test_api.py    20 Pruefungen gegen einen laufenden Server
+
 ## Entwickeln
 
     npm install
