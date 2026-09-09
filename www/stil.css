@@ -1,0 +1,270 @@
+/* Farben und Schriften von hausbauatlas.de, damit App und Seite zusammengehoeren.
+   Systemschrift statt Webfont: spart Platz im APK und startet ohne Nachladen. */
+:root {
+  --papier: #f7f5f1;
+  --karte: #ffffff;
+  --tinte: #23272b;
+  --tinte-leise: #5f6772;
+  --akzent: #e8a020;
+  --akzent-dunkel: #8a5a08;
+  --linie: #ddd8cf;
+  --band: #efece5;
+  --gut: #2e7d4f;
+  --warn: #b3261e;
+  --kopf-hoehe: 56px;
+  --schrift: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+/* Muss vor allem anderen stehen und !important tragen: die Regeln fuer
+   #kopf .zurueck setzen display, und eine ID schlaegt das browsereigene
+   [hidden] { display: none } jedes Mal. */
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--papier); color: var(--tinte);
+  font-family: var(--schrift); font-size: 16px; line-height: 1.5;
+  overscroll-behavior-y: none;
+}
+
+/* Statusleiste des Telefons nicht ueberdecken. */
+body { padding-top: env(safe-area-inset-top); }
+
+h1 { font-size: 24px; line-height: 1.2; margin: 0 0 4px; font-weight: 700; }
+h2 { font-size: 18px; margin: 0 0 10px; font-weight: 700; }
+h3 { font-size: 15px; margin: 0 0 6px; font-weight: 600; }
+p { margin: 0 0 12px; }
+a { color: var(--akzent-dunkel); }
+
+/* --------------------------------------------------------------- Grundgeruest */
+
+#kopf {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 4px;
+  height: var(--kopf-hoehe); padding: 0 8px;
+  background: var(--karte); border-bottom: 1px solid var(--linie);
+}
+#kopf .zurueck {
+  width: 44px; height: 44px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  border: none; background: none; color: var(--tinte);
+  font-size: 26px; line-height: 1; cursor: pointer; border-radius: 8px;
+}
+#kopf .zurueck:active { background: var(--band); }
+#kopf .titel {
+  font-weight: 700; font-size: 17px; flex: 1;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#kopf .kopf-aktion {
+  min-width: 44px; height: 44px; padding: 0 12px; flex: none;
+  border: none; background: none; color: var(--akzent-dunkel);
+  font: inherit; font-weight: 600; cursor: pointer; border-radius: 8px;
+}
+
+#inhalt {
+  padding: 16px;
+  padding-bottom: calc(32px + env(safe-area-inset-bottom));
+  max-width: 720px; margin: 0 auto;
+}
+
+.seitenkopf { margin-bottom: 16px; }
+.unterzeile { color: var(--tinte-leise); font-size: 14px; margin: 0; }
+
+.karte {
+  background: var(--karte); border: 1px solid var(--linie);
+  border-radius: 12px; padding: 16px; margin-bottom: 14px;
+}
+
+/* ------------------------------------------------------------------ Startseite */
+
+.kachelgitter { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 340px) { .kachelgitter { grid-template-columns: 1fr; } }
+
+.kachel {
+  display: flex; flex-direction: column; gap: 4px;
+  min-height: 104px; padding: 14px;
+  background: var(--karte); border: 1px solid var(--linie); border-radius: 12px;
+  text-align: left; text-decoration: none; color: var(--tinte);
+  font: inherit; cursor: pointer;
+}
+.kachel:active { background: var(--band); }
+.kachel .kachel-zeichen { font-size: 22px; line-height: 1; }
+.kachel .kachel-titel { font-weight: 700; font-size: 15px; }
+.kachel .kachel-text { font-size: 12.5px; color: var(--tinte-leise); line-height: 1.35; }
+
+/* ------------------------------------------------------------------ Formulare */
+
+.feld { display: block; margin-bottom: 14px; }
+.feld-name { display: block; font-size: 13px; font-weight: 600; color: var(--tinte-leise); margin-bottom: 5px; }
+.feld-hinweis { display: block; font-size: 12px; color: var(--tinte-leise); margin-top: 4px; }
+
+input[type="text"], input[type="date"], input[type="email"], input[type="tel"],
+input[type="number"], select, textarea {
+  width: 100%; font: inherit; font-size: 16px;
+  min-height: 48px; padding: 11px 12px;
+  border: 1px solid var(--linie); border-radius: 8px;
+  background: var(--karte); color: var(--tinte);
+}
+textarea { min-height: 88px; resize: vertical; line-height: 1.45; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--akzent); outline-offset: -1px; }
+
+input[type="range"] { width: 100%; height: 44px; accent-color: var(--akzent); }
+input[type="checkbox"] { width: 22px; height: 22px; min-height: 0; accent-color: var(--akzent); }
+
+.knopf, .knopf-haupt, .knopf-leise, .knopf-warn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 48px; padding: 12px 18px; width: 100%;
+  font: inherit; font-weight: 700; font-size: 15px;
+  border-radius: 8px; border: 1px solid var(--linie);
+  background: var(--karte); color: var(--tinte); cursor: pointer;
+}
+.knopf-haupt { background: var(--akzent); border-color: var(--akzent); color: #fff; }
+.knopf-haupt:active { background: var(--akzent-dunkel); border-color: var(--akzent-dunkel); }
+.knopf-leise { background: none; border-color: transparent; color: var(--akzent-dunkel); font-weight: 600; }
+.knopf-warn { color: var(--warn); border-color: var(--linie); }
+.knopf:active, .knopf-warn:active { background: var(--band); }
+
+/* Einzeln untereinander stehende Knoepfe brauchen Luft; in einer Reihe
+   uebernimmt das gap den Abstand, dort stoert der Rand. */
+.knopf, .knopf-haupt, .knopf-leise, .knopf-warn { margin-bottom: 10px; }
+.knopf-reihe { display: flex; gap: 10px; margin-bottom: 10px; }
+.knopf-reihe > * { flex: 1; margin-bottom: 0; }
+.karte > .knopf:last-child, .karte > .knopf-haupt:last-child,
+.karte > .knopf-leise:last-child, .karte > .knopf-warn:last-child { margin-bottom: 0; }
+.knopf-schmal { width: auto; }
+
+/* -------------------------------------------------------------------- Listen */
+
+.liste { list-style: none; margin: 0; padding: 0; }
+.listenzeile {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--linie);
+  text-align: left; width: 100%; background: none;
+  border-left: 0; border-right: 0; border-top: 0;
+  font: inherit; color: var(--tinte); cursor: pointer; min-height: 56px;
+}
+.listenzeile:last-child { border-bottom: none; }
+.listenzeile .zeilen-text { flex: 1; min-width: 0; }
+.listenzeile .zeilen-titel { font-weight: 600; display: block; }
+.listenzeile .zeilen-unter { font-size: 13px; color: var(--tinte-leise); display: block; }
+.listenzeile .zeilen-wert { font-weight: 700; white-space: nowrap; }
+.listenzeile .vorschau {
+  width: 48px; height: 48px; flex: none; border-radius: 8px;
+  object-fit: cover; background: var(--band);
+}
+
+.wertzeile {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 9px 0; border-bottom: 1px solid var(--linie); font-size: 15px;
+}
+.wertzeile:last-child { border-bottom: none; }
+.wertzeile.stark { font-size: 17px; padding-top: 12px; }
+.wertzeile.stark strong { color: var(--akzent-dunkel); }
+
+/* -------------------------------------------------------------------- Kaesten */
+
+.kasten { border-radius: 8px; padding: 12px 14px; font-size: 14px; margin: 0 0 14px; }
+.kasten-info { background: var(--band); }
+.kasten-warn { background: #fdecea; color: #7f1d1a; }
+.kasten-gut { background: #e6f4ec; color: #1e5c39; }
+
+.leer { text-align: center; padding: 28px 12px; color: var(--tinte-leise); }
+.leer h2 { color: var(--tinte); }
+
+.marke {
+  display: inline-block; padding: 3px 9px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; background: var(--band); color: var(--tinte-leise);
+}
+.marke-offen { background: #fdecea; color: #9b2c22; }
+.marke-arbeit { background: #fff4de; color: #8a5a08; }
+.marke-fertig { background: #e6f4ec; color: #1e5c39; }
+
+/* -------------------------------------------------------------------- Tabelle */
+
+.tabellenrahmen { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--linie); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--tinte-leise); }
+tr.bindung td { background: var(--band); font-weight: 700; }
+
+/* ---------------------------------------------------------------- Anschlussplan */
+
+.planflaeche {
+  position: relative; width: 100%; overflow: hidden;
+  border: 1px solid var(--linie); border-radius: 10px; background: var(--band);
+  touch-action: none;
+}
+.planflaeche img { display: block; width: 100%; user-select: none; -webkit-user-drag: none; }
+.pin {
+  position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px;
+  border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+  border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4);
+  display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+}
+.pin span { transform: rotate(45deg); font-size: 14px; line-height: 1; }
+.pin.gewaehlt { outline: 3px solid var(--akzent); outline-offset: 2px; }
+
+.geschossleiste { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px; }
+.geschossleiste button {
+  flex: none; min-height: 40px; padding: 8px 14px;
+  font: inherit; font-weight: 600; font-size: 14px;
+  border: 1px solid var(--linie); border-radius: 999px;
+  background: var(--karte); color: var(--tinte); cursor: pointer;
+}
+.geschossleiste button.aktiv { background: var(--akzent); border-color: var(--akzent); color: #fff; }
+
+/* ---------------------------------------------------------------------- Fotos */
+
+.fotoreihe { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.fotoreihe figure { position: relative; margin: 0; }
+.fotoreihe img { width: 84px; height: 84px; object-fit: cover; border-radius: 8px; border: 1px solid var(--linie); }
+.fotoreihe .weg {
+  position: absolute; top: -6px; right: -6px; width: 26px; height: 26px;
+  border-radius: 50%; border: 1px solid var(--linie); background: var(--karte);
+  font-size: 15px; line-height: 1; cursor: pointer; padding: 0;
+}
+.grossbild { width: 100%; border-radius: 10px; border: 1px solid var(--linie); display: block; margin-bottom: 12px; }
+
+/* Der Dateiwaehler haengt an einem Knopf, das Feld selbst bleibt unsichtbar. */
+.versteckt { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+/* ------------------------------------------------------------------- Diagramm */
+
+.balkenblock { display: flex; align-items: flex-end; gap: 2px; height: 120px; margin: 12px 0 6px; }
+.balkenblock .saeule { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
+.balkenblock .anteil-zins { background: var(--akzent); }
+.balkenblock .anteil-tilg { background: var(--akzent-dunkel); }
+.legende { display: flex; gap: 16px; font-size: 12.5px; color: var(--tinte-leise); }
+.legende i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; }
+
+.fortschrittsbalken { height: 10px; border-radius: 5px; background: var(--band); overflow: hidden; margin: 8px 0; }
+.fortschrittsbalken div { height: 100%; background: var(--akzent); }
+
+/* ------------------------------------------------------------------- Meldungen */
+
+.meldung {
+  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
+  background: var(--tinte); color: #fff; padding: 11px 18px; border-radius: 999px;
+  font-size: 14px; z-index: 60; max-width: 90vw; text-align: center;
+  transition: opacity 350ms ease;
+}
+.meldung.weg { opacity: 0; }
+
+/* --------------------------------------------------------------------- Dialog */
+
+.ueberlagerung {
+  position: fixed; inset: 0; z-index: 50; background: rgba(20,22,26,.55);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.blatt {
+  background: var(--papier); width: 100%; max-width: 720px;
+  max-height: 92vh; overflow-y: auto;
+  border-radius: 16px 16px 0 0;
+  padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+}
+.blatt h2 { margin-bottom: 14px; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

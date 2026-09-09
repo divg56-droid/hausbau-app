@@ -1,0 +1,74 @@
+"""Erzeugt App-Symbol und Startbild.
+
+    python ressourcen/symbol.py
+
+Schreibt ressourcen/icon.png und ressourcen/splash.png. Daraus macht
+@capacitor/assets im CI die Android-Groessen. Das Motiv ist ein Haus mit
+Giebel in Kranbau-Gelb auf dem Papierton der Website - dieselbe Marke wie
+hausbauatlas.de, damit man die App im Startmenue wiedererkennt.
+"""
+import pathlib
+from PIL import Image, ImageDraw
+
+HIER = pathlib.Path(__file__).parent
+PAPIER = (247, 245, 241)
+TINTE = (35, 39, 43)
+AKZENT = (232, 160, 32)
+
+
+def haus(bild: Image.Image, mitte: tuple[int, int], groesse: int) -> None:
+    """Zeichnet das Hauszeichen mittig, groesse ist die Breite der Fassade."""
+    stift = ImageDraw.Draw(bild)
+    mx, my = mitte
+    b = groesse
+    h = int(b * 0.62)          # Hoehe der Fassade
+    dach = int(b * 0.46)       # Hoehe des Giebels
+    strich = max(6, b // 14)
+
+    oben = my - (h + dach) // 2
+    links = mx - b // 2
+    rechts = mx + b // 2
+    unten = oben + dach + h
+
+    # Giebel als gefuellte Flaeche, Fassade als Umriss: so bleibt das Zeichen
+    # auch klein noch lesbar.
+    stift.polygon(
+        [(links - strich, oben + dach), (mx, oben), (rechts + strich, oben + dach)],
+        fill=AKZENT,
+    )
+    stift.rectangle(
+        [links, oben + dach, rechts, unten],
+        outline=TINTE, width=strich,
+    )
+
+    # Tuer
+    tb = int(b * 0.26)
+    th = int(h * 0.55)
+    stift.rectangle(
+        [mx - tb // 2, unten - th, mx + tb // 2, unten],
+        fill=TINTE,
+    )
+
+    # Zwei Fenster
+    fb = int(b * 0.17)
+    fy = oben + dach + int(h * 0.18)
+    for fx in (links + int(b * 0.16), rechts - int(b * 0.16) - fb):
+        stift.rectangle([fx, fy, fx + fb, fy + fb], fill=AKZENT)
+
+
+def symbol(kante: int, ziel: str, rand_faktor: float, hintergrund) -> None:
+    bild = Image.new("RGB", (kante, kante), hintergrund)
+    haus(bild, (kante // 2, kante // 2), int(kante * rand_faktor))
+    bild.save(HIER / ziel)
+    print(f"  {ziel}  {kante}x{kante}")
+
+
+if __name__ == "__main__":
+    # Android beschneidet adaptive Symbole kreisfoermig; deshalb nur 52 Prozent
+    # der Kante belegen, sonst wird der Giebel abgeschnitten.
+    symbol(1024, "icon.png", 0.52, PAPIER)
+    # Startbild: dasselbe Zeichen klein auf grosser Flaeche.
+    splash = Image.new("RGB", (2732, 2732), PAPIER)
+    haus(splash, (1366, 1366), 620)
+    splash.save(HIER / "splash.png")
+    print("  splash.png  2732x2732")

@@ -1,0 +1,90 @@
+# Baut das Android-Paket und haengt es an eine Veroeffentlichung.
+#
+# Warum im CI und nicht lokal: Der Ubuntu-Laeufer von GitHub bringt JDK und
+# Android-SDK bereits mit. Damit muss auf keinem Arbeitsrechner ein Android
+# Studio installiert werden, und der Bau laeuft bei jedem gleich ab.
+#
+# Der Ordner android/ ist bewusst nicht im Repository. Er wird bei jedem Lauf
+# frisch aus capacitor.config.json erzeugt; so kann er nicht veralten.
+name: APK bauen
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk
+  cancel-in-progress: true
+
+jobs:
+  bauen:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Abhängigkeiten
+        run: npm ci
+
+      - name: Rechenkerne prüfen
+        run: node test.mjs
+
+      # Erst die Android-Plattform anlegen, dann Symbole erzeugen: der
+      # Symbolerzeuger schreibt in android/app/src/main/res.
+      - name: Android-Plattform anlegen
+        run: npx --yes cap add android
+
+      - name: Symbole und Startbild erzeugen
+        run: |
+          mkdir -p assets
+          cp ressourcen/icon.png assets/icon.png
+          cp ressourcen/splash.png assets/splash.png
+          npx --yes @capacitor/assets generate --android
+
+      - name: Web-Dateien übernehmen
+        run: npx --yes cap sync android
+
+      - name: APK bauen
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Umbenennen
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk \
+             hausbau-app-${{ github.run_number }}.apk
+          ls -la hausbau-app-*.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hausbau-app-apk
+          path: hausbau-app-*.apk
+          retention-days: 30
+
+      # Veroeffentlichung mit fester Marke: Der Link bleibt gleich, der Inhalt
+      # wird ersetzt. So muss auf dem Telefon nur ein Lesezeichen bestehen.
+      - name: Zum Herunterladen bereitstellen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete test --yes --cleanup-tag || true
+          gh release create test \
+            --title "Hausbau App - Testversion" \
+            --notes "Build ${{ github.run_number }} vom $(date +%d.%m.%Y). Debug-Paket zum Ausprobieren, nicht für den Play Store signiert. Zum Installieren auf dem Telefon unter Einstellungen die Installation aus unbekannten Quellen für den Browser erlauben." \
+            --prerelease \
+            hausbau-app-${{ github.run_number }}.apk
