@@ -7,12 +7,18 @@
 import { baukosten, pruefe } from './www/module/baukosten.js';
 import { annuitaet } from './www/module/finanzierung.js';
 import { simuliere } from './www/module/tilgung.js';
-import { terminePlanen } from './www/module/ablauf.js';
+import { terminePlanen, balkenPlan, tageZwischen } from './www/module/ablauf.js';
 import { Blatt } from './www/pdf.js';
 import { zuZahl } from './www/hilfen.js';
 import { neueKennung, umschreiben } from './www/daten.js';
 import { postenRechnen } from './www/module/baukasse.js';
 import { helferVon, stundenJeHelfer } from './www/module/tagebuch.js';
+import { angeboteRechnen } from './www/module/angebote.js';
+import { csvText, zelle } from './www/csv.js';
+import {
+  KOSTENGRUPPEN, kostengruppeName, kostengruppeLang, hauptgruppe,
+  kostengruppenOptionen, kostengruppeVorschlag, nachHauptgruppen,
+} from './www/din276.js';
 
 const TEST_JPEG =
   '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAAYACgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDeREjjWONQiKAFVRgADsBQiJHGscahEUAKqjAAHYChESONY41CIoAVVGAAOwFCIkcaxxqERQAqqMAAdgK+DbPpAREjjWONQiKAFVRgADsBQiJHGscahEUAKqjAAHYChESONY41CIoAVVGAAOwFCIkcaxxqERQAqqMAAdgKGwBESONY41CIoAVVGAAOwFFCIkcaxxqERQAqqMAAdgKKGMERI41jjUIigBVUYAA7AUIiRxrHGoRFACqowAB2AooouAIiRxrHGoRFACqowAB2AoREjjWONQiKAFVRgADsBRRRcAREjjWONQiKAFVRgADsBRRRSA//2Q==';
@@ -255,6 +261,202 @@ pruef('leerer Posten stuerzt nicht ab', p.differenz === 0 && p.massgeblich === 0
 // Bezahlt ohne feste Summe: Plan gilt als Massstab
 p = postenRechnen({ id:'a', geplant:5000, tatsaechlich:0, status:'geplant' }, [B('a', 5000)]);
 pruef('ohne Auftragssumme misst sich Bezahltes am Plan', p.statusName === 'Bezahlt');
+
+// ---------------------------------------------------------------- Balkenplan
+
+console.log('Balkenplan');
+{
+  const kette = terminePlanen([
+    { id: 'a', titel: 'A', dauer: 5, start: '2026-03-02', vorgaengerId: null, status: 'fertig' },
+    { id: 'b', titel: 'B', dauer: 3, start: null, vorgaengerId: 'a', status: 'laeuft' },
+    { id: 'c', titel: 'C', dauer: 2, start: null, vorgaengerId: 'b', status: 'offen' },
+  ]);
+  const plan = balkenPlan(kette);
+
+  pruef('Achse beginnt am fruehesten Start', plan.von === '2026-03-02', 'ist ' + plan.von);
+  pruef('Achse endet am spaetesten Ende', plan.bis === '2026-03-11', 'ist ' + plan.bis);
+  pruef('Achse ist 10 Tage lang', plan.tage === 10, 'ist ' + plan.tage);
+  pruef('A liegt am Anfang', plan.zeilen[0].ab === 0 && plan.zeilen[0].dauer === 5,
+    plan.zeilen[0].ab + '/' + plan.zeilen[0].dauer);
+  pruef('B schliesst luecklos an A an', plan.zeilen[1].ab === 5 && plan.zeilen[1].dauer === 3,
+    plan.zeilen[1].ab + '/' + plan.zeilen[1].dauer);
+  pruef('C endet genau auf der Achse',
+    plan.zeilen[2].ab + plan.zeilen[2].dauer === plan.tage,
+    plan.zeilen[2].ab + '+' + plan.zeilen[2].dauer);
+  pruef('Status wandert in die Zeile', plan.zeilen[0].status === 'fertig');
+
+  // Aufgaben ohne Termin duerfen nicht stillschweigend verschwinden.
+  const gemischt = balkenPlan([
+    ...kette,
+    { id: 'd', titel: 'Ohne', dauer: 4, start: null, ende: null },
+  ]);
+  pruef('Aufgabe ohne Termin wird gesondert gemeldet',
+    gemischt.ohneTermin.length === 1 && gemischt.zeilen.length === 3,
+    gemischt.ohneTermin.length + '/' + gemischt.zeilen.length);
+
+  const leer = balkenPlan([{ id: 'x', titel: 'X', dauer: 3, start: null, ende: null }]);
+  pruef('Ganz ohne Termine bleibt der Plan leer statt zu werfen',
+    leer.tage === 0 && leer.zeilen.length === 0 && leer.ohneTermin.length === 1);
+}
+
+console.log('Monatsraster');
+{
+  // Ueber drei Monate, Beginn mitten im Januar. Der erste Abschnitt muss am
+  // Planbeginn ansetzen, nicht am Monatsersten - sonst laege er ausserhalb.
+  const lang = balkenPlan(terminePlanen([
+    { id: 'a', titel: 'Lang', dauer: 60, start: '2026-01-20', vorgaengerId: null },
+  ]));
+  pruef('60 Tage ab 20.01. enden am 20.03.', lang.bis === '2026-03-20', 'ist ' + lang.bis);
+  pruef('Drei Monatsabschnitte', lang.monate.length === 3, 'sind ' + lang.monate.length);
+  pruef('Erster Abschnitt beginnt bei null', lang.monate[0].ab === 0);
+  pruef('Januar deckt 12 Tage ab', lang.monate[0].tage === 12, 'sind ' + lang.monate[0].tage);
+  pruef('Februar 2026 hat 28 Tage', lang.monate[1].tage === 28, 'sind ' + lang.monate[1].tage);
+  pruef('Die Abschnitte fuellen die Achse ohne Luecke',
+    lang.monate.reduce((sum, m) => sum + m.tage, 0) === lang.tage,
+    lang.monate.reduce((sum, m) => sum + m.tage, 0) + ' statt ' + lang.tage);
+  pruef('Jeder Abschnitt schliesst an den vorigen an',
+    lang.monate.every((m, i) => i === 0 || m.ab === lang.monate[i - 1].ab + lang.monate[i - 1].tage));
+
+  // Jahreswechsel: der haeufigste Fall, in dem eine Monatsrechnung kippt.
+  const ueberJahr = balkenPlan(terminePlanen([
+    { id: 'a', titel: 'Jahreswechsel', dauer: 40, start: '2026-12-15', vorgaengerId: null },
+  ]));
+  pruef('40 Tage ab 15.12.2026 enden am 23.01.2027',
+    ueberJahr.bis === '2027-01-23', 'ist ' + ueberJahr.bis);
+  pruef('Zwei Abschnitte ueber den Jahreswechsel', ueberJahr.monate.length === 2);
+  pruef('Das Jahr wandert mit', ueberJahr.monate[1].jahr === 2027, 'ist ' + ueberJahr.monate[1].jahr);
+}
+
+console.log('Tage zwischen zwei Daten');
+pruef('Ueber die Sommerzeitumstellung stimmt die Zahl',
+  tageZwischen('2026-03-28', '2026-03-30') === 2,
+  'ist ' + tageZwischen('2026-03-28', '2026-03-30'));
+pruef('Ueber die Winterzeitumstellung stimmt die Zahl',
+  tageZwischen('2026-10-24', '2026-10-26') === 2,
+  'ist ' + tageZwischen('2026-10-24', '2026-10-26'));
+pruef('Derselbe Tag ergibt null', tageZwischen('2026-05-05', '2026-05-05') === 0);
+
+// ------------------------------------------------------------ Angebotsvergleich
+
+console.log('Angebotsvergleich');
+{
+  const drei = [
+    { id: '1', betrag: 10000, status: 'offen' },
+    { id: '2', betrag: 12000, status: 'offen' },
+    { id: '3', betrag: 15000, status: 'offen' },
+  ];
+  const r = angeboteRechnen(drei);
+  pruef('Drei Angebote zaehlen mit', r.anzahl === 3, 'sind ' + r.anzahl);
+  pruef('Guenstigstes ist 10.000', r.guenstigstes.betrag === 10000);
+  pruef('Teuerstes ist 15.000', r.teuerstes.betrag === 15000);
+  pruef('Spanne 5.000', r.spanne === 5000, 'ist ' + r.spanne);
+  pruef('Spanne 50 Prozent ueber dem guenstigsten', r.spanneProzent === 50, 'ist ' + r.spanneProzent);
+
+  // Abgelehnte duerfen die Spanne nicht mehr aufblaehen.
+  const ohneAusreisser = angeboteRechnen([
+    ...drei.slice(0, 2), { id: '3', betrag: 15000, status: 'abgelehnt' },
+  ]);
+  pruef('Abgelehntes zaehlt nicht mehr mit', ohneAusreisser.anzahl === 2, 'sind ' + ohneAusreisser.anzahl);
+  pruef('Spanne ohne Ausreisser 2.000', ohneAusreisser.spanne === 2000, 'ist ' + ohneAusreisser.spanne);
+
+  const beauftragt = angeboteRechnen([
+    { id: '1', betrag: 10000, status: 'offen' },
+    { id: '2', betrag: 12000, status: 'beauftragt' },
+    { id: '3', betrag: 15000, status: 'offen' },
+  ]);
+  pruef('Beauftragtes wird erkannt', beauftragt.beauftragt.betrag === 12000);
+  pruef('Ersparnis gegen das teuerste Angebot', beauftragt.ersparnis === 3000, 'ist ' + beauftragt.ersparnis);
+
+  const leer = angeboteRechnen([]);
+  pruef('Ohne Angebote wird nicht gerechnet',
+    leer.anzahl === 0 && leer.guenstigstes === null && leer.spanne === 0);
+  const nurNullen = angeboteRechnen([{ id: '1', betrag: 0, status: 'offen' }]);
+  pruef('Ein Angebot ueber null zaehlt nicht', nurNullen.anzahl === 0);
+  const eines = angeboteRechnen([{ id: '1', betrag: 8000, status: 'offen' }]);
+  pruef('Ein einzelnes Angebot hat keine Spanne', eines.anzahl === 1 && eines.spanne === 0);
+}
+
+// ------------------------------------------------------------------- CSV
+
+console.log('CSV');
+pruef('Zahlen bekommen ein Komma', zelle(1250.5) === '1250,5', 'ist ' + zelle(1250.5));
+pruef('Ganze Zahlen bleiben ganz', zelle(1250) === '1250');
+pruef('Leeres bleibt leer', zelle(null) === '' && zelle(undefined) === '');
+pruef('Harmloser Text bleibt ohne Anfuehrungszeichen', zelle('Rohbau') === 'Rohbau');
+pruef('Semikolon im Text wird eingefasst',
+  zelle('Rohbau; Keller') === '"Rohbau; Keller"', 'ist ' + zelle('Rohbau; Keller'));
+pruef('Anfuehrungszeichen werden verdoppelt',
+  zelle('Er sagte "ja" dazu') === '"Er sagte ""ja"" dazu"',
+  'ist ' + zelle('Er sagte "ja" dazu'));
+pruef('Zeilenumbruch wird eingefasst', zelle('a\nb') === '"a\nb"');
+{
+  const text = csvText(['Position', 'Betrag'], [['Rohbau', 120000.5]]);
+  pruef('Datei beginnt mit der Bytefolge fuer Excel', text.charCodeAt(0) === 0xfeff);
+  pruef('Semikolon trennt die Spalten', text.includes('Position;Betrag'));
+  pruef('Zeilen enden mit CRLF', text.includes('\r\n') && text.endsWith('\r\n'));
+  pruef('Der Betrag steht mit Komma', text.includes('Rohbau;120000,5'));
+}
+
+// ---------------------------------------------------------------- DIN 276
+
+console.log('DIN 276');
+{
+  const alle = KOSTENGRUPPEN.flatMap((h) => [h.nr, ...h.unter.map((u) => u.nr)]);
+  pruef('Keine Nummer kommt doppelt vor', new Set(alle).size === alle.length,
+    alle.length - new Set(alle).size + ' doppelt');
+  pruef('Acht Hauptgruppen, 100 bis 800', KOSTENGRUPPEN.length === 8,
+    'sind ' + KOSTENGRUPPEN.length);
+  pruef('Die Finanzierung ist als 800 dabei',
+    KOSTENGRUPPEN.some((h) => h.nr === '800' && h.name === 'Finanzierung'));
+  pruef('Jede Untergruppe gehoert zu ihrer Hauptgruppe',
+    KOSTENGRUPPEN.every((h) => h.unter.every((u) => hauptgruppe(u.nr) === h.nr)));
+  pruef('770 und 780 gibt es nicht', kostengruppeName('770') === '' && kostengruppeName('780') === '');
+  pruef('790 gibt es', kostengruppeName('790') === 'Sonstige Baunebenkosten');
+  pruef('Lange Form nennt Nummer und Namen',
+    kostengruppeLang('330') === '330 Außenwände', 'ist ' + kostengruppeLang('330'));
+  pruef('Unbekannte Nummer ergibt leeren Text', kostengruppeLang('999') === '');
+  pruef('Die Auswahlliste enthaelt alle Gruppen plus den Leereintrag',
+    kostengruppenOptionen().length === alle.length + 1);
+}
+
+console.log('Kostengruppen-Vorschlag');
+pruef('Elektro landet bei 440', kostengruppeVorschlag('Elektroinstallation', 'Elektro') === '440',
+  'ist ' + kostengruppeVorschlag('Elektroinstallation', 'Elektro'));
+pruef('Heizung landet bei 420', kostengruppeVorschlag('Heizung', 'Heizung') === '420');
+pruef('Dachdeckung landet bei 360', kostengruppeVorschlag('Dachstuhl und Dachdeckung', 'Dach') === '360');
+pruef('Notar landet bei 120', kostengruppeVorschlag('Notar und Grundbuch', 'Sonstiges') === '120');
+pruef('Grundstueck landet bei 110', kostengruppeVorschlag('Grundstück', 'Sonstiges') === '110');
+pruef('Architekt landet bei 730', kostengruppeVorschlag('Architektenhonorar', 'Sonstiges') === '730');
+pruef('Zinsen landen in der Finanzierung', kostengruppeVorschlag('Bereitstellungszinsen', '') === '820');
+pruef('Ohne Treffer bleibt der Vorschlag leer', kostengruppeVorschlag('Zirkuszelt', '') === '');
+pruef('Jeder Vorschlag ist eine echte Kostengruppe',
+  ['Elektroinstallation', 'Heizung', 'Estrich', 'Küche', 'Außenanlagen', 'Baugenehmigung',
+   'Bodenplatte oder Keller', 'Vermessung', 'Puffer für Unvorhergesehenes']
+    .every((n) => kostengruppeName(kostengruppeVorschlag(n, '')) !== ''));
+
+console.log('Zusammenfassung nach Hauptgruppen');
+{
+  const gruppen = nachHauptgruppen(
+    [
+      { kostengruppe: '330', betrag: 100 },
+      { kostengruppe: '360', betrag: 50 },
+      { kostengruppe: '440', betrag: 30 },
+      { betrag: 7 },
+    ],
+    (x) => x.betrag
+  );
+  const dreihundert = gruppen.find((g) => g.nr === '300');
+  pruef('330 und 360 fallen in dieselbe Hauptgruppe',
+    dreihundert.summe === 150 && dreihundert.saetze.length === 2,
+    dreihundert.summe + '/' + dreihundert.saetze.length);
+  pruef('Unzugeordnetes bekommt einen eigenen Korb',
+    gruppen.some((g) => g.nr === '' && g.summe === 7));
+  pruef('Unzugeordnetes steht am Ende', gruppen[gruppen.length - 1].nr === '');
+  pruef('Die Hauptgruppen stehen aufsteigend',
+    gruppen.filter((g) => g.nr).every((g, i, f) => i === 0 || f[i - 1].nr < g.nr));
+  pruef('Nichts geht verloren',
+    gruppen.reduce((sum, g) => sum + g.summe, 0) === 187);
+}
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');
 process.exit(fehler ? 1 : 0);

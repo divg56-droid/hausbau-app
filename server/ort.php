@@ -19,7 +19,7 @@ require __DIR__ . '/_start.php';
  */
 
 const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
-const KENNUNG = 'HausbauApp/1.0 (+https://hausbauatlas.de/app/)';
+const KENNUNG = 'Bauzeuge/1.0 (+https://www.bauzeuge.de/app/)';
 
 // Wie viele neue Orte darf eine Adresse in der Stunde nachschlagen? Aus dem
 // Zwischenspeicher bedient werden beliebig viele.

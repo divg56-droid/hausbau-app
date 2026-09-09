@@ -25,6 +25,10 @@ export const MODULE = [
     text: 'Budget, Rechnungen und Restbudget im Blick behalten.',
   },
   {
+    weg: 'angebote', zeichen: '\u{1F4C4}', titel: 'Angebote',
+    text: 'Mehrere Angebote je Gewerk nebeneinander legen und vergleichen.',
+  },
+  {
     weg: 'raeume', zeichen: '\u{1F6CB}', titel: 'Räume',
     text: 'Jeder Raum mit Fotos, Mängeln und dem, was er gekostet hat.',
   },
@@ -66,7 +70,7 @@ const inhalt = document.getElementById('inhalt');
 // Die Kopfzeile gehoert dem Gehaeuse. Module melden hier an, was rechts oben
 // stehen soll, statt sich eine eigene Leiste zu bauen.
 export function setzeKopf({ titel, aktion }) {
-  kopftitel.textContent = titel || 'Hausbau App';
+  kopftitel.textContent = titel || 'Bauzeuge';
   kopfaktion.hidden = !aktion;
   if (aktion) {
     kopfaktion.textContent = aktion.text;
@@ -84,7 +88,7 @@ zurueckKnopf.addEventListener('click', () => {
 });
 
 function startseite() {
-  setzeKopf({ titel: 'Hausbau App' });
+  setzeKopf({ titel: 'Bauzeuge' });
   zurueckKnopf.hidden = true;
 
   inhalt.append(

@@ -96,13 +96,13 @@ jobs:
       - name: Umbenennen
         run: |
           cp android/app/build/outputs/apk/debug/app-debug.apk \
-             hausbau-app-${{ github.run_number }}.apk
-          ls -la hausbau-app-*.apk
+             bauzeuge-${{ github.run_number }}.apk
+          ls -la bauzeuge-*.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: hausbau-app-apk
-          path: hausbau-app-*.apk
+          name: bauzeuge-apk
+          path: bauzeuge-*.apk
           retention-days: 30
 
       # Veroeffentlichung mit fester Marke: Der Link bleibt gleich, der Inhalt
@@ -113,7 +113,7 @@ jobs:
         run: |
           gh release delete test --yes --cleanup-tag || true
           gh release create test \
-            --title "Hausbau App - Testversion" \
+            --title "Bauzeuge - Testversion" \
             --notes "Build ${{ github.run_number }} vom $(date +%d.%m.%Y). Debug-Paket zum Ausprobieren, nicht für den Play Store signiert. Zum Installieren auf dem Telefon unter Einstellungen die Installation aus unbekannten Quellen für den Browser erlauben." \
             --prerelease \
-            hausbau-app-${{ github.run_number }}.apk
+            bauzeuge-${{ github.run_number }}.apk

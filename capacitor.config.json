@@ -1,6 +1,6 @@
 {
-  "appId": "de.hausbauatlas.app",
-  "appName": "Hausbau App",
+  "appId": "de.bauzeuge.app",
+  "appName": "Bauzeuge",
   "webDir": "www",
   "android": {
     "allowMixedContent": false

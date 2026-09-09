@@ -11,7 +11,7 @@ import {
 } from '../hilfen.js';
 import { daten, einstellung } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
-import { Blatt, pdfTeilen } from '../pdf.js';
+import { Blatt, pdfTeilen, A4, RAND, INNEN } from '../pdf.js';
 
 export const PHASEN = [
   'Vorbereitung', 'Erdarbeiten', 'Rohbau', 'Dach', 'Fenster und Türen',
@@ -93,16 +93,92 @@ export function terminePlanen(aufgaben) {
   return aufgaben.map((a) => ({ ...a, ...rechne(a) }));
 }
 
+const MONATSNAMEN = [
+  'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+  'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
+];
+
+/** Tage von a bis b, beide als ISO-Datum. Durchgehend UTC, wie plusTage. */
+export function tageZwischen(a, b) {
+  return Math.round(
+    (new Date(b + 'T00:00:00Z').getTime() - new Date(a + 'T00:00:00Z').getTime()) / TAG
+  );
+}
+
+/**
+ * Rechnet den Balkenplan aus: eine gemeinsame Zeitachse und je Aufgabe die
+ * Lage darauf.
+ *
+ * Alle Masse stehen in Tagen ab dem ersten Tag des Plans. Erst der Zeichner
+ * macht daraus Prozente oder Punkte. So rechnet der Bildschirm und das PDF
+ * dasselbe, und die Rechnung laesst sich ohne Browser pruefen.
+ *
+ * Aufgaben ohne Termin haben keinen Balken. Sie fallen nicht unter den Tisch,
+ * sondern kommen als eigene Liste zurueck - ein Plan, der die Haelfte
+ * verschweigt, waere schlimmer als keiner.
+ */
+export function balkenPlan(aufgaben) {
+  const mitTermin = aufgaben.filter((a) => a.start && a.ende);
+  const ohneTermin = aufgaben.filter((a) => !a.start || !a.ende);
+
+  if (!mitTermin.length) {
+    return { von: null, bis: null, tage: 0, zeilen: [], monate: [], ohneTermin };
+  }
+
+  const von = mitTermin.map((a) => a.start).sort()[0];
+  const bis = mitTermin.map((a) => a.ende).sort().pop();
+  const tage = tageZwischen(von, bis) + 1;
+
+  const zeilen = mitTermin
+    .slice()
+    .sort((a, b) => a.start.localeCompare(b.start) || a.titel.localeCompare(b.titel, 'de'))
+    .map((a) => ({
+      id: a.id,
+      titel: a.titel,
+      phase: a.phase,
+      status: a.status || 'offen',
+      start: a.start,
+      ende: a.ende,
+      ab: tageZwischen(von, a.start),
+      dauer: tageZwischen(a.start, a.ende) + 1,
+    }));
+
+  // Monatsraster. Der erste Abschnitt beginnt am Planbeginn, nicht am
+  // Monatsersten, sonst laege er links ausserhalb der Achse.
+  const monate = [];
+  let lauf = von;
+  while (lauf <= bis) {
+    const [j, m] = lauf.split('-').map(Number);
+    const naechster = m === 12 ? `${j + 1}-01-01` : `${j}-${String(m + 1).padStart(2, '0')}-01`;
+    const ende = naechster > bis ? bis : plusTage(naechster, -1);
+    monate.push({
+      name: MONATSNAMEN[m - 1],
+      jahr: j,
+      ab: tageZwischen(von, lauf),
+      tage: tageZwischen(lauf, ende) + 1,
+    });
+    lauf = naechster;
+  }
+
+  return { von, bis, tage, zeilen, monate, ohneTermin };
+}
+
+const BALKENFARBE = {
+  fertig: [90, 150, 95],
+  laeuft: [211, 150, 40],
+  offen: [150, 158, 170],
+};
+
 export async function zeige(rahmen) {
   await zeichne(rahmen);
 }
 
-async function zeichne(rahmen) {
+async function zeichne(rahmen, ansicht = 'liste') {
   rahmen.replaceChildren();
   const [roh, kontakte, maengel] = await Promise.all([
     daten.alle('aufgaben'), daten.alle('kontakte'), daten.alle('maengel'),
   ]);
-  const neu = () => zeichne(rahmen);
+  const neu = () => zeichne(rahmen, ansicht);
 
   rahmen.append(kopfzeile('Bauablauf', 'Was muss zuerst, was kann parallel, was später.'));
 
@@ -131,6 +207,19 @@ async function zeichne(rahmen) {
   const ende = aufgaben.map((a) => a.ende).filter(Boolean).sort().pop();
 
   rahmen.append(
+    el('div', { klasse: 'geschossleiste' }, [
+      ['liste', 'Liste'],
+      ['balken', 'Balkenplan'],
+    ].map(([wert, text]) =>
+      el('button', {
+        type: 'button', text,
+        klasse: ansicht === wert ? 'aktiv' : null,
+        onclick: () => zeichne(rahmen, wert),
+      })
+    ))
+  );
+
+  rahmen.append(
     karte([
       el('h2', { text: 'Stand' }),
       el('p', {
@@ -149,6 +238,11 @@ async function zeichne(rahmen) {
   }
   if (aufgaben.every((a) => !a.start)) {
     rahmen.append(hinweisKasten('Noch kein Startdatum gesetzt. Trage es bei der ersten Aufgabe ein, der Rest rechnet sich daraus.', 'info'));
+  }
+
+  if (ansicht === 'balken') {
+    zeigeBalken(rahmen, aufgaben, roh, kontakte, maengel, neu);
+    return;
   }
 
   const phasen = PHASEN.filter((p) => aufgaben.some((a) => a.phase === p));
@@ -191,6 +285,208 @@ async function zeichne(rahmen) {
     knopf('Arbeitsschritt hinzufügen', () => aufgabeBearbeiten({ status: 'offen' }, roh, kontakte, maengel, neu), 'knopf-haupt'),
     knopf('Plan als PDF teilen', () => pdfErzeugen(aufgaben, kontakte))
   );
+}
+
+// --------------------------------------------------------------- Balkenplan
+
+// Punkte je Tag auf dem Bildschirm. Ein Bauplan laeuft ueber Monate; bei
+// voller Breite waere ein Viertagesbalken ein Strich. Lieber breiter zeichnen
+// und seitlich schieben lassen.
+const PX_JE_TAG = 6;
+const TITELSPALTE = 132;
+
+function zeigeBalken(rahmen, aufgaben, roh, kontakte, maengel, neu) {
+  const plan = balkenPlan(aufgaben);
+
+  if (!plan.zeilen.length) {
+    rahmen.append(
+      karte([
+        leerzustand(
+          'Noch keine Termine',
+          'Der Balkenplan braucht wenigstens ein Startdatum. Trage es beim ersten ' +
+            'Arbeitsschritt ein, alles Weitere rechnet sich aus Dauer und Vorgänger.'
+        ),
+      ])
+    );
+    return;
+  }
+
+  const breite = Math.max(plan.tage * PX_JE_TAG, 280);
+  const heuteAb = tageZwischen(plan.von, heute());
+  const imZeitraum = heuteAb >= 0 && heuteAb < plan.tage;
+
+  // Monatsköpfe
+  const monatszeile = el('div', { klasse: 'balken-monate', stil: { width: breite + 'px' } },
+    plan.monate.map((m) =>
+      el('span', {
+        klasse: 'balken-monat',
+        stil: { left: m.ab * PX_JE_TAG + 'px', width: m.tage * PX_JE_TAG + 'px' },
+        text: m.tage * PX_JE_TAG > 54 ? m.name : m.name.slice(0, 3),
+        title: m.name + ' ' + m.jahr,
+      })
+    )
+  );
+
+  const zeilen = plan.zeilen.map((z) => {
+    const kontakt = kontakte.find((k) => k.id === (roh.find((a) => a.id === z.id) || {}).kontaktId);
+    const balken = el('span', {
+      klasse: 'balken balken-' + z.status,
+      stil: { left: z.ab * PX_JE_TAG + 'px', width: Math.max(z.dauer * PX_JE_TAG, 4) + 'px' },
+      title: `${z.titel}: ${datumLang(z.start)} bis ${datumLang(z.ende)}`,
+    });
+    return el('button', {
+      klasse: 'balken-zeile',
+      onclick: () => aufgabeBearbeiten(roh.find((a) => a.id === z.id), roh, kontakte, maengel, neu),
+    }, [
+      el('span', { klasse: 'balken-titel' }, [
+        el('strong', { text: z.titel }),
+        el('span', {
+          klasse: 'zeilen-unter',
+          text: [`${z.dauer} T.`, kontakt ? kontakt.name : null].filter(Boolean).join(' · '),
+        }),
+      ]),
+      el('span', { klasse: 'balken-bahn', stil: { width: breite + 'px' } }, [balken]),
+    ]);
+  });
+
+  // Das Raster liegt als eigene Ebene hinter den Zeilen, nicht in ihnen: So
+  // laufen die Monatsstriche und die Heute-Linie ohne Unterbrechung durch.
+  const raster = el('div', {
+    klasse: 'balken-raster',
+    stil: { left: TITELSPALTE + 'px', width: breite + 'px' },
+  }, [
+    ...plan.monate.slice(1).map((m) =>
+      el('span', { klasse: 'balken-strich', stil: { left: m.ab * PX_JE_TAG + 'px' } })
+    ),
+    imZeitraum
+      ? el('span', { klasse: 'balken-heute', stil: { left: heuteAb * PX_JE_TAG + 'px' } })
+      : null,
+  ]);
+
+  rahmen.append(
+    karte([
+      el('h2', { text: 'Balkenplan' }),
+      el('p', {
+        klasse: 'unterzeile',
+        text: `${datumLang(plan.von)} bis ${datumLang(plan.bis)}, ${plan.tage} Tage.` +
+          (imZeitraum ? ' Die senkrechte Linie ist heute.' : ''),
+      }),
+      el('div', { klasse: 'balken-flaeche' }, [
+        el('div', {
+          klasse: 'balken-innen',
+          stil: { width: (TITELSPALTE + breite) + 'px' },
+        }, [
+          el('div', { klasse: 'balken-kopf', stil: { marginLeft: TITELSPALTE + 'px' } }, [monatszeile]),
+          raster,
+          el('div', { klasse: 'balken-zeilen' }, zeilen),
+        ]),
+      ]),
+      el('div', { klasse: 'legende' }, [
+        el('span', {}, [el('i', { klasse: 'balken-offen' }), 'Offen']),
+        el('span', {}, [el('i', { klasse: 'balken-laeuft' }), 'Läuft']),
+        el('span', {}, [el('i', { klasse: 'balken-fertig' }), 'Fertig']),
+      ]),
+    ])
+  );
+
+  if (plan.ohneTermin.length) {
+    rahmen.append(
+      hinweisKasten(
+        (plan.ohneTermin.length === 1
+          ? 'Ein Arbeitsschritt hat keinen Termin und steht deshalb nicht im Balken: '
+          : `${plan.ohneTermin.length} Arbeitsschritte haben keinen Termin und stehen deshalb nicht im Balken: `) +
+          plan.ohneTermin.map((a) => a.titel).join(', ') + '.',
+        'info'
+      )
+    );
+  }
+
+  rahmen.append(
+    knopf('Balkenplan als PDF teilen', () => balkenPdf(plan), 'knopf-haupt'),
+    knopf('Plan als Tabelle teilen', () => pdfErzeugen(aufgaben, kontakte), 'knopf-leise')
+  );
+}
+
+/**
+ * Der Balkenplan quer auf A4. Hochkant blieben je Monat sieben Millimeter,
+ * darauf ist nichts mehr zu erkennen.
+ */
+async function balkenPdf(plan) {
+  melde('PDF wird erstellt …');
+  const projekt = (await einstellung('projektname')) || '';
+  const blatt = new Blatt({
+    titel: 'Balkenplan',
+    untertitel: (projekt ? projekt + ' · ' : '') +
+      `${datumLang(plan.von)} bis ${datumLang(plan.bis)}`,
+    fusszeile: 'Bauzeuge · Termine gerechnet aus Dauer und Vorgänger',
+  });
+
+  const TITEL_PT = 150;
+  const achseX = RAND + TITEL_PT;
+  const achseBreite = INNEN - TITEL_PT;
+  const proTag = achseBreite / plan.tage;
+  const ZEILE = 15;
+
+  blatt.absatz(
+    `${plan.zeilen.length} Arbeitsschritte mit Termin über ${plan.tage} Tage. ` +
+      'Die Balken zeigen Beginn und Ende, die Farbe den Stand.',
+    9
+  );
+
+  const monatsKopf = () => {
+    blatt.platz(ZEILE + 6);
+    for (const m of plan.monate) {
+      // Nur beschriften, wo das Wort auch hinpasst.
+      if (m.tage * proTag < 26) continue;
+      blatt.schreibe(m.name.slice(0, 3) + ' ' + String(m.jahr).slice(2), {
+        groesse: 7.5, x: achseX + m.ab * proTag + 1, farbe: [95, 103, 114],
+      });
+    }
+    blatt.y -= 4;
+    blatt.linie(0.6, 0.75);
+    blatt.y -= 3;
+  };
+
+  monatsKopf();
+
+  for (const z of plan.zeilen) {
+    if (blatt.y - ZEILE < RAND + 26) {
+      blatt.neueSeite();
+      monatsKopf();
+    }
+    blatt.schreibe(z.titel, { groesse: 8.5, x: RAND });
+
+    // Monatsraster hinter dem Balken, damit sich die Lage ablesen laesst.
+    for (const m of plan.monate.slice(1)) {
+      blatt.senkrechte(achseX + m.ab * proTag, blatt.y - 3, blatt.y + 9, 0.9, 0.3);
+    }
+
+    blatt.flaeche(
+      achseX + z.ab * proTag,
+      blatt.y - 2,
+      Math.max(z.dauer * proTag, 1.2),
+      8,
+      BALKENFARBE[z.status] || BALKENFARBE.offen
+    );
+    blatt.y -= ZEILE;
+  }
+
+  blatt.y -= 6;
+  blatt.absatz(
+    'Farben: grün fertig, gelb läuft, grau offen.' +
+      (plan.ohneTermin.length
+        ? ' Ohne Termin und deshalb nicht abgebildet: ' +
+          plan.ohneTermin.map((a) => a.titel).join(', ') + '.'
+        : ''),
+    8.5
+  );
+
+  try {
+    await pdfTeilen(blatt.blob(), 'balkenplan.pdf', 'Balkenplan');
+  } catch (fehler) {
+    melde('PDF konnte nicht geteilt werden.');
+    console.error(fehler);
+  }
 }
 
 async function vorlageLaden(nachher) {
@@ -309,7 +605,7 @@ async function pdfErzeugen(aufgaben, kontakte) {
   const blatt = new Blatt({
     titel: 'Bauablaufplan',
     untertitel: (projekt ? projekt + ' · ' : '') + 'Stand ' + datumLang(heute()),
-    fusszeile: 'Hausbau App · Termine gerechnet aus Dauer und Vorgänger',
+    fusszeile: 'Bauzeuge · Termine gerechnet aus Dauer und Vorgänger',
   });
 
   blatt.tabelle(

@@ -1,9 +1,44 @@
-# Hausbau App
+# Bauzeuge
 
-Android-App für Bauherren: die Rechner von hausbauatlas.de plus die Werkzeuge,
-die man auf der Baustelle braucht. Alle Daten bleiben auf dem Gerät.
+Android-App für Bauherren: Rechner, Kostenaufstellung und die Werkzeuge, die
+man auf der Baustelle braucht. Ohne Konto bleiben alle Daten auf dem Gerät;
+mit Konto gleicht die App sie mit www.bauzeuge.de ab.
 
 Testversion, unsigniert. Nicht im Play Store.
+
+## Der Umzug im September 2026
+
+Die App hieß bis dahin "Hausbau App" und lag auf hausbauatlas.de. Drei Dinge
+haben sich gleichzeitig geändert, und alle drei brechen etwas:
+
+1. **Paketkennung** von `de.hausbauatlas.app` auf `de.bauzeuge.app`. Android
+   sieht darin eine andere App. Die neue Fassung installiert sich neben der
+   alten und startet mit leerer Datenbank.
+2. **Adresse der Schnittstelle** von `hausbauatlas.de/app/api` auf
+   `www.bauzeuge.de/app/api`. Sie steckt fest im APK. Eine Weiterleitung
+   rettet das nicht: Ein POST mit eigenem Kopfzeilenfeld überlebt eine
+   Umleitung samt Vorabfrage nicht zuverlässig. Jedes alte APK verliert die
+   Verbindung, sobald hausbauatlas.de abgeschaltet ist.
+3. **Herkunft der Weboberfläche.** localStorage und IndexedDB hängen im
+   Browser an der Domain. Wer die App unter hausbauatlas.de/app/ benutzt hat,
+   findet sie unter der neuen Adresse leer vor.
+
+Für alle drei Fälle gilt derselbe Weg zurück: anmelden, dann holt der Abgleich
+die Daten vom Server. Wer kein Konto hat, legt vorher in den Einstellungen eine
+Sicherung an und liest sie danach wieder ein.
+
+Was beim Umzug absichtlich **nicht** umbenannt wurde: der Name der Datenbank
+im Browser (`hausbau`), die Schlüssel in localStorage (`hausbau.marke`,
+`hausbau.stand`, `hausbau.lokal`, `hausbau.freigabe`) und das Kopfzeilenfeld
+der Schnittstelle (`X-Hausbau-Marke`). Diese Namen sind nach außen unsichtbar.
+Sie zu ändern hieße, jede vorhandene Installation abzumelden und ihren
+Abgleichsstand zu verlieren. Wer hier aufräumen will, braucht dafür eine
+Wanderung, keine Umbenennung.
+
+`www.bauzeuge.de` ist die maßgebliche Adresse, `bauzeuge.de` wird dauerhaft
+dorthin umgeleitet. Das ist keine Kosmetik: Apex und www sind für den Browser
+zwei verschiedene Herkünfte. Ohne die Umleitung hätte dieselbe Person je nach
+eingetippter Adresse zwei getrennte Datenbestände.
 
 ## Das APK bekommen
 
@@ -19,26 +54,42 @@ gilt dem Browser, nicht der App.
 Ohne GitHub-Konto ist das APK auch unter Actions → letzter Lauf → Artifacts zu
 finden, dort allerdings nur nach Anmeldung.
 
-## Die zehn Bereiche
+## Die Bereiche
 
 | Bereich | Was er tut |
 |---|---|
 | Baukostenrechner | Bausumme aus Bundesland, Fläche, Standard, Keller, Grundstück |
-| Baufinanzierung | Eigenkapital und Darlehen erfassen, oder erst rechnen lassen |
+| Baufinanzierung | Eigenkapital, Zuschüsse, Förder- und Bankdarlehen, oder erst rechnen lassen |
 | Tilgungsverlauf | Restschuld Jahr für Jahr, mit Sondertilgung, als PDF |
-| Baukasse | Budget, Kostenaufstellung geplant gegen tatsächlich, Rechnungen |
+| Baukasse | Budget, Kostenaufstellung geplant gegen tatsächlich, Rechnungen, Gliederung nach DIN 276 |
+| Angebote | Mehrere Angebote je Position, Spanne, beauftragen mit Übernahme in die Baukasse |
 | Räume | Jeder Raum mit Fotos, Mängeln, Fläche und Kosten je m² |
 | Anschlussplan | Grundriss hochladen, Anschlüsse markieren, als PDF mit Plan |
 | Mängelliste | Mängel je Raum mit Foto und Status, als PDF und als Mängelrüge |
-| Bauablauf | Gewerke in der richtigen Reihenfolge, Termine rechnen sich |
-| Bauhelfertagebuch | Tageseinträge mit Fotos, Helferstunden und Wetter vom DWD |
+| Bauablauf | Gewerke in der richtigen Reihenfolge, Termine rechnen sich, Balkenplan |
+| Bauhelfertagebuch | Tageseinträge mit Fotos, Helferstunden, Wetter vom DWD, öffentlicher Verweis zum Mitlesen |
 | Kontakte | Firmen und Helfer, von den anderen Bereichen verlinkt |
-| Einstellungen | Projektname, Sicherung, alles löschen |
+| Einstellungen | Projektname, Sicherung, CSV-Ausgabe, alles löschen |
 
 Die Bereiche hängen zusammen: Die Baukasse zieht ihr Budget aus der
 Baufinanzierung, der Tilgungsverlauf lädt dort die Darlehen, aus einem Mangel
-wird auf Wunsch eine Aufgabe im Bauablauf, und Mängel wie Aufgaben zeigen auf
+wird auf Wunsch eine Aufgabe im Bauablauf, ein beauftragtes Angebot wird zur
+tatsächlichen Summe einer Kostenposition, und Mängel wie Aufgaben zeigen auf
 dieselben Kontakte.
+
+## Das öffentliche Bautagebuch
+
+Auf Wunsch erzeugt die App einen Verweis, unter dem andere den Baufortschritt
+mitlesen können, ohne die App zu haben. Die Seite liegt auf dem Server unter
+`oeffentlich.php` und ist nur über eine zufällige Marke erreichbar, die dort
+allein als SHA-256 gespeichert ist. Sie trägt `noindex` und landet nicht in
+Suchmaschinen.
+
+Nach außen gehen ausschließlich Datum, Wetter, das Feld "was wurde gemacht" und
+die Fotos. Helfernamen, Helferstunden und das Feld "liegengeblieben" bleiben
+grundsätzlich in der App: Das eine sind personenbezogene Daten Dritter, die
+nicht eingewilligt haben, das andere ist Beweismaterial für den Streitfall.
+Diese Grenze ist fest verdrahtet und absichtlich nicht einstellbar.
 
 ## Aufbau
 
@@ -63,7 +114,7 @@ wird es erst beim Öffnen.
 
 ### Warum ohne Bundler
 
-Die Rechner stammen aus den `.astro`-Dateien von hausbauatlas.de und konnten
+Die Rechner stammen aus den `.astro`-Dateien der Website und konnten
 fast unverändert übernommen werden. Ein Bauschritt hätte nur eine weitere
 Stelle geschaffen, an der etwas kaputtgeht. Capacitor-Erweiterungen liegen
 zur Laufzeit unter `Capacitor.Plugins`, deshalb gibt es im Quelltext keine
@@ -73,9 +124,9 @@ Einfuhr von `@capacitor/...`.
 
 Die App laeuft doppelt: als APK und als Website unter derselben Adresse.
 
-    hausbauatlas.de/             Astro-Seite, Ratgeber, Rechner
-    hausbauatlas.de/app/         dieselbe App wie im APK
-    hausbauatlas.de/app/api/     PHP fuer Konto und Abgleich
+    www.bauzeuge.de/             Astro-Seite, Ratgeber, Rechner
+    www.bauzeuge.de/app/         dieselbe App wie im APK
+    www.bauzeuge.de/app/api/     PHP fuer Konto und Abgleich
 
 Im Quelltext steht kein absoluter Pfad, und die Navigation laeuft ueber den
 Adress-Anker. Deshalb laeuft derselbe Ordner `www/` unveraendert im Paket wie
@@ -91,7 +142,7 @@ unter einem Unterpfad.
     python deploy.py --pruefen   nur nachsehen, was live ist
 
 Zugangsdaten in `deploy.env`, Vorlage daneben. Dieselben Werte wie in
-`hausbauatlas/.env`, es ist derselbe Server.
+der `.env` der Website, es ist derselbe Server.
 
 Zwei Dinge gehen nie von allein hoch: `server/daten/geheim.php` mit den
 Zugangsdaten der Datenbank, und `server/daten/bilder/` mit den hochgeladenen
@@ -104,7 +155,7 @@ laeuft und ob `geheim.php` gesperrt ist.
 
 1. `server/daten/geheim.beispiel.php` als `geheim.php` kopieren und ausfuellen
 2. `python deploy.py` und danach `python deploy.py --geheim`
-3. `https://hausbauatlas.de/app/api/einrichten.php?schluessel=...` einmal aufrufen
+3. `https://www.bauzeuge.de/app/api/einrichten.php?schluessel=...` einmal aufrufen
 
 Der dritte Schritt legt die Tabellen an und laesst sich gefahrlos wiederholen.
 
@@ -124,7 +175,7 @@ werden sie nur ueber `bild.php`, und nur an den Eigentuemer.
 
 Die Anmeldung laeuft ueber eine Marke im Anfragekopf statt ueber ein
 Plaetzchen: Die App laeuft unter der Herkunft `https://localhost` und spricht
-mit hausbauatlas.de; ein Plaetzchen waere dort fremd. In der Datenbank steht
+mit www.bauzeuge.de; ein Plaetzchen waere dort fremd. In der Datenbank steht
 die Marke nur als Pruefsumme.
 
     python server/test_api.py    20 Pruefungen gegen einen laufenden Server
@@ -172,7 +223,7 @@ einzigen Transaktion: Bricht etwas ab, bleiben die alten Daten stehen.
 **Ohne Konto sendet die App nichts.** Alles liegt in der IndexedDB des
 Geräts, es gibt keine Anmeldung und keinen Aufruf nach außen.
 
-**Mit Konto** gehen die Daten zum Abgleich an hausbauatlas.de: Sätze über
+**Mit Konto** gehen die Daten zum Abgleich an www.bauzeuge.de: Sätze über
 `abgleich.php`, Fotos über `bild.php`, beides nur für das eigene Konto.
 
 Bis zum Abgleich trug das Paket keine Internet-Berechtigung, und Android
@@ -184,7 +235,7 @@ Standort haben hier nach wie vor nichts zu suchen.
 Nachprüfen lässt sich das mit jedem APK-Betrachter, etwa:
 
     python -m pip install pyaxmlparser
-    python -c "from pyaxmlparser import APK; print(APK('hausbau-app.apk').get_permissions())"
+    python -c "from pyaxmlparser import APK; print(APK('bauzeuge.apk').get_permissions())"
 
 Zu sehen sein muss genau INTERNET, dazu
 `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`. Den legt AndroidX selbst an, er
@@ -202,7 +253,7 @@ Teilen-Menü beim PDF oder bei der Sicherung.
 
 Die m²-Preise je Bundesland und die Grunderwerbsteuersätze stehen oben in
 `www/module/baukosten.js` (Stand 08.2026), die Zinsrichtwerte je Bindung in
-`www/module/finanzierung.js`. Beides stammt aus hausbauatlas.de und muss beim
+`www/module/finanzierung.js`. Beides stammt aus der Website und muss beim
 dortigen Monatsupdate mitgezogen werden. `test.mjs` rechnet die drei
 Beispielhäuser der Website nach und schlägt an, wenn eine Formel abweicht.
 

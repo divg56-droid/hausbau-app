@@ -13,11 +13,15 @@ import {
   el, eur, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile,
   wertzeile, hinweisKasten, leerzustand, zuZahl, melde, datumLang, heute,
 } from '../hilfen.js';
-import { daten, bildUrl, bildLoeschen } from '../daten.js';
+import { daten, einstellung, bildUrl, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
 import { finanzierungsstand } from './finanzierung.js';
 import { fotofeld } from '../fotos.js';
 import { GEWERKE } from './maengel.js';
+import {
+  kostengruppenOptionen, kostengruppeLang, kostengruppeVorschlag, nachHauptgruppen,
+} from '../din276.js';
+import { csvTeilen } from '../csv.js';
 
 // Was der Nutzer selbst setzt. Ob etwas teilweise oder ganz bezahlt ist,
 // rechnet die App aus den Rechnungen aus - das kann so nicht veralten.
@@ -102,6 +106,7 @@ async function zeichne(rahmen, ansicht = 'uebersicht') {
     el('div', { klasse: 'geschossleiste' }, [
       ['uebersicht', 'Übersicht'],
       ['posten', `Positionen (${posten.length})`],
+      ['din276', 'DIN 276'],
       ['rechnungen', `Rechnungen (${belege.length})`],
     ].map(([wert, text]) =>
       el('button', {
@@ -113,6 +118,7 @@ async function zeichne(rahmen, ansicht = 'uebersicht') {
   );
 
   if (ansicht === 'posten') return zeigePosten(rahmen, gerechnet, kontakte, raeume, neu);
+  if (ansicht === 'din276') return zeigeKostengruppen(rahmen, gerechnet, summe, neu);
   if (ansicht === 'rechnungen') return zeigeRechnungen(rahmen, belege, posten, stand, kontakte, neu);
   return zeigeUebersicht(rahmen, stand, summe, gerechnet, belege);
 }
@@ -292,6 +298,210 @@ function zeigePosten(rahmen, gerechnet, kontakte, raeume, neu) {
   );
 }
 
+// ------------------------------------------------------------- Kostengruppen
+
+function zeigeKostengruppen(rahmen, gerechnet, summe, neu) {
+  if (!gerechnet.length) {
+    rahmen.append(
+      karte([
+        leerzustand(
+          'Noch keine Positionen',
+          'Die Gliederung nach DIN 276 fasst deine Positionen so zusammen, wie Banken ' +
+            'und Architekten Baukosten rechnen. Dafür braucht sie erst einmal Positionen.'
+        ),
+      ])
+    );
+    return;
+  }
+
+  const ohne = gerechnet.filter((p) => !p.kostengruppe);
+  const gruppen = nachHauptgruppen(gerechnet, (p) => p.massgeblich);
+
+  rahmen.append(
+    karte([
+      el('h2', { text: 'Kosten nach DIN 276' }),
+      el('p', {
+        klasse: 'unterzeile',
+        text: 'Maßgeblich ist die tatsächliche Summe, solange sie feststeht, sonst die geplante.',
+      }),
+      ...gruppen.map((g) => {
+        const anteil = summe.tatsaechlich > 0 ? (g.summe / summe.tatsaechlich) * 100 : 0;
+        return el('div', {}, [
+          el('div', { klasse: 'wertzeile' }, [
+            el('span', { text: g.nr ? g.nr + ' ' + g.name : g.name }),
+            el('strong', { text: eur.format(g.summe) }),
+          ]),
+          el('p', {
+            klasse: 'unterzeile', stil: { margin: '-4px 0 6px' },
+            text: g.saetze.length + (g.saetze.length === 1 ? ' Position' : ' Positionen') +
+              (anteil >= 0.5 ? ', ' + Math.round(anteil) + ' % der Bausumme' : ''),
+          }),
+          el('div', { klasse: 'fortschrittsbalken' }, [
+            el('div', { stil: { width: Math.min(100, anteil) + '%' } }),
+          ]),
+        ]);
+      }),
+      el('div', { klasse: 'wertzeile stark' }, [
+        el('span', { text: 'Zusammen' }),
+        el('strong', { text: eur.format(summe.tatsaechlich) }),
+      ]),
+    ])
+  );
+
+  if (ohne.length) {
+    rahmen.append(
+      hinweisKasten(
+        ohne.length === 1
+          ? 'Eine Position ist noch keiner Kostengruppe zugeordnet und fällt in der Gliederung durch.'
+          : ohne.length + ' Positionen sind noch keiner Kostengruppe zugeordnet und fallen in der Gliederung durch.',
+        'warn'
+      ),
+      knopf('Kostengruppen vorschlagen', () => gruppenVorschlagen(ohne, neu), 'knopf-haupt')
+    );
+  }
+
+  // Die Einzelpositionen je Gruppe. Ohne sie ist nicht nachvollziehbar,
+  // warum eine Gruppe so gross ausfaellt.
+  for (const g of gruppen.filter((x) => x.nr)) {
+    rahmen.append(
+      karte([
+        el('h2', { text: g.nr + ' ' + g.name }),
+        el('ul', { klasse: 'liste' }, g.saetze
+          .slice()
+          .sort((a, b) => String(a.kostengruppe).localeCompare(String(b.kostengruppe)))
+          .map((p) =>
+            el('li', {}, [
+              el('div', { klasse: 'listenzeile', stil: { cursor: 'default' } }, [
+                el('span', { klasse: 'zeilen-text' }, [
+                  el('span', { klasse: 'zeilen-titel', text: p.name }),
+                  el('span', { klasse: 'zeilen-unter', text: kostengruppeLang(p.kostengruppe) }),
+                ]),
+                el('span', { klasse: 'zeilen-wert', text: eur.format(p.massgeblich) }),
+              ]),
+            ])
+          )),
+      ])
+    );
+  }
+
+  rahmen.append(
+    knopf('Kostenaufstellung als PDF', () => din276Pdf(gerechnet, gruppen, summe)),
+    knopf('Kostenaufstellung als CSV', () => din276Csv(gerechnet), 'knopf-leise'),
+    hinweisKasten(
+      'Die Gliederung folgt DIN 276:2018-12. Für eine förmliche Einreichung gleiche ' +
+        'die Bezeichnungen einmal mit dem Normtext ab; einzelne Untergruppen werden ' +
+        'in den frei zugänglichen Quellen unterschiedlich benannt.',
+      'info'
+    )
+  );
+}
+
+/** Setzt fuer alle noch unzugeordneten Positionen den Vorschlag. */
+async function gruppenVorschlagen(ohne, nachher) {
+  const treffer = ohne
+    .map((p) => ({ posten: p, nr: kostengruppeVorschlag(p.name, p.gewerk) }))
+    .filter((t) => t.nr);
+
+  if (!treffer.length) {
+    melde('Zu diesen Bezeichnungen gibt es keinen Vorschlag.');
+    return;
+  }
+  if (!window.confirm(
+    treffer.length + ' von ' + ohne.length + ' Positionen bekommen einen Vorschlag. ' +
+    'Prüfe ihn danach, die Zuordnung bleibt deine Entscheidung.'
+  )) return;
+
+  for (const { posten, nr } of treffer) {
+    // Nur die gespeicherten Felder zurueckschreiben. postenRechnen haengt
+    // ausgerechnete Werte an, die nichts in der Datenbank zu suchen haben.
+    const {
+      differenz, gezahlt, massgeblich, offen, statusName, marke, ...rein
+    } = posten;
+    await daten.sichern('posten', { ...rein, kostengruppe: nr });
+  }
+  melde(treffer.length + ' Positionen zugeordnet.');
+  await nachher();
+}
+
+async function din276Pdf(gerechnet, gruppen, summe) {
+  melde('PDF wird erstellt …');
+  const projekt = (await einstellung('projektname')) || '';
+  const { Blatt, pdfTeilen } = await import('../pdf.js');
+  const blatt = new Blatt({
+    titel: 'Kostenaufstellung nach DIN 276',
+    untertitel: (projekt ? projekt + ' · ' : '') + 'Stand ' + datumLang(heute()),
+    fusszeile: 'Bauzeuge · Kostenaufstellung',
+  });
+
+  blatt.absatz(
+    'Gegliedert nach DIN 276:2018-12. Maßgeblich ist die tatsächliche Summe, ' +
+      'solange sie feststeht, sonst die geplante.'
+  );
+
+  blatt.ueberschrift('Zusammenfassung');
+  blatt.tabelle(
+    ['Kostengruppe', 'Positionen', 'Summe'],
+    gruppen.map((g) => [
+      g.nr ? g.nr + ' ' + g.name : g.name,
+      String(g.saetze.length),
+      eur.format(g.summe),
+    ]),
+    [3.4, 1, 1.4],
+    [1, 2]
+  );
+  blatt.wertzeile('Zusammen', eur.format(summe.tatsaechlich), true);
+
+  blatt.ueberschrift('Einzelpositionen');
+  blatt.tabelle(
+    ['KG', 'Position', 'Geplant', 'Tatsächlich', 'Bezahlt'],
+    [...gerechnet]
+      .sort((a, b) => String(a.kostengruppe || 'zzz').localeCompare(String(b.kostengruppe || 'zzz')))
+      .map((p) => [
+        p.kostengruppe || '',
+        p.name,
+        p.geplant ? eur.format(p.geplant) : '',
+        p.tatsaechlich ? eur.format(p.tatsaechlich) : '',
+        p.gezahlt ? eur.format(p.gezahlt) : '',
+      ]),
+    [0.7, 2.8, 1.2, 1.3, 1.2],
+    [2, 3, 4]
+  );
+
+  try {
+    await pdfTeilen(blatt.blob(), 'kostenaufstellung-din276.pdf', 'Kostenaufstellung');
+  } catch (fehler) {
+    melde('PDF konnte nicht geteilt werden.');
+    console.error(fehler);
+  }
+}
+
+async function din276Csv(gerechnet) {
+  try {
+    await csvTeilen(
+      ['Kostengruppe', 'Bezeichnung der Kostengruppe', 'Position', 'Gewerk',
+        'Geplant', 'Tatsaechlich', 'Bezahlt', 'Abweichung', 'Status'],
+      [...gerechnet]
+        .sort((a, b) => String(a.kostengruppe || 'zzz').localeCompare(String(b.kostengruppe || 'zzz')))
+        .map((p) => [
+          p.kostengruppe || '',
+          p.kostengruppe ? kostengruppeLang(p.kostengruppe).slice(4) : '',
+          p.name,
+          p.gewerk || '',
+          p.geplant || 0,
+          p.tatsaechlich || 0,
+          p.gezahlt || 0,
+          p.differenz || 0,
+          p.statusName,
+        ]),
+      'kostenaufstellung.csv',
+      'Kostenaufstellung'
+    );
+  } catch (fehler) {
+    melde('CSV konnte nicht geteilt werden.');
+    console.error(fehler);
+  }
+}
+
 // Die Posten, die bei fast jedem Neubau vorkommen. Betraege bleiben leer:
 // Zahlen zu raten waere schlimmer, als sie fehlen zu lassen.
 const VORLAGE = [
@@ -331,6 +541,7 @@ async function vorlageLaden(nachher) {
     if (vorhanden.has(name)) continue;
     await daten.sichern('posten', {
       name, gewerk, kontaktId: null, geplant: 0, tatsaechlich: 0,
+      kostengruppe: kostengruppeVorschlag(name, gewerk) || null,
       status: 'geplant', notiz: '',
     });
     angelegt++;
@@ -342,6 +553,16 @@ async function vorlageLaden(nachher) {
 function postenBearbeiten(posten, kontakte, raeume, nachher) {
   const name = eingabe({ value: posten.name || '', placeholder: 'z. B. Elektroinstallation' });
   const gewerk = auswahl(GEWERKE.map((g) => [g, g]), posten.gewerk || 'Sonstiges');
+  // Bei einer neuen Position gleich einen Vorschlag setzen, sonst ordnet
+  // niemand sechsundzwanzig Positionen von Hand zu.
+  const kostengruppe = auswahl(
+    kostengruppenOptionen(),
+    posten.kostengruppe ?? (posten.id ? '' : kostengruppeVorschlag(posten.name, posten.gewerk))
+  );
+  // Tippt jemand die Bezeichnung, wandert der Vorschlag mit - solange er die
+  // Gruppe nicht selbst angefasst hat.
+  let gruppeSelbst = Boolean(posten.kostengruppe);
+  kostengruppe.addEventListener('change', () => { gruppeSelbst = true; });
   const geplant = zahlfeld({ value: posten.geplant ? String(posten.geplant).replace('.', ',') : '' });
   const tatsaechlich = zahlfeld({
     value: posten.tatsaechlich ? String(posten.tatsaechlich).replace('.', ',') : '',
@@ -384,11 +605,20 @@ function postenBearbeiten(posten, kontakte, raeume, nachher) {
   tatsaechlich.addEventListener('input', rechnen);
   rechnen();
 
+  const gruppeVorschlagen = () => {
+    if (gruppeSelbst) return;
+    kostengruppe.value = kostengruppeVorschlag(name.value, gewerk.value) || '';
+  };
+  name.addEventListener('input', gruppeVorschlagen);
+  gewerk.addEventListener('change', gruppeVorschlagen);
+
   blattOeffnen(
     posten.id ? 'Position bearbeiten' : 'Position anlegen',
     [
       feld('Bezeichnung', name),
       feld('Gewerk', gewerk),
+      feld('Kostengruppe (DIN 276)', kostengruppe,
+        'Die Gliederung, nach der Banken und Architekten rechnen. Wird vorgeschlagen, lässt sich ändern.'),
       feld('Geplante Kosten in €', geplant, 'Was du erwartest, bevor ein Angebot vorliegt.'),
       feld('Tatsächliche Kosten in €', tatsaechlich,
         'Auftrags- oder Schlusssumme. Leer lassen, solange nichts feststeht.'),
@@ -402,6 +632,7 @@ function postenBearbeiten(posten, kontakte, raeume, nachher) {
       const wert = {
         name: name.value.trim(),
         gewerk: gewerk.value,
+        kostengruppe: kostengruppe.value || null,
         geplant: Math.max(0, zuZahl(geplant.value)),
         tatsaechlich: Math.max(0, zuZahl(tatsaechlich.value)),
         status: status.value,

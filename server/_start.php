@@ -9,7 +9,7 @@ declare(strict_types=1);
  *
  * Die Anmeldung laeuft ueber eine Marke im Kopf der Anfrage, nicht ueber ein
  * Sitzungsplaetzchen. Grund: Die Android-App laeuft unter der Herkunft
- * https://localhost und spricht mit hausbauatlas.de. Ein Plaetzchen waere dort
+ * https://localhost und spricht mit bauzeuge.de. Ein Plaetzchen waere dort
  * fremd und wird von den Browsern zunehmend verworfen. Eine Marke im Kopf
  * funktioniert in beiden Faellen gleich.
  */

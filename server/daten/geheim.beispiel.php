@@ -21,7 +21,7 @@ return [
     'erlaubte_herkunft' => ['https://localhost', 'capacitor://localhost'],
 
     // Absender fuer Bestaetigungs- und Passwortmails
-    'absender' => 'kontakt@hausbauatlas.de',
+    'absender' => 'kontakt@bauzeuge.de',
 
     // Schuetzt einrichten.php. Selbst ausdenken, lang und zufaellig.
     // Ohne diesen Wert laesst sich das Schema nicht anlegen.

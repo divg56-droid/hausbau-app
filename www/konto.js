@@ -1,4 +1,4 @@
-// Zugang zur Schnittstelle auf hausbauatlas.de.
+// Zugang zur Schnittstelle auf bauzeuge.de.
 //
 // Die Marke und der Abgleichsstand liegen in localStorage, nicht in der
 // Datenbank der App. Zwei Gruende: Sie sind an dieses Geraet gebunden und
@@ -9,14 +9,34 @@ const MARKE = 'hausbau.marke';
 const EPOST = 'hausbau.epost';
 const STAND = 'hausbau.stand';       // Zeitpunkt, bis zu dem der Server gelesen wurde
 const LOKAL = 'hausbau.lokal';       // ab hier muessen eigene Aenderungen noch hoch
+const VERWEIS = 'hausbau.freigabe';  // oeffentlicher Verweis aufs Bautagebuch
 
-/**
- * Als Website liegt die Schnittstelle daneben und ist gleicher Herkunft. Im
- * Paket laeuft die App unter https://localhost und muss die volle Adresse
- * nennen; dafuer steht die Herkunft in der Freigabeliste des Servers.
+/*
+ * Als Website liegt die Schnittstelle daneben und ist gleicher Herkunft, dann
+ * genuegt der Pfad. Im Paket laeuft die App unter https://localhost und muss
+ * die volle Adresse nennen; dafuer steht diese Herkunft in der Freigabeliste
+ * des Servers.
+ *
+ * Apex und www sind fuer den Browser zwei verschiedene Herkuenfte mit je
+ * eigenem localStorage und eigener IndexedDB. Wer die App einmal unter der
+ * einen und einmal unter der anderen Adresse oeffnet, haette zwei getrennte
+ * Datenbestaende. Deshalb leitet der Server bauzeuge.de dauerhaft auf
+ * www.bauzeuge.de um. Beide stehen hier trotzdem: Faellt die Umleitung
+ * einmal aus, soll die Seite wenigstens nicht zusaetzlich die Schnittstelle
+ * verfehlen.
  */
-export const BASIS =
-  location.hostname === 'hausbauatlas.de' ? '/app/api' : 'https://hausbauatlas.de/app/api';
+const EIGENE_WIRTE = ['www.bauzeuge.de', 'bauzeuge.de'];
+
+/*
+ * Diese Adresse steckt fest im APK. Aendert sie sich, hilft keine Umleitung:
+ * Ein POST mit eigenem Kopfzeilenfeld ueberlebt eine Weiterleitung samt
+ * Vorabfrage nicht zuverlaessig. Ein Adresswechsel braucht darum immer ein
+ * neues APK, und die alte Adresse muss so lange weiterlaufen, wie es noch
+ * alte Installationen gibt.
+ */
+export const FERNE_BASIS = 'https://www.bauzeuge.de/app/api';
+
+export const BASIS = EIGENE_WIRTE.includes(location.hostname) ? '/app/api' : FERNE_BASIS;
 
 // Beim oertlichen Entwickeln auf einen selbst gestarteten Server umlenken.
 const ABWEICHUNG = (() => {
@@ -65,6 +85,16 @@ export const standSetzen = (wert) => schreib(STAND, wert || '');
 export const lokalLesen = () => lies(LOKAL) || '';
 export const lokalSetzen = (wert) => schreib(LOKAL, wert || '');
 
+/*
+ * Der oeffentliche Verweis steht nur hier auf dem Geraet. Auf dem Server liegt
+ * die Marke ausschliesslich als SHA-256, damit ein Blick in die Datenbank
+ * keinen gueltigen Verweis hergibt. Der Preis dafuer: Geht der Verweis hier
+ * verloren, muss die Freigabe neu angelegt werden. Das ist der richtige
+ * Tausch, denn ein neuer Verweis kostet nichts und ein Leck waere teuer.
+ */
+export const freigabeLesen = () => lies(VERWEIS) || '';
+export const freigabeSetzen = (wert) => schreib(VERWEIS, wert || null);
+
 /** Wirft mit einer lesbaren Meldung, wenn die Schnittstelle nein sagt. */
 export async function ruf(pfad, inhalt, optionen = {}) {
   const kopf = { 'Content-Type': 'application/json' };
@@ -110,6 +140,7 @@ export function vergessen() {
   schreib(EPOST, null);
   schreib(STAND, null);
   schreib(LOKAL, null);
+  schreib(VERWEIS, null);
 }
 
 export async function registrieren(adresse, passwort) {
@@ -138,6 +169,22 @@ export async function kontoLoeschen(passwort) {
   const ergebnis = await ruf('/konto.php', { tun: 'konto_loeschen', passwort });
   vergessen();
   return ergebnis;
+}
+
+// ------------------------------------------------------------------ Freigabe
+
+export const freigabeStand = () => ruf('/freigabe.php', { tun: 'stand' });
+
+export async function freigabeAnlegen(titel) {
+  const antwort = await ruf('/freigabe.php', { tun: 'anlegen', titel });
+  freigabeSetzen(antwort.verweis);
+  return antwort;
+}
+
+export async function freigabeAufheben() {
+  const antwort = await ruf('/freigabe.php', { tun: 'aufheben' });
+  freigabeSetzen(null);
+  return antwort;
 }
 
 // -------------------------------------------------------------------- Bilder

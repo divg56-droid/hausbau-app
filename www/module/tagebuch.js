@@ -16,6 +16,7 @@ import { daten, einstellung, bildUrl, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
 import { fotofeld } from '../fotos.js';
 import { Blatt, pdfTeilen, bildLaden } from '../pdf.js';
+import { csvTeilen } from '../csv.js';
 
 export const WETTER = {
   sonnig: 'Sonnig', bewoelkt: 'Bewölkt', regen: 'Regen',
@@ -190,8 +191,165 @@ async function zeichne(rahmen) {
           ]);
         }))),
       ]),
-      knopf('Tagebuch als PDF teilen', () => pdfErzeugen(sortiert, kontakte))
+      el('div', { klasse: 'knopf-reihe' }, [
+        knopf('Tagebuch als PDF teilen', () => pdfErzeugen(sortiert, kontakte)),
+        knopf('Als CSV', () => csvErzeugen(sortiert, kontakte), 'knopf-leise'),
+      ])
     );
+  }
+
+  rahmen.append(freigabekarte());
+}
+
+// ------------------------------------------------------- Oeffentliches Tagebuch
+
+/**
+ * Ein Verweis, unter dem Verwandte und Freunde den Baufortschritt mitlesen
+ * koennen, ohne ein Konto zu brauchen.
+ *
+ * Nach aussen gehen nur Datum, Wetter, was gemacht wurde, und die Fotos.
+ * Helfernamen, Helferstunden und das Feld "liegengeblieben" bleiben hier. Das
+ * eine sind Daten anderer Leute, das andere ist Beweismaterial. Diese
+ * Grenze ist fest verdrahtet und absichtlich nicht einstellbar.
+ */
+function freigabekarte() {
+  const stand = el('p', { klasse: 'unterzeile', text: 'Wird geprüft …' });
+  const knoepfe = el('div', { klasse: 'knopf-reihe' });
+  const verweiszeile = el('p', { klasse: 'unterzeile', hidden: true });
+
+  const karteInhalt = karte([
+    el('h2', { text: 'Öffentlich mitlesen lassen' }),
+    el('p', {
+      klasse: 'unterzeile',
+      text:
+        'Erzeugt einen Verweis, unter dem andere den Baufortschritt sehen können, ' +
+        'ohne die App zu haben. Gezeigt werden Datum, Wetter, was gemacht wurde ' +
+        'und die Fotos. Namen und Stunden der Helfer bleiben ausdrücklich hier, ' +
+        'ebenso alles, was liegengeblieben ist.',
+    }),
+    stand,
+    verweiszeile,
+    knoepfe,
+  ]);
+
+  // Wird im Anlauf unten gesetzt und danach von den Schaltflaechen benutzt.
+  let konto = null;
+
+  const zeigen = (frei, verweis) => {
+    knoepfe.replaceChildren();
+    verweiszeile.hidden = !(frei && verweis);
+
+    if (!frei) {
+      stand.textContent = 'Das Tagebuch ist derzeit nicht öffentlich.';
+      knoepfe.append(knopf('Öffentlich schalten', anschalten, 'knopf-haupt'));
+      return;
+    }
+
+    stand.textContent = verweis
+      ? 'Öffentlich. Es wird gezeigt, was zuletzt abgeglichen wurde.'
+      : 'Öffentlich, aber der Verweis ist auf diesem Gerät nicht bekannt. ' +
+        'Lege ihn neu an, dann gilt der alte nicht mehr.';
+
+    if (verweis) {
+      verweiszeile.replaceChildren(el('a', { href: verweis, target: '_blank', text: verweis }));
+      knoepfe.append(knopf('Verweis kopieren', () => kopieren(verweis)));
+    } else {
+      knoepfe.append(knopf('Verweis neu anlegen', anschalten, 'knopf-haupt'));
+    }
+    knoepfe.append(knopf('Nicht mehr öffentlich', abschalten, 'knopf-warn'));
+  };
+
+  async function anschalten() {
+    const vorgabe = (await einstellung('projektname')) || 'Unser Bautagebuch';
+    const titel = window.prompt(
+      'Überschrift der öffentlichen Seite:\n\n' +
+      'Vermeide die genaue Adresse der Baustelle. Wer den Verweis hat, kann die Seite lesen.',
+      vorgabe
+    );
+    if (titel === null) return;
+    try {
+      const antwort = await konto.freigabeAnlegen(titel.trim());
+      melde('Öffentlich geschaltet.');
+      zeigen(true, antwort.verweis);
+      // Ohne Abgleich stünde die Seite leer da: Sie liest vom Server.
+      const { abgleichen } = await import('../abgleich.js');
+      await abgleichen(() => {}).catch(() => {});
+    } catch (fehler) {
+      stand.textContent = fehler.message;
+    }
+  }
+
+  async function abschalten() {
+    if (!window.confirm(
+      'Der Verweis gilt danach nicht mehr. Wer ihn gespeichert hat, sieht nichts mehr.'
+    )) return;
+    try {
+      await konto.freigabeAufheben();
+      melde('Nicht mehr öffentlich.');
+      zeigen(false, '');
+    } catch (fehler) {
+      stand.textContent = fehler.message;
+    }
+  }
+
+  async function kopieren(verweis) {
+    try {
+      await navigator.clipboard.writeText(verweis);
+      melde('Verweis kopiert.');
+    } catch {
+      // Ohne Zwischenablage bleibt der Verweis als Text stehen und lässt
+      // sich von Hand markieren.
+      melde('Kopieren ging nicht. Der Verweis steht oben zum Markieren.');
+    }
+  }
+
+  (async () => {
+    konto = await import('../konto.js');
+    if (!konto.angemeldet()) {
+      stand.textContent =
+        'Dafür brauchst du ein Konto: Die öffentliche Seite liest die Einträge vom Server.';
+      knoepfe.append(knopf('Zum Konto', () => { location.hash = '#/konto'; }));
+      return;
+    }
+    try {
+      const antwort = await konto.freigabeStand();
+      zeigen(Boolean(antwort.frei), konto.freigabeLesen());
+    } catch {
+      stand.textContent = 'Der Stand ließ sich nicht abfragen. Ohne Netz ist das normal.';
+    }
+  })();
+
+  return karteInhalt;
+}
+
+async function csvErzeugen(eintraege, kontakte) {
+  try {
+    await csvTeilen(
+      ['Datum', 'Wetter', 'Temperatur', 'Helfer', 'Helferstunden am Tag',
+        'Ausgeführt', 'Liegengeblieben', 'Fotos'],
+      [...eintraege]
+        .sort((a, b) => String(a.datum).localeCompare(String(b.datum)))
+        .map((e) => {
+          const drin = helferVon(e).map((h) => ({
+            ...h, name: (kontakte.find((k) => k.id === h.id) || {}).name,
+          })).filter((h) => h.name);
+          return [
+            e.datum || '',
+            e.wetter ? WETTER[e.wetter] : '',
+            e.temperatur || '',
+            drin.map((h) => h.stunden ? `${h.name} (${h.stunden} h)` : h.name).join(', '),
+            drin.reduce((s, h) => s + h.stunden, 0),
+            e.gemacht || '',
+            e.offen || '',
+            (e.bildIds || []).length,
+          ];
+        }),
+      'bautagebuch.csv',
+      'Bautagebuch'
+    );
+  } catch (fehler) {
+    melde('CSV konnte nicht geteilt werden.');
+    console.error(fehler);
   }
 }
 
@@ -372,7 +530,7 @@ async function pdfErzeugen(eintraege, kontakte) {
   const blatt = new Blatt({
     titel: 'Bauhelfertagebuch',
     untertitel: (projekt ? projekt + ' · ' : '') + 'Stand ' + datumLang(heute()),
-    fusszeile: 'Hausbau App · Bauhelfertagebuch',
+    fusszeile: 'Bauzeuge · Bauhelfertagebuch',
   });
 
   // Aelteste zuerst: ein Nachweis liest sich chronologisch.

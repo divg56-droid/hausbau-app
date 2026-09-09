@@ -1,4 +1,4 @@
-/* Farben und Schriften von hausbauatlas.de, damit App und Seite zusammengehoeren.
+/* Farben und Schriften von bauzeuge.de, damit App und Seite zusammengehoeren.
    Systemschrift statt Webfont: spart Platz im APK und startet ohne Nachladen. */
 :root {
   --papier: #f7f5f1;
@@ -276,3 +276,48 @@ tr.bindung td { background: var(--band); font-weight: 700; }
 .blatt h2 { margin-bottom: 14px; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---------------------------------------------------------------- Balkenplan */
+
+/* Ein Bauplan laeuft ueber Monate. Statt alles auf Bildschirmbreite zu
+   quetschen, wo ein Viertagesbalken zum Strich wird, ist die Achse breit und
+   die Flaeche wird seitlich geschoben. */
+.balken-flaeche { overflow-x: auto; overflow-y: hidden; margin: 4px -4px 10px; padding: 0 4px; }
+.balken-innen { position: relative; }
+
+.balken-kopf { height: 20px; }
+.balken-monate { position: relative; height: 20px; }
+.balken-monat {
+  position: absolute; top: 0; font-size: 11.5px; font-weight: 600;
+  color: var(--tinte-leise); white-space: nowrap; overflow: hidden;
+  padding-left: 3px; border-left: 1px solid var(--linie);
+}
+
+/* Liegt hinter den Zeilen, damit Monatsstriche und Heute-Linie durchlaufen. */
+.balken-raster { position: absolute; top: 20px; bottom: 0; pointer-events: none; }
+.balken-strich { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--linie); }
+.balken-heute { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--warn); opacity: .55; }
+
+.balken-zeilen { position: relative; }
+.balken-zeile {
+  display: flex; align-items: center; width: 100%; min-height: 40px;
+  padding: 4px 0; border: 0; background: none; font: inherit; color: inherit;
+  text-align: left; cursor: pointer;
+}
+.balken-zeile + .balken-zeile { border-top: 1px solid var(--band); }
+.balken-titel {
+  flex: none; width: 132px; padding-right: 10px; overflow: hidden;
+  display: flex; flex-direction: column; line-height: 1.25;
+}
+.balken-titel strong { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.balken-titel .zeilen-unter { font-size: 11.5px; }
+
+.balken-bahn { position: relative; flex: none; height: 20px; }
+.balken { position: absolute; top: 4px; height: 12px; border-radius: 3px; }
+.balken-offen  { background: #969eaa; }
+.balken-laeuft { background: var(--akzent); }
+.balken-fertig { background: var(--gut); }
+
+.legende i.balken-offen  { background: #969eaa; }
+.legende i.balken-laeuft { background: var(--akzent); }
+.legende i.balken-fertig { background: var(--gut); }

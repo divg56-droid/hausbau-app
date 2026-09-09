@@ -5,14 +5,58 @@
 
 import {
   el, eur, zahl, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile,
-  wertzeile, hinweisKasten, leerzustand, zuZahl, melde,
+  wertzeile, hinweisKasten, leerzustand, zuZahl, melde, datumLang,
 } from '../hilfen.js';
 import { daten, einstellung } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
 
-// Marktnahe Startwerte je Zinsbindung, wie auf hausbauatlas.de. Beim
+// Marktnahe Startwerte je Zinsbindung, wie auf bauzeuge.de. Beim
 // monatlichen Zins-Update dort mitziehen.
 export const ZINS_JE_BINDUNG = { 5: 3.7, 10: 3.8, 15: 4.1, 20: 4.3 };
+
+/*
+ * Foerderprogramme fuer private Bauherren.
+ *
+ * Bewusst ohne Zinssaetze und ohne Foerderhoehen: Beides aendert sich
+ * mehrmals im Jahr, und eine veraltete Zahl in einer App ist schlimmer als
+ * gar keine. Was hier steht, ist der Name, der Traeger und die Art. Die
+ * Betraege traegt der Nutzer ein, sobald er seine Zusage hat.
+ *
+ * "zuschuss" wird nicht zurueckgezahlt und zaehlt wie Eigenkapital.
+ * "darlehen" ist ein zinsverbilligter Kredit und wird wie jedes andere
+ * Darlehen mit Zins, Tilgung und Bindung gerechnet.
+ *
+ * Stand der Liste: September 2026.
+ */
+export const FOERDERPROGRAMME = [
+  { nr: '297/298', name: 'Klimafreundlicher Neubau – Wohngebäude', traeger: 'KfW', art: 'darlehen' },
+  { nr: '296', name: 'Klimafreundlicher Neubau im Niedrigpreissegment', traeger: 'KfW', art: 'darlehen' },
+  { nr: '300', name: 'Wohneigentum für Familien', traeger: 'KfW', art: 'darlehen' },
+  { nr: '308', name: 'Jung kauft Alt', traeger: 'KfW', art: 'darlehen' },
+  { nr: '261', name: 'Wohngebäude – Kredit, Effizienzhaus-Sanierung', traeger: 'KfW', art: 'darlehen' },
+  { nr: '270', name: 'Erneuerbare Energien Standard', traeger: 'KfW', art: 'darlehen' },
+  { nr: '358/359', name: 'Ergänzungskredit zur Heizungsförderung', traeger: 'KfW', art: 'darlehen' },
+  { nr: '159', name: 'Altersgerecht Umbauen – Kredit', traeger: 'KfW', art: 'darlehen' },
+  { nr: '458', name: 'Heizungsförderung für Privatpersonen', traeger: 'KfW', art: 'zuschuss' },
+  { nr: '', name: 'Einzelmaßnahmen: Gebäudehülle, Anlagentechnik', traeger: 'BAFA', art: 'zuschuss' },
+  { nr: '501/502/503', name: 'Selbst genutzter Wohnraum', traeger: 'ISB Rheinland-Pfalz', art: 'darlehen' },
+  { nr: '', name: 'Modernisierung selbst genutzten Wohnraums', traeger: 'ISB Rheinland-Pfalz', art: 'darlehen' },
+  { nr: '', name: 'Tilgungszuschuss aus einem Förderdarlehen', traeger: 'KfW', art: 'zuschuss' },
+  { nr: '', name: 'Kommunaler Zuschuss', traeger: 'Kommune', art: 'zuschuss' },
+];
+
+/** Beschriftung eines Programms fuer Auswahllisten und Namensvorschlag. */
+export function programmName(programm) {
+  return [programm.traeger, programm.nr, programm.name].filter(Boolean).join(' ');
+}
+
+const programmOptionen = (art) => [
+  ['', '– kein Programm –'],
+  ...FOERDERPROGRAMME.filter((f) => f.art === art).map((f, i) => [String(i), programmName(f)]),
+];
+
+const programmNach = (art, wert) =>
+  wert === '' ? null : FOERDERPROGRAMME.filter((f) => f.art === art)[Number(wert)] || null;
 
 /** Annuitaet und Restschuld am Ende der Zinsbindung. */
 export function annuitaet({ betrag, zinsProzent, tilgungProzent, bindungJahre }) {
@@ -42,18 +86,36 @@ export async function finanzierungsstand() {
   const posten = await daten.alle('darlehen');
   const eigenkapital = posten.filter((p) => p.art === 'eigenkapital');
   const darlehen = posten.filter((p) => p.art === 'darlehen');
+  // Zuschuesse werden nicht zurueckgezahlt. Sie erhoehen das Budget, aber
+  // niemals die Monatsrate - das ist der ganze Unterschied zum Foerderdarlehen.
+  const zuschuesse = posten.filter((p) => p.art === 'zuschuss');
 
   const ekSumme = eigenkapital.reduce((s, p) => s + p.betrag, 0);
   const fkSumme = darlehen.reduce((s, p) => s + p.betrag, 0);
+  const zuschussSumme = zuschuesse.reduce((s, p) => s + p.betrag, 0);
   const rate = darlehen.reduce((s, p) => s + annuitaet(p).rate, 0);
 
-  return { posten, eigenkapital, darlehen, ekSumme, fkSumme, rate, gesamt: ekSumme + fkSumme };
+  return {
+    posten, eigenkapital, darlehen, zuschuesse,
+    ekSumme, fkSumme, zuschussSumme,
+    // Was die Bank als Eigenmittel ansieht: Erspartes und Zuschuesse zusammen.
+    eigenmittel: ekSumme + zuschussSumme,
+    rate,
+    gesamt: ekSumme + fkSumme + zuschussSumme,
+  };
 }
 
 // ------------------------------------------------------------------ Eingabe
 
 function darlehensfelder(vorlage) {
   const name = eingabe({ value: vorlage.name || '', placeholder: 'z. B. Bankdarlehen' });
+  // Ein Foerderdarlehen ist rechnerisch ein Darlehen wie jedes andere, nur
+  // guenstiger. Deshalb dasselbe Formular und nur ein Feld mehr.
+  const programm = auswahl(programmOptionen('darlehen'), '');
+  programm.addEventListener('change', () => {
+    const gewaehlt = programmNach('darlehen', programm.value);
+    if (gewaehlt && !name.value.trim()) name.value = programmName(gewaehlt);
+  });
   const betrag = zahlfeld({ value: vorlage.betrag ? String(vorlage.betrag) : '' });
   const zins = zahlfeld({ value: String(vorlage.zinsProzent ?? 3.8) });
   const tilgung = zahlfeld({ value: String(vorlage.tilgungProzent ?? 2.0) });
@@ -73,6 +135,8 @@ function darlehensfelder(vorlage) {
 
   return {
     knoten: [
+      feld('Förderprogramm', programm,
+        'Nur zum Ausfüllen der Bezeichnung. Zins und Tilgung stehen in deiner Zusage.'),
       feld('Bezeichnung', name),
       feld('Darlehenssumme in €', betrag),
       feld('Sollzins in % p. a.', zins),
@@ -80,6 +144,7 @@ function darlehensfelder(vorlage) {
       feld('Zinsbindung', bindung),
     ],
     lesen: () => {
+      const gewaehlt = programmNach('darlehen', programm.value);
       const wert = {
         art: 'darlehen',
         name: name.value.trim() || 'Darlehen',
@@ -87,6 +152,7 @@ function darlehensfelder(vorlage) {
         zinsProzent: zuZahl(zins.value),
         tilgungProzent: zuZahl(tilgung.value),
         bindungJahre: +bindung.value,
+        traeger: gewaehlt ? gewaehlt.traeger : (vorlage.traeger ?? null),
       };
       if (wert.betrag <= 0) throw new Error('Bitte eine Darlehenssumme eintragen.');
       if (wert.zinsProzent <= 0) throw new Error('Bitte einen Sollzins eintragen.');
@@ -113,12 +179,60 @@ function eigenkapitalfelder(vorlage) {
   };
 }
 
+function zuschussfelder(vorlage) {
+  const programm = auswahl(programmOptionen('zuschuss'), '');
+  const name = eingabe({ value: vorlage.name || '', placeholder: 'z. B. KfW 458 Heizungsförderung' });
+  const betrag = zahlfeld({ value: vorlage.betrag ? String(vorlage.betrag) : '' });
+  const bewilligt = el('input', { type: 'date', value: vorlage.bewilligt || '' });
+
+  programm.addEventListener('change', () => {
+    const gewaehlt = programmNach('zuschuss', programm.value);
+    if (gewaehlt && !name.value.trim()) name.value = programmName(gewaehlt);
+  });
+
+  return {
+    knoten: [
+      feld('Förderprogramm', programm),
+      feld('Bezeichnung', name),
+      feld('Zuschusshöhe in €', betrag,
+        'Nur eintragen, was bewilligt ist. Ein beantragter Zuschuss ist kein Budget.'),
+      feld('Bewilligt am', bewilligt, 'Leer lassen, solange nur beantragt.'),
+      hinweisKasten(
+        'Ein Zuschuss wird nicht zurückgezahlt und erhöht deshalb dein Budget, ohne die ' +
+          'Monatsrate zu verändern. Einen Tilgungszuschuss aus einem Förderdarlehen ' +
+          'trägst du hier ein und das Darlehen daneben in voller Höhe.',
+        'info'
+      ),
+    ],
+    lesen: () => {
+      const gewaehlt = programmNach('zuschuss', programm.value);
+      const wert = {
+        art: 'zuschuss',
+        name: name.value.trim() || 'Zuschuss',
+        betrag: Math.max(0, zuZahl(betrag.value)),
+        traeger: gewaehlt ? gewaehlt.traeger : (vorlage.traeger ?? null),
+        bewilligt: bewilligt.value || null,
+      };
+      if (wert.betrag <= 0) throw new Error('Bitte die Zuschusshöhe eintragen.');
+      return wert;
+    },
+  };
+}
+
+const ARTNAME = {
+  eigenkapital: 'Eigenkapital',
+  darlehen: 'Darlehen',
+  zuschuss: 'Zuschuss',
+};
+
 function postenBearbeiten(posten, nachher) {
-  const istDarlehen = posten.art === 'darlehen';
-  const bau = istDarlehen ? darlehensfelder(posten) : eigenkapitalfelder(posten);
+  const bau =
+    posten.art === 'darlehen' ? darlehensfelder(posten)
+    : posten.art === 'zuschuss' ? zuschussfelder(posten)
+    : eigenkapitalfelder(posten);
 
   blattOeffnen(
-    posten.id ? 'Bearbeiten' : istDarlehen ? 'Darlehen anlegen' : 'Eigenkapital anlegen',
+    posten.id ? 'Bearbeiten' : (ARTNAME[posten.art] || 'Eigenkapital') + ' anlegen',
     bau.knoten,
     async () => {
       const wert = bau.lesen();
@@ -161,6 +275,7 @@ async function zeichne(rahmen) {
         ),
         el('div', { klasse: 'knopf-reihe' }, [
           knopf('Eigenkapital', () => postenBearbeiten({ art: 'eigenkapital' }, neu)),
+          knopf('Zuschuss', () => postenBearbeiten({ art: 'zuschuss' }, neu)),
           knopf('Darlehen', () => postenBearbeiten({ art: 'darlehen' }, neu), 'knopf-haupt'),
         ]),
       ]),
@@ -179,6 +294,7 @@ async function zeichne(rahmen) {
     karte([
       el('h2', { text: 'Finanzierungsbasis' }),
       wertzeile('Eigenkapital', eur.format(stand.ekSumme)),
+      stand.zuschussSumme > 0 ? wertzeile('Zuschüsse', eur.format(stand.zuschussSumme)) : null,
       wertzeile('Fremdkapital', eur.format(stand.fkSumme)),
       wertzeile('Gesamtvolumen', eur.format(stand.gesamt)),
       wertzeile('Monatsrate', stand.rate > 0 ? eur.format(stand.rate) + ' / Monat' : '–', true),
@@ -197,17 +313,22 @@ async function zeichne(rahmen) {
     );
   }
 
-  if (stand.ekSumme > 0 && stand.gesamt > 0 && stand.ekSumme / stand.gesamt < 0.15) {
+  if (stand.eigenmittel > 0 && stand.gesamt > 0 && stand.eigenmittel / stand.gesamt < 0.15) {
     rahmen.append(
       hinweisKasten(
-        'Dein Eigenkapital liegt unter 15 Prozent des Volumens. Rechne mit einem Zinsaufschlag der Bank.',
+        'Deine Eigenmittel aus Eigenkapital und Zuschüssen liegen unter 15 Prozent des ' +
+          'Volumens. Rechne mit einem Zinsaufschlag der Bank.',
         'warn'
       )
     );
   }
 
   // Posten
-  for (const [art, ueberschrift] of [['eigenkapital', 'Eigenkapital'], ['darlehen', 'Darlehen']]) {
+  for (const [art, ueberschrift] of [
+    ['eigenkapital', 'Eigenkapital'],
+    ['zuschuss', 'Förderungen und Zuschüsse'],
+    ['darlehen', 'Darlehen'],
+  ]) {
     const liste = stand.posten.filter((p) => p.art === art);
     rahmen.append(
       karte([
@@ -218,16 +339,17 @@ async function zeichne(rahmen) {
               { klasse: 'liste' },
               liste.map((p) => {
                 const a = art === 'darlehen' ? annuitaet(p) : null;
+                const unterzeile = a
+                  ? `${zahl(p.zinsProzent, 2)} % Zins · ${zahl(p.tilgungProzent, 2)} % Tilgung · ${p.bindungJahre} Jahre · ${eur.format(a.rate)}/Monat`
+                  : art === 'zuschuss'
+                    ? [p.traeger, p.bewilligt ? 'bewilligt am ' + datumLang(p.bewilligt) : 'noch nicht bewilligt']
+                        .filter(Boolean).join(' · ')
+                    : 'Eigenkapital';
                 return el('li', {}, [
                   el('button', { klasse: 'listenzeile', onclick: () => postenBearbeiten(p, neu) }, [
                     el('span', { klasse: 'zeilen-text' }, [
                       el('span', { klasse: 'zeilen-titel', text: p.name }),
-                      el('span', {
-                        klasse: 'zeilen-unter',
-                        text: a
-                          ? `${zahl(p.zinsProzent, 2)} % Zins · ${zahl(p.tilgungProzent, 2)} % Tilgung · ${p.bindungJahre} Jahre · ${eur.format(a.rate)}/Monat`
-                          : 'Eigenkapital',
-                      }),
+                      el('span', { klasse: 'zeilen-unter', text: unterzeile }),
                     ]),
                     el('span', { klasse: 'zeilen-wert', text: eur.format(p.betrag) }),
                   ]),
@@ -236,15 +358,32 @@ async function zeichne(rahmen) {
             )
           : el('p', { klasse: 'unterzeile', text: 'Noch nichts erfasst.' }),
         knopf(
-          art === 'darlehen' ? 'Darlehen hinzufügen' : 'Eigenkapital hinzufügen',
+          art === 'darlehen' ? 'Darlehen hinzufügen'
+            : art === 'zuschuss' ? 'Zuschuss hinzufügen'
+            : 'Eigenkapital hinzufügen',
           () => postenBearbeiten({ art }, neu),
           'knopf-leise'
         ),
+        art === 'zuschuss'
+          ? el('p', {
+              klasse: 'unterzeile',
+              text: 'Ein Förderdarlehen gehört nicht hierher, sondern unter Darlehen. ' +
+                'Dort lässt sich das Programm auswählen.',
+            })
+          : null,
       ])
     );
   }
 
   rahmen.append(
+    hinweisKasten(
+      'Nicht mehr verfügbar: Das Baukindergeld ist seit Ende 2022 beendet, die alte ' +
+        'Neubauförderung für Effizienzhäuser wurde durch den Klimafreundlichen Neubau ' +
+        'abgelöst, und der Zuschuss Altersgerecht Umbauen nimmt seit Juli 2026 keine ' +
+        'neuen Anträge mehr an. Prüfe vor dem Eintragen die Zusage, nicht die Werbung. ' +
+        'Stand dieser Liste: September 2026.',
+      'info'
+    ),
     el('div', { klasse: 'knopf-reihe' }, [
       knopf('Tilgungsverlauf', () => { location.hash = '#/tilgung'; }),
       knopf('Zur Baukasse', () => { location.hash = '#/baukasse'; }),

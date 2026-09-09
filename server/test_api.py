@@ -163,5 +163,103 @@ bilder = a['saetze'].get('bilder', [])
 pruef('Bildangaben kommen ueber den Abgleich', any(x['id'] == KENNUNG for x in bilder), bilder)
 pruef('Groesse ist vermerkt', any(x['id'] == KENNUNG and x['groesse'] == len(JPEG) for x in bilder), bilder)
 
+# ----------------------------------------------------------- Angebote im Abgleich
+
+# Der Speicher "angebote" ist neu. Fehlte er in der Freigabeliste des Servers,
+# wuerde er stillschweigend verworfen: der Abgleich meldete Erfolg, und die
+# Angebote waeren auf dem zweiten Geraet einfach nicht da.
+ANGEBOT = 'a1b2c3d4-1111-4111-8111-111111111111'
+code, a = ruf('/abgleich.php', {'seit': '', 'saetze': {'angebote': [{
+    'id': ANGEBOT, 'geaendert': '2026-09-09T09:00:00.000Z', 'geloescht': False,
+    'postenId': None, 'firma': 'Meyer Bau GmbH', 'betrag': 192000,
+    'datum': '2026-04-02', 'status': 'beauftragt',
+}]}}, marke=handy)
+pruef('Angebot wird angenommen', code == 200 and a.get('angenommen', 0) >= 1, a)
+
+code, a = ruf('/abgleich.php', {'seit': '', 'saetze': {}}, marke=rechner)
+angebote = a['saetze'].get('angebote', [])
+pruef('Angebot kommt am zweiten Geraet an',
+      any(x['id'] == ANGEBOT for x in angebote), angebote)
+pruef('Der Betrag ueberlebt die Runde',
+      any(x['id'] == ANGEBOT and x.get('betrag') == 192000 for x in angebote), angebote)
+
+code, a = ruf('/abgleich.php', {'seit': '', 'saetze': {'erfundenes': [{
+    'id': 'ffffffff-1111-4111-8111-111111111111',
+    'geaendert': '2026-09-09T09:00:00.000Z',
+}]}}, marke=handy)
+pruef('Unbekannter Speicher wird still verworfen',
+      code == 200 and 'erfundenes' not in a['saetze'], a)
+
+# ------------------------------------------------------- Oeffentliches Tagebuch
+
+TAG = 'bbbbbbbb-2222-4222-8222-222222222222'
+ruf('/abgleich.php', {'seit': '', 'saetze': {'tagebuch': [{
+    'id': TAG, 'geaendert': '2026-09-09T09:10:00.000Z', 'geloescht': False,
+    'datum': '2026-08-21', 'wetter': 'regen', 'temperatur': '14',
+    'gemacht': 'Nur Aufräumarbeiten wegen Regen.',
+    'offen': 'Mauerwerk Obergeschoss wartet',
+    'helfer': [{'id': 'cccccccc-3333-4333-8333-333333333333', 'stunden': 6}],
+    'bildIds': [KENNUNG],
+}]}}, marke=handy)
+
+code, a = ruf('/freigabe.php', {'tun': 'stand'}, marke=handy)
+pruef('Ohne Freigabe meldet der Stand nein', code == 200 and a.get('frei') is False, a)
+
+code, _ = ruf('/freigabe.php', {'tun': 'stand'})
+pruef('Freigabe braucht eine Anmeldung', code == 401, code)
+
+code, a = ruf('/freigabe.php', {'tun': 'anlegen', 'titel': 'Unser Hausbau'}, marke=handy)
+pruef('Freigabe wird angelegt', code == 200 and a.get('frei') is True, a)
+verweis = a.get('verweis', '')
+pruef('Der Verweis nennt oeffentlich.php', 'oeffentlich.php?k=' in verweis, verweis)
+marke_oeff = verweis.split('k=')[-1]
+pruef('Die Marke ist lang genug zum Raten', len(marke_oeff) >= 32, len(marke_oeff))
+
+code, a = ruf('/freigabe.php', {'tun': 'stand'}, marke=handy)
+pruef('Der Stand kennt die Freigabe jetzt', a.get('frei') is True and a.get('titel') == 'Unser Hausbau', a)
+
+# Die Seite selbst, ohne jede Anmeldung.
+code, seite = ruf('/oeffentlich.php?k=' + marke_oeff, methode='GET')
+text = seite.decode('utf-8', 'replace') if isinstance(seite, bytes) else str(seite)
+pruef('Die Seite ist ohne Anmeldung lesbar', code == 200, code)
+pruef('Der Titel steht drin', 'Unser Hausbau' in text)
+pruef('Das Datum steht drin', '21.08.2026' in text)
+pruef('Was gemacht wurde, steht drin', 'Aufräumarbeiten' in text)
+pruef('Das Wetter steht drin', 'Regen' in text)
+
+# Das Wichtigste: was NICHT hinausgehen darf.
+pruef('Liegengebliebenes bleibt drin', 'Mauerwerk Obergeschoss wartet' not in text)
+pruef('Helferkennungen bleiben drin', 'cccccccc-3333' not in text)
+pruef('Die Stundenzahl steht nicht auf der Seite', '6 h' not in text)
+pruef('Die Seite verbietet die Aufnahme in Suchmaschinen', 'noindex' in text)
+
+# Das Bild aus dem Eintrag muss kommen, ein fremdes nicht.
+code, bild = ruf('/oeffentlich.php?k=' + marke_oeff + '&bild=' + KENNUNG, methode='GET')
+pruef('Bild des Eintrags wird ausgeliefert', code == 200 and bild == JPEG, code)
+
+FREMD = 'dddddddd-4444-4444-8444-444444444444'
+ruf('/bild.php?id=' + FREMD, roh=JPEG, art='image/jpeg', marke=handy)
+code, _ = ruf('/oeffentlich.php?k=' + marke_oeff + '&bild=' + FREMD, methode='GET')
+pruef('Bild ohne Tagebuchbezug wird nicht ausgeliefert', code == 404, code)
+
+code, _ = ruf('/oeffentlich.php?k=' + '0' * 48, methode='GET')
+pruef('Falsche Marke fuehrt ins Leere', code == 404, code)
+
+code, _ = ruf('/oeffentlich.php?k=nicht-hexadezimal', methode='GET')
+pruef('Unsinnige Marke wird abgewiesen', code == 404, code)
+
+# Nur eine Freigabe je Konto: die neue loest die alte ab.
+code, a = ruf('/freigabe.php', {'tun': 'anlegen', 'titel': 'Zweiter Anlauf'}, marke=handy)
+zweiter = a['verweis'].split('k=')[-1]
+pruef('Der neue Verweis ist ein anderer', zweiter != marke_oeff)
+code, _ = ruf('/oeffentlich.php?k=' + marke_oeff, methode='GET')
+pruef('Der alte Verweis gilt nicht mehr', code == 404, code)
+
+code, a = ruf('/freigabe.php', {'tun': 'aufheben'}, marke=handy)
+pruef('Freigabe laesst sich aufheben', code == 200 and a.get('frei') is False, a)
+code, _ = ruf('/oeffentlich.php?k=' + zweiter, methode='GET')
+pruef('Nach dem Aufheben ist nichts mehr zu sehen', code == 404, code)
+
+
 print('\nFEHLGESCHLAGEN: ' + str(len(fehler)) if fehler else '\nAlle Pruefungen bestanden.')
 raise SystemExit(1 if fehler else 0)

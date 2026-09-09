@@ -61,9 +61,9 @@ function alsPdfText(text) {
   return raus;
 }
 
-const A4 = { breite: 595.28, hoehe: 841.89 };
-const RAND = 48;
-const INNEN = A4.breite - 2 * RAND;
+export const A4 = { breite: 595.28, hoehe: 841.89 };
+export const RAND = 48;
+export const INNEN = A4.breite - 2 * RAND;
 
 // --------------------------------------------------------------------- Bilder
 
@@ -264,6 +264,25 @@ export class Blatt {
     this.strom += block;
   }
 
+  /**
+   * Gefuellte Flaeche in Punkten, gemessen von unten links der Seite.
+   * Braucht der Balkenplan; Text- und Tabellenbausteine kommen ohne aus.
+   */
+  flaeche(x, y, breite, hoehe, farbe = [200, 200, 200]) {
+    if (breite <= 0 || hoehe <= 0) return;
+    this.strom +=
+      farbe.map((k) => (k / 255).toFixed(3)).join(' ') + ' rg ' +
+      x.toFixed(2) + ' ' + y.toFixed(2) + ' ' +
+      breite.toFixed(2) + ' ' + hoehe.toFixed(2) + ' re f 0 0 0 rg\n';
+  }
+
+  /** Senkrechte Linie, fuer die Monatsraster des Balkenplans. */
+  senkrechte(x, vonY, bisY, farbe = 0.85, staerke = 0.4) {
+    this.strom +=
+      farbe + ' G ' + staerke + ' w ' + x.toFixed(2) + ' ' + vonY.toFixed(2) +
+      ' m ' + x.toFixed(2) + ' ' + bisY.toFixed(2) + ' l S 0 G\n';
+  }
+
   linie(staerke = 0.6, farbe = 0.85) {
     this.strom +=
       farbe + ' G ' + staerke + ' w ' + RAND + ' ' + this.y.toFixed(2) +
@@ -271,7 +290,7 @@ export class Blatt {
   }
 
   kopfblock() {
-    this.schreibe('HAUSBAU APP', { groesse: 9, fett: true, farbe: [138, 90, 8] });
+    this.schreibe('BAUZEUGE', { groesse: 9, fett: true, farbe: [138, 90, 8] });
     this.y -= 20;
     this.schreibe(this.titel, { groesse: 18, fett: true });
     this.y -= 15;
@@ -537,7 +556,7 @@ export class Blatt {
  * gewoehnlichen Download zurueck, damit sich dieselbe Datei am Rechner
  * pruefen laesst.
  */
-export async function pdfTeilen(blob, dateiname, titel = 'Hausbau App') {
+export async function pdfTeilen(blob, dateiname, titel = 'Bauzeuge') {
   // Ohne Bundler gibt es kein "import '@capacitor/share'": Capacitor haengt
   // die nativen Erweiterungen zur Laufzeit unter Capacitor.Plugins ein.
   const bruecke = window.Capacitor;

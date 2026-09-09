@@ -8,18 +8,21 @@
     python deploy.py --pruefen      laedt nichts, sieht nur nach was live ist
 
 Ziel:
-    www/     ->  hausbauatlas.de/app/
-    server/  ->  hausbauatlas.de/app/api/
+    www/     ->  www.bauzeuge.de/app/
+    server/  ->  www.bauzeuge.de/app/api/
 
 Die Astro-Seite deployt weiter unabhaengig in das Wurzelverzeichnis. Ihr
 Deploy laedt hoch und loescht nichts, deshalb bleibt /app/ dabei unangetastet
 und umgekehrt.
 
 Zugangsdaten stehen in deploy.env neben dieser Datei. Die Datei ist
-gitignored; dieselben Werte wie in hausbauatlas/.env.
+gitignored; dieselben Werte wie in der .env der Website - es ist derselbe
+Server. Nach dem Domainumzug muessen dort FTP_HOST und FTP_DIR auf das
+Verzeichnis von bauzeuge.de zeigen, sonst laedt das Skript weiter an die
+alte Stelle.
 
 Uebertragen wird mit curl statt mit ftplib. Grund steht in
-hausbauatlas/.github/workflows/deploy.yml: All-Inkl kappt bestimmten
+dem Deploy-Workflow der Website: All-Inkl kappt bestimmten
 FTPS-Klienten die Datenverbindung, curl macht die TLS-Sitzungswiederverwendung
 richtig und ist gegen genau diesen Server erprobt.
 """
@@ -35,7 +38,8 @@ import urllib.request
 
 HIER = pathlib.Path(__file__).parent
 MERKZETTEL = HIER / ".deploy-stand.json"
-DOMAIN = "hausbauatlas.de"
+# Nur fuer die Probe nach dem Hochladen und fuer die Meldungen.
+DOMAIN = "www.bauzeuge.de"
 
 # Was niemals hochgeht.
 #

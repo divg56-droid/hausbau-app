@@ -5,7 +5,7 @@ require __DIR__ . '/_start.php';
 /**
  * Legt die Tabellen an, einmalig nach dem Hochladen:
  *
- *     https://hausbauatlas.de/app/api/einrichten.php?schluessel=...
+ *     https://www.bauzeuge.de/app/api/einrichten.php?schluessel=...
  *
  * Laesst sich gefahrlos mehrfach aufrufen: Es wird nur angelegt, was fehlt.
  * Ohne den Schluessel aus geheim.php passiert nichts.
@@ -125,6 +125,21 @@ CREATE TABLE orte (
     gefunden TINYINT(1) NOT NULL DEFAULT 0,
     angelegt DATETIME NOT NULL,
     PRIMARY KEY (suche)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+
+// Oeffentliche Freigabe des Bautagebuchs. Die Marke steht als SHA-256, wie
+// bei den Sitzungen: Wer die Datenbank liest, kann daraus keinen gueltigen
+// Verweis bauen.
+'freigaben' => "
+CREATE TABLE freigaben (
+    marke CHAR(64) NOT NULL,
+    nutzer_id INT UNSIGNED NOT NULL,
+    art VARCHAR(32) NOT NULL,
+    titel VARCHAR(190) NOT NULL,
+    angelegt DATETIME NOT NULL,
+    PRIMARY KEY (marke),
+    UNIQUE KEY je_nutzer (nutzer_id, art),
+    CONSTRAINT freigabe_nutzer FOREIGN KEY (nutzer_id) REFERENCES nutzer (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
 
 'bremse' => "

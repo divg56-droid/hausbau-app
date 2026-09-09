@@ -7,7 +7,13 @@ import { daten, einstellung } from '../daten.js';
 
 // Alle Speicher ausser den Einstellungen selbst; Bilder werden gesondert
 // behandelt, weil sie als Blob nicht in JSON passen.
-const SPEICHER = ['darlehen', 'belege', 'geschosse', 'pins', 'maengel', 'aufgaben', 'tagebuch', 'kontakte'];
+// Die Liste muss vollstaendig sein: Was hier fehlt, fehlt in der Sicherung und
+// bleibt beim Loeschen stehen. Sie steht deshalb in derselben Reihenfolge wie
+// SPEICHER in daten.js, damit ein neuer Speicher beim Vergleich auffaellt.
+const SPEICHER = [
+  'darlehen', 'posten', 'angebote', 'belege', 'geschosse', 'raeume',
+  'pins', 'maengel', 'aufgaben', 'tagebuch', 'kontakte',
+];
 
 export async function zeige(rahmen) {
   await zeichne(rahmen);
@@ -103,8 +109,11 @@ async function zeichne(rahmen) {
     karte([
       el('h2', { text: 'Was gespeichert ist' }),
       wertzeile('Finanzierungsposten', String(bestand.darlehen)),
+      wertzeile('Kostenpositionen', String(bestand.posten)),
+      wertzeile('Angebote', String(bestand.angebote)),
       wertzeile('Rechnungen', String(bestand.belege)),
       wertzeile('Geschosse', String(bestand.geschosse)),
+      wertzeile('Räume', String(bestand.raeume)),
       wertzeile('Markierungen', String(bestand.pins)),
       wertzeile('Mängel', String(bestand.maengel)),
       wertzeile('Arbeitsschritte', String(bestand.aufgaben)),
@@ -123,6 +132,33 @@ async function zeichne(rahmen) {
       }),
       knopf('Sicherung erstellen', sicherungErstellen),
       knopf('Sicherung einlesen', () => sicherungEinlesen(rahmen)),
+    ]),
+
+    karte([
+      el('h2', { text: 'Daten als CSV' }),
+      el('p', {
+        klasse: 'unterzeile',
+        text:
+          'Für Excel oder LibreOffice: Semikolon als Trenner, Zahlen mit Komma, ' +
+          'sonst rechnet die Tabelle nicht. Fotos sind darin nicht enthalten, ' +
+          'dafür ist die Sicherung da.',
+      }),
+      el('div', { klasse: 'knopf-reihe' }, [
+        knopf('Kostenpositionen', () => csvPosten()),
+        knopf('Rechnungen', () => csvBelege()),
+      ]),
+      el('div', { klasse: 'knopf-reihe' }, [
+        knopf('Mängel', () => csvMaengel()),
+        knopf('Bauablauf', () => csvAufgaben()),
+      ]),
+      el('div', { klasse: 'knopf-reihe' }, [
+        knopf('Kontakte', () => csvKontakte()),
+      ]),
+      el('p', {
+        klasse: 'unterzeile',
+        text: 'Angebote und Bautagebuch exportierst du in ihrem eigenen Bereich, ' +
+          'dort sind die Spalten passend.',
+      }),
     ]),
 
     karte([
@@ -146,13 +182,123 @@ async function zeichne(rahmen) {
       el('p', {
         klasse: 'unterzeile',
         text:
-          'Hausbau App, Testversion. Ohne Konto bleibt alles auf diesem Gerät ' +
+          'Bauzeuge, Testversion. Ohne Konto bleibt alles auf diesem Gerät ' +
           'und nichts wird übertragen. Mit Konto gehen die Daten zum Abgleich ' +
-          'an hausbauatlas.de, und nur dorthin. Die Rechner nutzen dieselbe ' +
-          'Datenbasis wie hausbauatlas.de (Baukosten Stand 08.2026). ' +
+          'an bauzeuge.de, und nur dorthin. Die Baukosten haben den ' +
+          'Stand 08.2026. ' +
           'Ergebnisse sind Prognosen auf Grundlage realer Marktdaten, keine Angebote.',
       }),
     ])
+  );
+}
+
+// ------------------------------------------------------------------------ CSV
+
+async function csvSicher(kopf, zeilen, dateiname, titel) {
+  try {
+    if (!zeilen.length) {
+      melde('Dazu ist noch nichts erfasst.');
+      return;
+    }
+    const { csvTeilen } = await import('../csv.js');
+    await csvTeilen(kopf, zeilen, dateiname, titel);
+  } catch (fehler) {
+    console.error(fehler);
+    melde('CSV konnte nicht geteilt werden.');
+  }
+}
+
+async function csvPosten() {
+  const [posten, belege] = await Promise.all([daten.alle('posten'), daten.alle('belege')]);
+  const { postenRechnen } = await import('./baukasse.js');
+  const { kostengruppeLang } = await import('../din276.js');
+  await csvSicher(
+    ['Position', 'Gewerk', 'Kostengruppe', 'Bezeichnung der Kostengruppe',
+      'Geplant', 'Tatsaechlich', 'Bezahlt', 'Abweichung', 'Status', 'Notiz'],
+    posten.map((p) => {
+      const r = postenRechnen(p, belege);
+      return [
+        p.name, p.gewerk || '', p.kostengruppe || '',
+        p.kostengruppe ? kostengruppeLang(p.kostengruppe).slice(4) : '',
+        r.geplant, r.tatsaechlich, r.gezahlt, r.differenz, r.statusName, p.notiz || '',
+      ];
+    }),
+    'kostenpositionen.csv', 'Kostenpositionen'
+  );
+}
+
+async function csvBelege() {
+  const [belege, posten, kontakte] = await Promise.all([
+    daten.alle('belege'), daten.alle('posten'), daten.alle('kontakte'),
+  ]);
+  await csvSicher(
+    ['Datum', 'Beschreibung', 'Betrag', 'Firma laut Rechnung', 'Kontakt', 'Position'],
+    [...belege]
+      .sort((a, b) => String(a.datum).localeCompare(String(b.datum)))
+      .map((b) => {
+        const k = kontakte.find((x) => x.id === b.kontaktId);
+        const p = posten.find((x) => x.id === b.postenId);
+        return [
+          b.datum || '', b.beschreibung || '', b.betrag || 0,
+          b.kontaktName || '', k ? k.name : '', p ? p.name : '',
+        ];
+      }),
+    'rechnungen.csv', 'Rechnungen'
+  );
+}
+
+async function csvMaengel() {
+  const [maengel, kontakte, raeume] = await Promise.all([
+    daten.alle('maengel'), daten.alle('kontakte'), daten.alle('raeume'),
+  ]);
+  const { STATUS } = await import('./maengel.js');
+  await csvSicher(
+    ['Titel', 'Raum', 'Gewerk', 'Status', 'Angelegt am', 'Frist', 'Firma', 'Fotos', 'Beschreibung'],
+    maengel.map((m) => {
+      const k = kontakte.find((x) => x.id === m.kontaktId);
+      const r = raeume.find((x) => x.id === m.raumId);
+      return [
+        m.titel || '',
+        r ? r.name : (m.raum || ''),
+        m.gewerk || '',
+        (STATUS[m.status] || {}).name || m.status || '',
+        m.angelegt || '', m.frist || '',
+        k ? k.firma || k.name : '',
+        (m.bildIds || []).length,
+        m.beschreibung || '',
+      ];
+    }),
+    'maengel.csv', 'Mängelliste'
+  );
+}
+
+async function csvAufgaben() {
+  const [roh, kontakte] = await Promise.all([daten.alle('aufgaben'), daten.alle('kontakte')]);
+  const { terminePlanen } = await import('./ablauf.js');
+  await csvSicher(
+    ['Arbeitsschritt', 'Phase', 'Beginn', 'Ende', 'Dauer in Tagen', 'Wer', 'Status', 'Notiz'],
+    terminePlanen(roh).map((a) => {
+      const k = kontakte.find((x) => x.id === a.kontaktId);
+      return [
+        a.titel || '', a.phase || '', a.start || '', a.ende || '', a.dauer || 0,
+        k ? k.name : '',
+        a.status === 'fertig' ? 'Fertig' : a.status === 'laeuft' ? 'Läuft' : 'Offen',
+        a.notiz || '',
+      ];
+    }),
+    'bauablauf.csv', 'Bauablauf'
+  );
+}
+
+async function csvKontakte() {
+  const kontakte = await daten.alle('kontakte');
+  await csvSicher(
+    ['Name', 'Firma', 'Gewerk', 'Art', 'Strasse', 'PLZ und Ort', 'Telefon', 'E-Mail', 'Notiz'],
+    kontakte.map((k) => [
+      k.name || '', k.firma || '', k.gewerk || '', k.art || '',
+      k.strasse || '', k.plzOrt || '', k.telefon || '', k.epost || '', k.notiz || '',
+    ]),
+    'kontakte.csv', 'Kontakte'
   );
 }
 
@@ -180,7 +326,7 @@ async function sicherungErstellen() {
   const blob = new Blob([JSON.stringify(inhalt)], { type: 'application/json' });
   const { pdfTeilen } = await import('../pdf.js');
   try {
-    await pdfTeilen(blob, 'hausbau-sicherung-' + heute() + '.json', 'Sicherung');
+    await pdfTeilen(blob, 'bauzeuge-sicherung-' + heute() + '.json', 'Sicherung');
     melde('Sicherung bereit.');
   } catch (fehler) {
     console.error(fehler);

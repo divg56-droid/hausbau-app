@@ -22,8 +22,8 @@ require __DIR__ . '/_start.php';
 // Nur diese Speicher werden angenommen. Ohne die Liste koennte ein Aufrufer
 // beliebige Namen anlegen und die Tabelle vollschreiben.
 const SPEICHER = [
-    'einstellungen', 'darlehen', 'posten', 'belege', 'geschosse', 'raeume',
-    'pins', 'maengel', 'aufgaben', 'tagebuch', 'kontakte', 'bilder',
+    'einstellungen', 'darlehen', 'posten', 'angebote', 'belege', 'geschosse',
+    'raeume', 'pins', 'maengel', 'aufgaben', 'tagebuch', 'kontakte', 'bilder',
 ];
 
 // Obergrenze je Antwort. Bei einem grossen Bestand holt sich das Geraet den
