@@ -27,7 +27,14 @@ const ABWEICHUNG = (() => {
   }
 })();
 
-const ziel = (pfad) => (ABWEICHUNG || BASIS) + pfad;
+/**
+ * Die tatsaechlich benutzte Adresse, Umlenkung eingerechnet. Wer von aussen
+ * mit der Schnittstelle spricht, muss diese nehmen und nicht BASIS - sonst
+ * greift die oertliche Umlenkung beim Entwickeln nicht.
+ */
+export const apiBasis = () => ABWEICHUNG || BASIS;
+
+const ziel = (pfad) => apiBasis() + pfad;
 
 // localStorage kann in abgeschotteten Fenstern werfen, deshalb ueberall
 // abgesichert. Ohne Ablage funktioniert die App weiter, nur eben ohne

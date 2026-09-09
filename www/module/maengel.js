@@ -126,7 +126,8 @@ async function zeichne(rahmen, filter = 'alle') {
 
   rahmen.append(
     knopf('Mangel erfassen', () => mangelBearbeiten({ status: 'offen' }, kontakte, neu), 'knopf-haupt'),
-    knopf('Liste als PDF teilen', () => pdfErzeugen(maengel, kontakte))
+    knopf('Liste als PDF teilen', () => pdfErzeugen(maengel, kontakte)),
+    knopf('Mängelrüge an eine Firma', () => ruegeBlatt(maengel, kontakte))
   );
 }
 
@@ -205,6 +206,145 @@ function mangelBearbeiten(mangel, kontakte, nachher) {
         : null,
     }
   );
+}
+
+/**
+ * Fragt ab, an wen die Ruege geht und bis wann.
+ *
+ * Aufgenommen werden nur offene Punkte dieser Firma. Behobenes anzumahnen
+ * waere peinlich und schwaecht das Schreiben.
+ */
+function ruegeBlatt(maengel, kontakte) {
+  const firmen = kontakte.filter((k) => (k.art || 'firma') === 'firma');
+
+  if (!firmen.length) {
+    melde('Erst eine Firma in den Kontakten anlegen.');
+    return;
+  }
+
+  const empfaenger = auswahl(
+    firmen.map((k) => [k.id, k.name + (k.firma ? ' (' + k.firma + ')' : '')]),
+    firmen[0].id
+  );
+
+  // Zwei Wochen sind die uebliche Groessenordnung fuer eine Nachbesserung.
+  const vorgabe = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+  const frist = el('input', { type: 'date', value: vorgabe });
+  const zaehler = el('p', { klasse: 'unterzeile' });
+
+  function zaehlen() {
+    const offen = maengel.filter(
+      (m) => m.kontaktId === empfaenger.value && m.status !== 'behoben'
+    );
+    zaehler.textContent = offen.length === 1
+      ? 'Ein offener Mangel dieser Firma kommt in das Schreiben.'
+      : offen.length
+        ? `${offen.length} offene Mängel dieser Firma kommen in das Schreiben.`
+        : 'Dieser Firma ist kein offener Mangel zugeordnet.';
+    return offen;
+  }
+  empfaenger.addEventListener('change', zaehlen);
+  zaehlen();
+
+  blattOeffnen(
+    'Mängelrüge erstellen',
+    [
+      feld('An welche Firma?', empfaenger, 'Zuordnung erfolgt beim einzelnen Mangel.'),
+      feld('Frist zur Beseitigung', frist),
+      zaehler,
+      el('p', {
+        klasse: 'kasten kasten-info',
+        text:
+          'Das Schreiben ist eine Vorlage und keine Rechtsberatung. Lies es vor ' +
+          'dem Versand durch und schick es so, dass du den Zugang belegen kannst.',
+      }),
+    ],
+    async () => {
+      const offen = zaehlen();
+      if (!offen.length) throw new Error('Ohne offenen Mangel gibt es nichts zu rügen.');
+      const firma = firmen.find((k) => k.id === empfaenger.value);
+      await ruegeErzeugen(firma, offen, frist.value);
+    },
+    { sicherText: 'PDF erstellen' }
+  );
+}
+
+async function ruegeErzeugen(firma, maengel, frist) {
+  melde('Schreiben wird erstellt …');
+  const absender = (await einstellung('absender')) || {};
+  const projekt = (await einstellung('projektname')) || '';
+
+  const blatt = new Blatt({
+    ohneKopf: true,
+    fusszeile: 'Mängelrüge' + (projekt ? ' · ' + projekt : ''),
+  });
+
+  blatt.briefkopf(
+    [absender.name, absender.strasse, absender.plzOrt],
+    [
+      firma.firma || firma.name,
+      firma.firma && firma.name !== firma.firma ? 'z. Hd. ' + firma.name : null,
+      firma.strasse || null,
+      firma.plzOrt || null,
+    ],
+    datumLang(heute())
+  );
+
+  const vorhaben = absender.vorhaben || projekt;
+  blatt.betreff('Mängelrüge' + (vorhaben ? ' – Bauvorhaben ' + vorhaben : ''));
+
+  blatt.absatz('Sehr geehrte Damen und Herren,', 10.5);
+  blatt.absatz(
+    'bei der Abnahme beziehungsweise der Begehung der von Ihnen ausgeführten Arbeiten ' +
+    'habe ich die nachstehend aufgeführten Mängel festgestellt. Ich zeige Ihnen diese ' +
+    'hiermit an und fordere Sie auf, sie bis zum ' + datumLang(frist) + ' zu beseitigen.',
+    10.5
+  );
+
+  blatt.tabelle(
+    ['Nr.', 'Ort', 'Mangel', 'Festgestellt'],
+    maengel.map((m, i) => [
+      String(i + 1),
+      m.raum || 'ohne Angabe',
+      m.titel,
+      datumLang(m.angelegt),
+    ]),
+    [0.5, 1.6, 4, 1.3]
+  );
+
+  // Beschreibungen, soweit vorhanden. Ein Satz mehr im Schreiben erspart
+  // spaeter die Rueckfrage, was genau gemeint war.
+  const mitText = maengel.filter((m) => m.beschreibung);
+  if (mitText.length) {
+    blatt.zwischentitel('Einzelheiten zu den Mängeln');
+    for (const m of mitText) {
+      const nummer = maengel.indexOf(m) + 1;
+      blatt.absatz(nummer + '. ' + m.titel + ': ' + m.beschreibung, 10);
+    }
+  }
+
+  const mitFoto = maengel.filter((m) => (m.bildIds || []).length).length;
+  blatt.absatz(
+    (mitFoto
+      ? 'Zu ' + mitFoto + ' der aufgeführten Punkte liegen Lichtbilder mit Aufnahmedatum vor, ' +
+        'die ich Ihnen auf Wunsch übersende. '
+      : '') +
+    'Bitte bestätigen Sie mir den Erhalt dieses Schreibens und teilen Sie mir mit, ' +
+    'wann Sie die Arbeiten ausführen. Sollte die Frist fruchtlos verstreichen, ' +
+    'behalte ich mir die mir zustehenden Rechte vor.',
+    10.5
+  );
+
+  blatt.absatz('Mit freundlichen Grüßen', 10.5);
+  blatt.y -= 34;
+  blatt.absatz(absender.name || '', 10.5);
+
+  try {
+    await pdfTeilen(blatt.blob(), 'maengelruege.pdf', 'Mängelrüge');
+  } catch (fehler) {
+    melde('PDF konnte nicht geteilt werden.');
+    console.error(fehler);
+  }
 }
 
 async function pdfErzeugen(maengel, kontakte) {

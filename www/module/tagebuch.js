@@ -208,6 +208,34 @@ function eintragBearbeiten(eintrag, helfer, alleEintraege, nachher) {
   const gemacht = el('textarea', {}, [eintrag.gemacht || '']);
   const offen = el('textarea', {}, [eintrag.offen || '']);
 
+  const wetterstand = el('p', { klasse: 'unterzeile' });
+  const wetterknopf = knopf('\u{1F326} Wetter zu diesem Tag holen', async () => {
+    wetterknopf.disabled = true;
+    wetterstand.textContent = 'Wird geholt …';
+    try {
+      const { einstellung } = await import('../daten.js');
+      const ort = (await einstellung('baustelle')) || {};
+      if (!ort.lat) {
+        wetterstand.textContent = 'Erst den Ort der Baustelle in den Einstellungen bestimmen.';
+        return;
+      }
+      const { wetterHolen, wetterHinweis } = await import('../wetter.js');
+      const w = await wetterHolen(ort.lat, ort.lon, datum.value || heute());
+      wetter.value = w.wetter;
+      temperatur.value = String(w.temperatur);
+      wetterstand.textContent =
+        `${WETTER[w.wetter]}, ${w.min} bis ${w.max} °C, ${w.niederschlag} mm, ` +
+        `Böen bis ${w.wind} km/h. Station ${w.station}.`;
+      // Bei Wetter, das Arbeiten stoppt, den Grund gleich vorschlagen.
+      const satz = wetterHinweis(w);
+      if (satz && !offen.value.trim()) offen.value = satz;
+    } catch (fehler) {
+      wetterstand.textContent = fehler.message;
+    } finally {
+      wetterknopf.disabled = false;
+    }
+  });
+
   // Stand des Eintrags als Karte: id -> Stunden, nur fuer die Angehakten.
   const stand = new Map(helferVon(eintrag).map((h) => [h.id, h.stunden]));
 
@@ -279,6 +307,8 @@ function eintragBearbeiten(eintrag, helfer, alleEintraege, nachher) {
       feld('Tag', datum),
       feld('Wetter', wetter, 'Wichtig als Beleg, wenn Arbeiten warten mussten.'),
       feld('Temperatur in °C', temperatur),
+      wetterknopf,
+      wetterstand,
       helfer.length
         ? feld('Regelarbeitszeit in Stunden', regel,
             'Wird beim Anhaken vorgeschlagen und lässt sich je Person überschreiben.')

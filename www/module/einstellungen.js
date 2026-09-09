@@ -20,6 +20,19 @@ async function zeichne(rahmen) {
     value: (await einstellung('projektname')) || '',
     placeholder: 'z. B. Neubau Musterweg 3',
   });
+  const baustelle = (await einstellung('baustelle')) || {};
+  const ortfeld = eingabe({ value: baustelle.ort || '', placeholder: 'z. B. Kaiserslautern' });
+  const ortstand = el('p', { klasse: 'unterzeile' });
+  ortstand.textContent = baustelle.lat
+    ? 'Gefunden: ' + (baustelle.name || baustelle.ort)
+    : 'Noch kein Ort bestimmt.';
+
+  const absender = (await einstellung('absender')) || {};
+  const bauherr = eingabe({ value: absender.name || '', placeholder: 'Vor- und Nachname' });
+  const strasse = eingabe({ value: absender.strasse || '' });
+  const plzOrt = eingabe({ value: absender.plzOrt || '' });
+  const vorhaben = eingabe({ value: absender.vorhaben || '' });
+
   const bestand = {};
   for (const name of [...SPEICHER, 'bilder']) {
     bestand[name] = (await daten.alle(name)).length;
@@ -33,6 +46,56 @@ async function zeichne(rahmen) {
       feld('Projektname', projektname, 'Erscheint in der Kopfzeile jedes PDF.'),
       knopf('Speichern', async () => {
         await einstellung('projektname', projektname.value.trim());
+        melde('Gespeichert.');
+      }, 'knopf-haupt'),
+    ]),
+
+    karte([
+      el('h2', { text: 'Baustelle' }),
+      el('p', {
+        klasse: 'unterzeile',
+        text:
+          'Der Ort wird für das Wetter im Bautagebuch gebraucht und einmal in ' +
+          'Koordinaten übersetzt. Danach genügt ein Tippen, um die Messwerte ' +
+          'des Deutschen Wetterdienstes zum jeweiligen Tag zu holen.',
+      }),
+      feld('Ort der Baustelle', ortfeld, 'Stadt oder Gemeinde, z. B. Kaiserslautern.'),
+      ortstand,
+      knopf('Ort bestimmen', async () => {
+        const name = ortfeld.value.trim();
+        if (!name) { ortstand.textContent = 'Bitte einen Ort eintragen.'; return; }
+        ortstand.textContent = 'Wird gesucht …';
+        try {
+          const { ortSuchen } = await import('../wetter.js');
+          const treffer = await ortSuchen(name);
+          await einstellung('baustelle', {
+            ort: name, name: treffer.name, lat: treffer.lat, lon: treffer.lon,
+          });
+          ortstand.textContent = 'Gefunden: ' + treffer.name;
+          melde('Ort gespeichert.');
+        } catch (fehler) {
+          ortstand.textContent = fehler.message;
+        }
+      }, 'knopf-haupt'),
+    ]),
+
+    karte([
+      el('h2', { text: 'Angaben für Schreiben' }),
+      el('p', {
+        klasse: 'unterzeile',
+        text: 'Kommen in den Kopf der Mängelrüge. Ohne sie fehlt dem Schreiben der Absender.',
+      }),
+      feld('Name', bauherr),
+      feld('Straße und Hausnummer', strasse),
+      feld('PLZ und Ort', plzOrt),
+      feld('Bauvorhaben', vorhaben, 'Anschrift der Baustelle, falls abweichend.'),
+      knopf('Speichern', async () => {
+        await einstellung('absender', {
+          name: bauherr.value.trim(),
+          strasse: strasse.value.trim(),
+          plzOrt: plzOrt.value.trim(),
+          vorhaben: vorhaben.value.trim(),
+        });
         melde('Gespeichert.');
       }, 'knopf-haupt'),
     ]),

@@ -28,9 +28,9 @@ finden, dort allerdings nur nach Anmeldung.
 | Tilgungsverlauf | Restschuld Jahr für Jahr, mit Sondertilgung, als PDF |
 | Baukasse | Budget, Rechnungen, Restbudget je Finanzierungsposten |
 | Anschlussplan | Grundriss hochladen, Anschlüsse markieren, als PDF mit Plan |
-| Mängelliste | Mängel je Raum mit Foto, Gewerk, Frist und Status, als PDF mit Bildern |
+| Mängelliste | Mängel je Raum mit Foto und Status, als PDF und als Mängelrüge |
 | Bauablauf | Gewerke in der richtigen Reihenfolge, Termine rechnen sich |
-| Bauhelfertagebuch | Tageseinträge mit Wetter, Fotos und Helferstunden je Person |
+| Bauhelfertagebuch | Tageseinträge mit Fotos, Helferstunden und Wetter vom DWD |
 | Kontakte | Firmen und Helfer, von den anderen Bereichen verlinkt |
 | Einstellungen | Projektname, Sicherung, alles löschen |
 
@@ -236,6 +236,33 @@ die App liefert die Zahlen.
 
 Ältere Einträge ohne Stundenangabe bleiben lesbar und zählen mit null Stunden
 mit, damit eine alte Sicherung nichts verliert.
+
+## Wetter im Bautagebuch
+
+Die Messwerte kommen vom Deutschen Wetterdienst über Bright Sky, ohne
+Schlüssel. Bewusst Messwerte und keine Vorhersage: Im Bautagebuch geht es um
+einen Tag, der schon vorbei ist. Was gestern wirklich war, entscheidet, ob
+eine Verzögerung belegt ist.
+
+Der Ort der Baustelle wird einmal in den Einstellungen bestimmt. Die
+Übersetzung von Ortsname zu Koordinaten läuft über `server/ort.php` und nicht
+direkt aus der App: Nominatim verlangt eine Kennung des aufrufenden Programms
+und höchstens eine Anfrage je Sekunde. Ein Browser kann seine Kennung nicht
+setzen. Auf dem Server geht es gebündelt, mit Kennung und Zwischenspeicher,
+also ein Ort genau einmal für alle.
+
+Aus den Stundenwerten wird eine Lage: Was Arbeiten stoppt, gewinnt. Schnee vor
+Sturm vor Regen vor Frost, sonst sonnig oder bewölkt. Bei Wetter, das Arbeiten
+stoppt, schlägt die App den Grund für das Feld „liegengeblieben" vor.
+
+## Mängelrüge
+
+Aus den offenen Mängeln einer Firma wird ein Geschäftsbrief mit Absender,
+Empfänger, Betreff, Fristsetzung und Aufstellung. Behobenes bleibt draußen.
+
+Die Anschrift der Firma steht beim Kontakt, der eigene Absender in den
+Einstellungen. Das Schreiben ist eine Vorlage und keine Rechtsberatung; darauf
+weist die App vor dem Erstellen hin.
 
 ## Was noch fehlt
 

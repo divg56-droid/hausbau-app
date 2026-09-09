@@ -124,10 +124,17 @@ export async function bildLaden(blob) {
 }
 
 export class Blatt {
-  constructor({ titel, untertitel = '', fusszeile = '' } = {}) {
+  /**
+   * @param {object} optionen
+   *   ohneKopf: laesst den Kopf mit Marke und Titel weg. Fuer Schreiben, die
+   *   nach aussen gehen: Auf einer Maengelruege hat kein Werbekopf etwas zu
+   *   suchen, dort steht der Absender oben.
+   */
+  constructor({ titel, untertitel = '', fusszeile = '', ohneKopf = false } = {}) {
     this.titel = titel || 'Dokument';
     this.untertitel = untertitel;
     this.fusszeile = fusszeile;
+    this.ohneKopf = ohneKopf;
     this.seiten = [];
     this.strom = '';
     this.y = 0;
@@ -239,7 +246,7 @@ export class Blatt {
     if (this.strom) this.seiten.push(this.strom);
     this.strom = '';
     this.y = A4.hoehe - RAND;
-    if (this.seiten.length === 0) this.kopfblock();
+    if (this.seiten.length === 0 && !this.ohneKopf) this.kopfblock();
     else this.y -= 8;
   }
 
@@ -275,6 +282,51 @@ export class Blatt {
     this.y -= 6;
     this.linie(0.8, 0.75);
     this.y -= 18;
+  }
+
+  /**
+   * Kopf eines Briefes: Absender klein oben, darunter der Empfaenger, rechts
+   * das Datum. Entspricht dem, was man aus einem Geschaeftsbrief kennt.
+   */
+  briefkopf(absender, empfaenger, datum) {
+    const absenderzeile = absender.filter(Boolean).join(' · ');
+    if (absenderzeile) {
+      this.schreibe(absenderzeile, { groesse: 7.5, farbe: [95, 103, 114] });
+      this.y -= 4;
+      this.linie(0.4, 0.85);
+      this.y -= 18;
+    }
+
+    const oben = this.y;
+    for (const zeile of empfaenger.filter(Boolean)) {
+      this.schreibe(zeile, { groesse: 10.5 });
+      this.y -= 14;
+    }
+
+    if (datum) {
+      // Das Datum steht rechts auf Hoehe der ersten Empfaengerzeile.
+      const alt = this.y;
+      this.y = oben;
+      this.schreibe(datum, { groesse: 10.5, x: A4.breite - RAND - textbreite(datum, 10.5) });
+      this.y = alt;
+    }
+
+    this.y -= 24;
+  }
+
+  /** Betreffzeile: fett, mit Luft darunter. */
+  betreff(text) {
+    this.platz(30);
+    this.schreibe(text, { groesse: 11.5, fett: true });
+    this.y -= 22;
+  }
+
+  /** Zwischentitel in Tintenfarbe, fuer Schreiben nach aussen. */
+  zwischentitel(text) {
+    this.platz(28);
+    this.y -= 4;
+    this.schreibe(text, { groesse: 10.5, fett: true });
+    this.y -= 16;
   }
 
   ueberschrift(text) {

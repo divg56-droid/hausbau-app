@@ -88,6 +88,9 @@ function bearbeiten(kontakt, nachher) {
   const name = eingabe({ value: kontakt.name || '', placeholder: 'Vor- und Nachname' });
   const firma = eingabe({ value: kontakt.firma || '', placeholder: 'Betrieb' });
   const gewerk = auswahl([['', '– kein Gewerk –'], ...GEWERKE.map((g) => [g, g])], kontakt.gewerk || '');
+  // Anschrift: wird fuer den Briefkopf der Maengelruege gebraucht.
+  const strasse = eingabe({ value: kontakt.strasse || '', placeholder: 'Straße und Hausnummer' });
+  const plzOrt = eingabe({ value: kontakt.plzOrt || '', placeholder: 'PLZ und Ort' });
   const telefon = el('input', { type: 'tel', value: kontakt.telefon || '', placeholder: '01512 3456789' });
   const epost = el('input', { type: 'email', value: kontakt.epost || '', placeholder: 'name@betrieb.de' });
   const notiz = el('textarea', {}, [kontakt.notiz || '']);
@@ -99,6 +102,8 @@ function bearbeiten(kontakt, nachher) {
       feld('Name', name),
       feld('Betrieb', firma),
       feld('Gewerk', gewerk),
+      feld('Straße und Hausnummer', strasse),
+      feld('PLZ und Ort', plzOrt),
       feld('Telefon', telefon),
       feld('E-Mail', epost),
       feld('Notiz', notiz),
@@ -109,6 +114,8 @@ function bearbeiten(kontakt, nachher) {
         name: name.value.trim(),
         firma: firma.value.trim(),
         gewerk: gewerk.value,
+        strasse: strasse.value.trim(),
+        plzOrt: plzOrt.value.trim(),
         telefon: telefon.value.trim(),
         epost: epost.value.trim(),
         notiz: notiz.value.trim(),

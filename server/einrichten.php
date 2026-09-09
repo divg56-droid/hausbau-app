@@ -114,6 +114,19 @@ CREATE TABLE bilder (
     CONSTRAINT bild_nutzer FOREIGN KEY (nutzer_id) REFERENCES nutzer (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
 
+// Zwischenspeicher der Ortssuche. Steht hier und nicht beim Nutzer: Ein
+// Ortsname gehoert niemandem, und einmal nachgeschlagen reicht fuer alle.
+'orte' => "
+CREATE TABLE orte (
+    suche VARCHAR(190) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    lat DECIMAL(9,6) NOT NULL DEFAULT 0,
+    lon DECIMAL(9,6) NOT NULL DEFAULT 0,
+    gefunden TINYINT(1) NOT NULL DEFAULT 0,
+    angelegt DATETIME NOT NULL,
+    PRIMARY KEY (suche)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+
 'bremse' => "
 CREATE TABLE bremse (
     kennung VARCHAR(190) NOT NULL,
