@@ -146,10 +146,12 @@ function sicherungEinlesen(rahmen) {
           name: bild.name,
           angelegt: bild.angelegt,
           blob: base64ZuBlob(bild.daten, bild.typ),
-        });
+        }, { zeitBehalten: true });
       }
       for (const name of SPEICHER) {
-        for (const satz of inhalt.speicher[name] || []) await daten.sichern(name, satz);
+        for (const satz of inhalt.speicher[name] || []) {
+          await daten.sichern(name, satz, { zeitBehalten: true });
+        }
       }
       for (const [name, wert] of Object.entries(inhalt.einstellungen || {})) {
         await einstellung(name, wert);

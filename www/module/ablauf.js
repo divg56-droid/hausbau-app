@@ -274,10 +274,10 @@ function aufgabeBearbeiten(aufgabe, alleAufgaben, kontakte, maengel, nachher) {
         titel: titel.value.trim(),
         phase: phase.value,
         dauer: Math.max(1, Math.round(zuZahl(dauer.value))),
-        vorgaengerId: vorgaenger.value ? +vorgaenger.value : null,
+        vorgaengerId: vorgaenger.value || null,
         start: vorgaenger.value ? null : (start.value || null),
         status: status.value,
-        kontaktId: kontakt.value ? +kontakt.value : null,
+        kontaktId: kontakt.value || null,
         notiz: notiz.value.trim(),
         mangelId: aufgabe.mangelId ?? null,
       };

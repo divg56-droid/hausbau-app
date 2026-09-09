@@ -10,6 +10,7 @@ import { simuliere } from './www/module/tilgung.js';
 import { terminePlanen } from './www/module/ablauf.js';
 import { Blatt } from './www/pdf.js';
 import { zuZahl } from './www/hilfen.js';
+import { neueKennung, umschreiben } from './www/daten.js';
 import { helferVon, stundenJeHelfer } from './www/module/tagebuch.js';
 
 const TEST_JPEG =
@@ -162,6 +163,60 @@ pruef('Absteigend nach Stunden sortiert', summe[0].name === 'Onkel Fritz' && sum
 pruef('Gesamtsumme 18,5', summe.reduce((s, h) => s + h.stunden, 0) === 18.5);
 pruef('Ohne Eintraege leere Liste', stundenJeHelfer([], KONTAKTE).length === 0);
 pruef('Unbekannte id bekommt einen Platzhalter', stundenJeHelfer([{ helfer: [{ id: 99, stunden: 2 }] }], KONTAKTE)[0].name === 'Unbekannt');
+
+
+console.log('Kennungen und Wanderung');
+const k1 = neueKennung(), k2 = neueKennung();
+const istUuid = (x) => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(x);
+pruef('Kennung hat UUID-Form', istUuid(k1), k1);
+pruef('zwei Kennungen sind verschieden', k1 !== k2);
+pruef('tausend Kennungen ohne Doppelung', new Set(Array.from({length:1000}, neueKennung)).size === 1000);
+
+// Karte alte Nummer -> neue Kennung, wie sie die Wanderung aufbaut
+const karte = {
+  kontakte:  new Map([[1,'K-eins'],[2,'K-zwei']]),
+  bilder:    new Map([[1,'B-eins'],[7,'B-sieben']]),
+  geschosse: new Map([[1,'G-eins']]),
+  maengel:   new Map([[1,'M-eins']]),
+  darlehen:  new Map([[1,'D-eins']]),
+  aufgaben:  new Map([[1,'A-eins'],[2,'A-zwei']]),
+  pins: new Map(), belege: new Map(), tagebuch: new Map(),
+};
+const ZEIT = '2026-09-09T00:00:00.000Z';
+
+const pin = umschreiben('pins', { id:1, geschossId:1, bildId:7, art:'steckdose' }, { ...karte, pins:new Map([[1,'P-eins']]) }, ZEIT);
+pruef('Pin: eigene Kennung', pin.id === 'P-eins');
+pruef('Pin: Geschossverweis', pin.geschossId === 'G-eins');
+pruef('Pin: Bildverweis', pin.bildId === 'B-sieben');
+pruef('Pin: Sachfeld unangetastet', pin.art === 'steckdose');
+pruef('Pin: bekommt geaendert', pin.geaendert === ZEIT);
+pruef('Pin: nicht als geloescht markiert', pin.geloescht === false);
+
+const mangel = umschreiben('maengel', { id:1, kontaktId:2, bildIds:[1,7], titel:'Riss' }, karte, ZEIT);
+pruef('Mangel: Kontaktverweis', mangel.kontaktId === 'K-zwei');
+pruef('Mangel: Bildliste', JSON.stringify(mangel.bildIds) === '["B-eins","B-sieben"]');
+
+const folge = umschreiben('aufgaben', { id:2, vorgaengerId:1, kontaktId:1, mangelId:1 }, karte, ZEIT);
+pruef('Aufgabe: Verweis auf denselben Speicher', folge.vorgaengerId === 'A-eins');
+pruef('Aufgabe: Mangelverweis', folge.mangelId === 'M-eins');
+
+const ohneVerweis = umschreiben('aufgaben', { id:1, vorgaengerId:null, kontaktId:null }, karte, ZEIT);
+pruef('leerer Verweis bleibt leer', ohneVerweis.vorgaengerId === null && ohneVerweis.kontaktId === null);
+
+const tot = umschreiben('pins', { id:1, geschossId:99, bildId:1 }, { ...karte, pins:new Map([[1,'P']]) }, ZEIT);
+pruef('Verweis ins Leere wird null, statt eine falsche Kennung zu erben', tot.geschossId === null);
+
+const tag = umschreiben('tagebuch', { id:1, helferIds:[1,2,99], helfer:[{id:2,stunden:7.5},{id:99,stunden:3}], bildIds:[7] }, { ...karte, tagebuch:new Map([[1,'T']]) }, ZEIT);
+pruef('Tagebuch: Helferliste umgeschrieben', JSON.stringify(tag.helferIds) === '["K-eins","K-zwei"]');
+pruef('Tagebuch: unbekannter Helfer faellt raus', tag.helfer.length === 1 && tag.helfer[0].id === 'K-zwei');
+pruef('Tagebuch: Stunden bleiben', tag.helfer[0].stunden === 7.5);
+
+const beleg = umschreiben('belege', { id:1, kontaktId:1, quelleId:1, bildId:1, betrag:1250.5 }, { ...karte, belege:new Map([[1,'BE']]) }, ZEIT);
+pruef('Beleg: alle drei Verweise', beleg.kontaktId === 'K-eins' && beleg.quelleId === 'D-eins' && beleg.bildId === 'B-eins');
+pruef('Beleg: Betrag unveraendert', beleg.betrag === 1250.5);
+
+const altZeit = umschreiben('maengel', { id:1, geaendert:'2020-01-01T00:00:00.000Z' }, karte, ZEIT);
+pruef('vorhandener Zeitstempel wird nicht ueberschrieben', altZeit.geaendert === '2020-01-01T00:00:00.000Z');
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');
 process.exit(fehler ? 1 : 0);

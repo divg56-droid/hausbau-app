@@ -81,6 +81,31 @@ Das APK lokal zu bauen braucht JDK 21 und das Android-SDK:
 Ohne beides baut GitHub. Der Ordner `android/` steht bewusst nicht im
 Repository, er entsteht bei jedem Lauf neu aus `capacitor.config.json`.
 
+## Datensätze und der spätere Abgleich
+
+Jeder Datensatz trägt drei Felder, die für den Abgleich mit einem Server
+gebraucht werden:
+
+| Feld | Wozu |
+|---|---|
+| `id` | weltweit eindeutige Kennung (UUID) |
+| `geaendert` | Zeitpunkt der letzten Änderung |
+| `geloescht` | Grabstein statt echtem Löschen |
+
+Warum nicht die einfache laufende Nummer: Die zählt jedes Gerät für sich hoch.
+Handy und Rechner vergäben beide die 1, und beim Zusammenführen überschriebe
+ein Mangel den anderen.
+
+Der Grabstein ist genauso nötig. Ein einfach entfernter Satz käme beim
+nächsten Abgleich vom anderen Gerät zurück, weil der ihn noch kennt. Beim
+Setzen des Grabsteins fallen die übrigen Felder weg; bei Fotos gibt das
+außerdem den belegten Platz frei.
+
+Vorhandene Installationen wandern beim ersten Start automatisch mit. Dabei
+werden alle Querverweise umgeschrieben, also Pins auf ihr Geschoss, Mängel
+auf ihren Kontakt, Aufgaben auf ihren Vorgänger. Die Wanderung läuft in einer
+einzigen Transaktion: Bricht etwas ab, bleiben die alten Daten stehen.
+
 ## Datenschutz
 
 Die App sendet nichts und holt nichts. Es gibt keinen Server, kein Konto,

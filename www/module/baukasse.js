@@ -174,8 +174,8 @@ function belegBearbeiten(beleg, stand, kontakte, nachher) {
         beschreibung: beschreibung.value.trim(),
         datum: datum.value || heute(),
         kontaktName: kontaktName.value.trim(),
-        kontaktId: kontakt.value ? +kontakt.value : null,
-        quelleId: quelle.value ? +quelle.value : null,
+        kontaktId: kontakt.value || null,
+        quelleId: quelle.value || null,
         bildId: bilder[0] ?? null,
       };
       if (wert.betrag <= 0) throw new Error('Bitte einen Betrag eintragen.');

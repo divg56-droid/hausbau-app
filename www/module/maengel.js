@@ -169,7 +169,7 @@ function mangelBearbeiten(mangel, kontakte, nachher) {
         gewerk: gewerk.value,
         status: status.value,
         beschreibung: beschreibung.value.trim(),
-        kontaktId: kontakt.value ? +kontakt.value : null,
+        kontaktId: kontakt.value || null,
         frist: frist.value || null,
         bildIds: bilder,
         angelegt: mangel.angelegt || heute(),
