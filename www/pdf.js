@@ -217,7 +217,7 @@ export class Blatt {
    * @param {number} relX  0 bis 1, von links
    * @param {number} relY  0 bis 1, von oben - so liegen die Pins in der App
    */
-  marke(rahmen, relX, relY, beschriftung, farbe = [232, 160, 32]) {
+  marke(rahmen, relX, relY, beschriftung, farbe = [14, 110, 114]) {
     const x = rahmen.x + relX * rahmen.breite;
     // In PDF zeigt die y-Achse nach oben, in der App nach unten.
     const y = rahmen.unten + (1 - relY) * rahmen.hoehe;
@@ -290,7 +290,7 @@ export class Blatt {
   }
 
   kopfblock() {
-    this.schreibe('BAUZEUGE', { groesse: 9, fett: true, farbe: [138, 90, 8] });
+    this.schreibe('BAUZEUGE', { groesse: 9, fett: true, farbe: [10, 81, 85] });
     this.y -= 20;
     this.schreibe(this.titel, { groesse: 18, fett: true });
     this.y -= 15;

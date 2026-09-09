@@ -1,16 +1,23 @@
-/* Farben und Schriften von BauZeuge.de, damit App und Seite zusammengehoeren.
+/* Farben von BauZeuge.de, Zeichen fuer Zeichen aus Base.astro uebernommen,
+   damit App und Seite dieselbe Marke tragen.
    Systemschrift statt Webfont: spart Platz im APK und startet ohne Nachladen. */
 :root {
-  --papier: #f7f5f1;
+  --papier: #f5f7f6;
   --karte: #ffffff;
-  --tinte: #23272b;
-  --tinte-leise: #5f6772;
-  --akzent: #e8a020;
-  --akzent-dunkel: #8a5a08;
-  --linie: #ddd8cf;
-  --band: #efece5;
+  --tinte: #1f2a30;
+  --tinte-leise: #54626a;
+  --akzent: #0e6e72;
+  --akzent-dunkel: #0a5155;
+  /* Der Akzent fuer dunkle Flaechen. Petrol selbst waere dort zu dunkel. */
+  --akzent-hell: #5fbabd;
+  --linie: #d3dcd9;
+  --band: #e9efec;
   --gut: #2e7d4f;
   --warn: #b3261e;
+  /* Zustandsfarbe, keine Markenfarbe: "laeuft" braucht einen Ton, der weder
+     mit dem Gruen von "fertig" noch mit dem Petrol der Marke verwechselbar
+     ist. Frueher stand hier der Akzent, weil der zufaellig gelb war. */
+  --arbeit: #c98a1a;
   --kopf-hoehe: 56px;
   --schrift: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
@@ -315,9 +322,9 @@ tr.bindung td { background: var(--band); font-weight: 700; }
 .balken-bahn { position: relative; flex: none; height: 20px; }
 .balken { position: absolute; top: 4px; height: 12px; border-radius: 3px; }
 .balken-offen  { background: #969eaa; }
-.balken-laeuft { background: var(--akzent); }
+.balken-laeuft { background: var(--arbeit); }
 .balken-fertig { background: var(--gut); }
 
 .legende i.balken-offen  { background: #969eaa; }
-.legende i.balken-laeuft { background: var(--akzent); }
+.legende i.balken-laeuft { background: var(--arbeit); }
 .legende i.balken-fertig { background: var(--gut); }

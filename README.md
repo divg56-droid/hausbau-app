@@ -14,6 +14,14 @@ Dateinamen. Bei den Wirtsnamen ist das Bedingung und keine Geschmacksfrage,
 denn `location.hostname` liefert im Browser immer Kleinbuchstaben. `test.mjs`
 wacht darueber.
 
+## Farben
+
+Die Palette kommt vollstaendig von der Website und steht in `www/stil.css`.
+`test.mjs` prueft jeden Wert gegen `src/layouts/Base.astro` im Schwesterprojekt.
+Gruen, Bernstein und Grau der Zustaende sind bewusst keine Markenfarben: Mit
+dem Petrol als "laeuft" waere der Balkenplan neben dem Gruen von "fertig"
+nicht mehr lesbar.
+
 ## Der Umzug im September 2026
 
 Die App hieß bis dahin "Hausbau App" und lag auf hausbauatlas.de. Drei Dinge

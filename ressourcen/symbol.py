@@ -12,9 +12,12 @@ import pathlib
 from PIL import Image, ImageDraw
 
 HIER = pathlib.Path(__file__).parent
-PAPIER = (247, 245, 241)
-TINTE = (35, 39, 43)
-AKZENT = (232, 160, 32)
+# Die Palette von BauZeuge.de, siehe www/stil.css.
+PAPIER = (245, 247, 246)
+TINTE = (31, 42, 48)
+AKZENT = (14, 110, 114)
+# Der Giebel sitzt auf der dunklen Kachel; dort traegt der helle Akzent.
+AKZENT_HELL = (95, 186, 189)
 
 
 def haus(bild: Image.Image, mitte: tuple[int, int], groesse: int) -> None:
@@ -35,11 +38,11 @@ def haus(bild: Image.Image, mitte: tuple[int, int], groesse: int) -> None:
     # auch klein noch lesbar.
     stift.polygon(
         [(links - strich, oben + dach), (mx, oben), (rechts + strich, oben + dach)],
-        fill=AKZENT,
+        fill=AKZENT_HELL,
     )
     stift.rectangle(
         [links, oben + dach, rechts, unten],
-        outline=TINTE, width=strich,
+        outline=PAPIER, width=strich,
     )
 
     # Tuer
@@ -47,14 +50,8 @@ def haus(bild: Image.Image, mitte: tuple[int, int], groesse: int) -> None:
     th = int(h * 0.55)
     stift.rectangle(
         [mx - tb // 2, unten - th, mx + tb // 2, unten],
-        fill=TINTE,
+        fill=PAPIER,
     )
-
-    # Zwei Fenster
-    fb = int(b * 0.17)
-    fy = oben + dach + int(h * 0.18)
-    for fx in (links + int(b * 0.16), rechts - int(b * 0.16) - fb):
-        stift.rectangle([fx, fy, fx + fb, fy + fb], fill=AKZENT)
 
 
 def symbol(kante: int, ziel: str, rand_faktor: float, hintergrund) -> None:
@@ -69,7 +66,7 @@ WWW = HIER.parent / "www"
 
 def websymbol(kante: int, ziel: str, rand_faktor: float) -> None:
     """Symbol fuer das Web-App-Manifest, direkt nach www/."""
-    bild = Image.new("RGB", (kante, kante), PAPIER)
+    bild = Image.new("RGB", (kante, kante), TINTE)
     haus(bild, (kante // 2, kante // 2), int(kante * rand_faktor))
     bild.save(WWW / ziel)
     print(f"  www/{ziel}  {kante}x{kante}")
@@ -78,9 +75,9 @@ def websymbol(kante: int, ziel: str, rand_faktor: float) -> None:
 if __name__ == "__main__":
     # Android beschneidet adaptive Symbole kreisfoermig; deshalb nur 52 Prozent
     # der Kante belegen, sonst wird der Giebel abgeschnitten.
-    symbol(1024, "icon.png", 0.52, PAPIER)
+    symbol(1024, "icon.png", 0.52, TINTE)
     # Startbild: dasselbe Zeichen klein auf grosser Flaeche.
-    splash = Image.new("RGB", (2732, 2732), PAPIER)
+    splash = Image.new("RGB", (2732, 2732), TINTE)
     haus(splash, (1366, 1366), 620)
     splash.save(HIER / "splash.png")
     print("  splash.png  2732x2732")

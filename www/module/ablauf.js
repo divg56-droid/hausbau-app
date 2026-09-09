@@ -163,9 +163,12 @@ export function balkenPlan(aufgaben) {
   return { von, bis, tage, zeilen, monate, ohneTermin };
 }
 
+// Dieselben drei Zustandsfarben wie auf dem Bildschirm: gruen fertig,
+// bernstein laeuft, grau offen. Bewusst nicht die Markenfarbe, sonst waere
+// "laeuft" von "fertig" kaum zu unterscheiden.
 const BALKENFARBE = {
-  fertig: [90, 150, 95],
-  laeuft: [211, 150, 40],
+  fertig: [46, 125, 79],
+  laeuft: [201, 138, 26],
   offen: [150, 158, 170],
 };
 

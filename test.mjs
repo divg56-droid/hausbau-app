@@ -476,7 +476,11 @@ console.log('Web-App-Manifest');
     manifest.start_url.startsWith(manifest.scope), manifest.scope);
   pruef('Anzeige ist eigenstaendig',
     ['standalone', 'fullscreen', 'minimal-ui'].includes(manifest.display), manifest.display);
-  pruef('Hintergrundfarbe passt zum Papierton', manifest.background_color === '#f7f5f1');
+  // Der Papierton der Marke, Zeichen fuer Zeichen aus Base.astro der Website.
+  pruef('Hintergrundfarbe passt zum Papierton',
+    manifest.background_color === '#f5f7f6', manifest.background_color);
+  pruef('Themenfarbe stimmt mit der Hintergrundfarbe ueberein',
+    manifest.theme_color === manifest.background_color, manifest.theme_color);
 
   const groessen = manifest.icons.map((i) => i.sizes);
   pruef('Symbol in 192 vorhanden', groessen.includes('192x192'), groessen.join(' '));
@@ -544,6 +548,35 @@ console.log('Anmeldung des Arbeiters');
   pruef('Nur ueber https', html.includes("location.protocol !== 'https:'"));
   pruef('localhost ist nicht in der Wirtsliste',
     !/var wirte = \[[^\]]*localhost/.test(html));
+}
+
+console.log('Palette');
+{
+  const css = readFileSync('./www/stil.css', 'utf8');
+  // getrimmt, damit ein Leerzeichen hinter dem Doppelpunkt nichts kaputt macht
+  const wert = (name) =>
+    ((css.match(new RegExp('--' + name + ':([^;]+);')) || [])[1] || '').trim();
+
+  // Diese Werte stehen genauso in Base.astro der Website. Laufen sie
+  // auseinander, tragen App und Seite wieder zwei verschiedene Marken.
+  const soll = {
+    papier: '#f5f7f6', karte: '#ffffff', tinte: '#1f2a30', 'tinte-leise': '#54626a',
+    akzent: '#0e6e72', 'akzent-dunkel': '#0a5155', 'akzent-hell': '#5fbabd',
+    linie: '#d3dcd9', band: '#e9efec',
+  };
+  for (const [name, farbe] of Object.entries(soll)) {
+    pruef('--' + name + ' ist ' + farbe, wert(name) === farbe, wert(name));
+  }
+
+  // "laeuft" darf nicht die Markenfarbe sein, sonst ist es im Balkenplan von
+  // "fertig" kaum zu unterscheiden.
+  pruef('laeuft hat eine eigene Zustandsfarbe',
+    css.includes('.balken-laeuft { background: var(--arbeit); }'));
+  pruef('die Zustandsfarbe ist nicht der Akzent', wert('arbeit') !== wert('akzent'));
+
+  const html = readFileSync('./www/index.html', 'utf8');
+  pruef('Die Themenfarbe im HTML ist der Papierton',
+    html.includes('name="theme-color" content="#f5f7f6"'));
 }
 
 console.log('Wirtsnamen bleiben kleingeschrieben');
