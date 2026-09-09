@@ -45,6 +45,10 @@ export const MODULE = [
     text: 'Handwerker, Bauleiter und Ansprechpartner an einer Stelle.',
   },
   {
+    weg: 'konto', zeichen: '\u{2601}', titel: 'Konto',
+    text: 'Anmelden, damit App und Internetseite dieselben Daten zeigen.',
+  },
+  {
     weg: 'einstellungen', zeichen: '\u{2699}', titel: 'Einstellungen',
     text: 'Projektname, Daten sichern, alles löschen.',
   },
@@ -140,3 +144,10 @@ async function zeichne() {
 
 window.addEventListener('hashchange', zeichne);
 zeichne();
+
+// Beim Start einmal still abgleichen. Schlaegt es fehl, etwa ohne Empfang,
+// merkt der Nutzer nichts: Das Geraet ist die Arbeitskopie, der Abgleich holt
+// es beim naechsten Mal nach.
+import('./abgleich.js')
+  .then((m) => m.stillAbgleichen())
+  .catch((fehler) => console.warn('Abgleich beim Start nicht moeglich:', fehler));
