@@ -16,13 +16,15 @@
 //              Abgleich vom anderen Geraet zurueck, weil der ihn noch kennt.
 
 const DB_NAME = 'hausbau';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 // Wo Eintraege zu einem Elternobjekt gehoeren (Pins zu einem Geschoss), steht
 // dessen Kennung als Feld drin und bekommt einen Index.
 const SPEICHER = {
   einstellungen: { schluessel: 'name' },
   darlehen: { indizes: [] },
+  // Kostenpositionen: was geplant war und was es wirklich wurde.
+  posten: { indizes: ['gewerk'] },
   belege: { indizes: ['datum'] },
   geschosse: { indizes: [] },
   pins: { indizes: ['geschossId'] },
@@ -37,7 +39,8 @@ const SPEICHER = {
 const VERWEISE = {
   geschosse: { bildId: 'bilder' },
   pins: { geschossId: 'geschosse', bildId: 'bilder' },
-  belege: { kontaktId: 'kontakte', quelleId: 'darlehen', bildId: 'bilder' },
+  posten: { kontaktId: 'kontakte' },
+  belege: { kontaktId: 'kontakte', quelleId: 'darlehen', bildId: 'bilder', postenId: 'posten' },
   maengel: { kontaktId: 'kontakte' },
   aufgaben: { vorgaengerId: 'aufgaben', kontaktId: 'kontakte', mangelId: 'maengel' },
 };
@@ -77,6 +80,12 @@ function db() {
       }
       if (ereignis.oldVersion < 2) {
         aufKennungenUmstellen(d, anfrage.transaction);
+      }
+      // Ab hier reicht Anlegen: anlegen() ueberspringt, was es schon gibt.
+      // Die Wanderung auf Fassung 2 legt neue Speicher bereits mit an, ein
+      // zweiter Aufruf schadet deshalb nicht.
+      if (ereignis.oldVersion < 3) {
+        anlegen(d);
       }
     };
     anfrage.onsuccess = () => fertig(anfrage.result);

@@ -22,7 +22,7 @@ require __DIR__ . '/_start.php';
 // Nur diese Speicher werden angenommen. Ohne die Liste koennte ein Aufrufer
 // beliebige Namen anlegen und die Tabelle vollschreiben.
 const SPEICHER = [
-    'einstellungen', 'darlehen', 'belege', 'geschosse', 'pins',
+    'einstellungen', 'darlehen', 'posten', 'belege', 'geschosse', 'pins',
     'maengel', 'aufgaben', 'tagebuch', 'kontakte', 'bilder',
 ];
 

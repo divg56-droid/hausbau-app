@@ -11,6 +11,7 @@ import { terminePlanen } from './www/module/ablauf.js';
 import { Blatt } from './www/pdf.js';
 import { zuZahl } from './www/hilfen.js';
 import { neueKennung, umschreiben } from './www/daten.js';
+import { postenRechnen } from './www/module/baukasse.js';
 import { helferVon, stundenJeHelfer } from './www/module/tagebuch.js';
 
 const TEST_JPEG =
@@ -217,6 +218,43 @@ pruef('Beleg: Betrag unveraendert', beleg.betrag === 1250.5);
 
 const altZeit = umschreiben('maengel', { id:1, geaendert:'2020-01-01T00:00:00.000Z' }, karte, ZEIT);
 pruef('vorhandener Zeitstempel wird nicht ueberschrieben', altZeit.geaendert === '2020-01-01T00:00:00.000Z');
+
+
+console.log('Kostenpositionen');
+const B = (postenId, betrag) => ({ postenId, betrag });
+
+let p = postenRechnen({ id:'a', geplant:10000, tatsaechlich:0, status:'geplant' }, []);
+pruef('ohne echte Summe keine Abweichung', p.differenz === 0, p.differenz);
+pruef('massgeblich ist dann der Plan', p.massgeblich === 10000);
+pruef('Status bleibt geplant', p.statusName === 'Geplant');
+
+p = postenRechnen({ id:'a', geplant:10000, tatsaechlich:12500, status:'beauftragt' }, []);
+pruef('teurer geworden: +2500', p.differenz === 2500);
+pruef('massgeblich ist die echte Summe', p.massgeblich === 12500);
+pruef('Status bleibt beauftragt solange nichts gezahlt', p.statusName === 'Beauftragt');
+
+p = postenRechnen({ id:'a', geplant:10000, tatsaechlich:8000, status:'beauftragt' }, []);
+pruef('guenstiger geworden: -2000', p.differenz === -2000);
+
+p = postenRechnen({ id:'a', geplant:10000, tatsaechlich:12500, status:'beauftragt' }, [B('a', 5000), B('b', 9999)]);
+pruef('nur eigene Rechnungen zaehlen', p.gezahlt === 5000, p.gezahlt);
+pruef('teilweise bezahlt wird erkannt', p.statusName === 'Teilgezahlt');
+pruef('offen ist 7500', p.offen === 7500, p.offen);
+
+p = postenRechnen({ id:'a', geplant:10000, tatsaechlich:12500, status:'beauftragt' }, [B('a', 12500)]);
+pruef('vollstaendig bezahlt wird erkannt', p.statusName === 'Bezahlt');
+pruef('nichts mehr offen', p.offen === 0);
+
+p = postenRechnen({ id:'a', geplant:10000, tatsaechlich:12500, status:'beauftragt' }, [B('a', 13000)]);
+pruef('Ueberzahlung gilt auch als bezahlt', p.statusName === 'Bezahlt');
+pruef('offen wird nicht negativ', p.offen === 0);
+
+p = postenRechnen({ id:'a', geplant:0, tatsaechlich:0, status:'geplant' }, []);
+pruef('leerer Posten stuerzt nicht ab', p.differenz === 0 && p.massgeblich === 0 && p.statusName === 'Geplant');
+
+// Bezahlt ohne feste Summe: Plan gilt als Massstab
+p = postenRechnen({ id:'a', geplant:5000, tatsaechlich:0, status:'geplant' }, [B('a', 5000)]);
+pruef('ohne Auftragssumme misst sich Bezahltes am Plan', p.statusName === 'Bezahlt');
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');
 process.exit(fehler ? 1 : 0);

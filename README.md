@@ -26,7 +26,7 @@ finden, dort allerdings nur nach Anmeldung.
 | Baukostenrechner | Bausumme aus Bundesland, Fläche, Standard, Keller, Grundstück |
 | Baufinanzierung | Eigenkapital und Darlehen erfassen, oder erst rechnen lassen |
 | Tilgungsverlauf | Restschuld Jahr für Jahr, mit Sondertilgung, als PDF |
-| Baukasse | Budget, Rechnungen, Restbudget je Finanzierungsposten |
+| Baukasse | Budget, Kostenaufstellung geplant gegen tatsächlich, Rechnungen |
 | Anschlussplan | Grundriss hochladen, Anschlüsse markieren, als PDF mit Plan |
 | Mängelliste | Mängel je Raum mit Foto und Status, als PDF und als Mängelrüge |
 | Bauablauf | Gewerke in der richtigen Reihenfolge, Termine rechnen sich |
@@ -236,6 +236,32 @@ die App liefert die Zahlen.
 
 Ältere Einträge ohne Stundenangabe bleiben lesbar und zählen mit null Stunden
 mit, damit eine alte Sicherung nichts verliert.
+
+## Kostenaufstellung
+
+Der Kern der Baukasse, in drei Ansichten:
+
+| Ansicht | Frage |
+|---|---|
+| Übersicht | Wie viel habe ich, wie viel kostet es, was bleibt? |
+| Positionen | Was war geplant, was wurde es wirklich? |
+| Rechnungen | Was ist tatsächlich abgeflossen? |
+
+Eine Position trägt **geplante** und **tatsächliche** Kosten. Tatsächlich meint
+die Auftrags- oder Schlusssumme, nicht das schon Gezahlte. Das
+auseinanderzuhalten ist der ganze Witz: Eine Position kann teurer geworden und
+trotzdem noch gar nicht bezahlt sein.
+
+Die Abweichung steht farbig daneben, über dem Plan rot, darunter grün. Auf der
+Übersicht stehen die fünf größten Abweichungen zuerst; wer nachsteuern will,
+fängt oben an.
+
+Den Status setzt man nur auf Geplant oder Beauftragt. Teilgezahlt und Bezahlt
+rechnet die App aus den zugeordneten Rechnungen aus, so kann er nicht
+veralten.
+
+Beim Löschen einer Position bleiben ihre Rechnungen bestehen und verlieren nur
+die Zuordnung. Sie zu löschen wäre falsch: Das Geld ist trotzdem geflossen.
 
 ## Wetter im Bautagebuch
 

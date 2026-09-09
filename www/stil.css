@@ -178,6 +178,14 @@ input[type="checkbox"] { width: 22px; height: 22px; min-height: 0; accent-color:
   font-size: 12px; font-weight: 700; background: var(--band); color: var(--tinte-leise);
 }
 .marke-offen { background: #fdecea; color: #9b2c22; }
+.marke-geplant { background: var(--band); color: var(--tinte-leise); }
+.marke-beauftragt { background: #e6eefc; color: #1e429f; }
+
+/* Abweichungen: ueber dem Geplanten rot, darunter gruen. Das ist die
+   Information, um die es in einer Kostenaufstellung ueberhaupt geht. */
+.leise { color: var(--tinte-leise); }
+.mehr { color: var(--warn); font-weight: 700; }
+.weniger { color: var(--gut); font-weight: 700; }
 .marke-arbeit { background: #fff4de; color: #8a5a08; }
 .marke-fertig { background: #e6f4ec; color: #1e5c39; }
 
