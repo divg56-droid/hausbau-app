@@ -11,6 +11,9 @@ import { terminePlanen } from './www/module/ablauf.js';
 import { Blatt } from './www/pdf.js';
 import { zuZahl } from './www/hilfen.js';
 
+const TEST_JPEG =
+  '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAAYACgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDeREjjWONQiKAFVRgADsBQiJHGscahEUAKqjAAHYChESONY41CIoAVVGAAOwFCIkcaxxqERQAqqMAAdgK+DbPpAREjjWONQiKAFVRgADsBQiJHGscahEUAKqjAAHYChESONY41CIoAVVGAAOwFCIkcaxxqERQAqqMAAdgKGwBESONY41CIoAVVGAAOwFFCIkcaxxqERQAqqMAAdgKKGMERI41jjUIigBVUYAA7AUIiRxrHGoRFACqowAB2AooouAIiRxrHGoRFACqowAB2AoREjjWONQiKAFVRgADsBRRRcAREjjWONQiKAFVRgADsBRRRSA//2Q==';
+
 let fehler = 0;
 const pruef = (name, bedingung, zusatz = '') => {
   if (bedingung) console.log('  ok   ' + name);
@@ -83,6 +86,50 @@ const startxref = Number(text.slice(text.lastIndexOf('startxref') + 9).trim().sp
 pruef('startxref zeigt genau auf die xref-Tabelle', text.slice(startxref, startxref + 4) === 'xref', 'dort steht ' + JSON.stringify(text.slice(startxref, startxref + 8)));
 const seitenObjekte = (text.match(/\/Type \/Page[^s]/g) || []).length;
 pruef('Seitenobjekte passen zur Seitenzahl', seitenObjekte === blatt.seiten.length, seitenObjekte + ' statt ' + blatt.seiten.length);
+
+
+console.log('Bilder im PDF');
+// Ein echtes 40x24-JPEG als Grundlage. Der Weg ueber bildLaden() braucht ein
+// Canvas und laesst sich nur im Browser pruefen; die Einbettung selbst
+// haengt daran nicht.
+const jpegBytes = Uint8Array.from(atob(TEST_JPEG), (z) => z.charCodeAt(0));
+const testbild = { bytes: jpegBytes, breite: 40, hoehe: 24, kanaele: 3 };
+
+const mitBild = new Blatt({ titel: 'Mängelliste', fusszeile: 'Prüfung' });
+mitBild.ueberschrift('1. Kratzer in der Fensterbank');
+mitBild.wertzeile('Raum', 'Wohnzimmer');
+mitBild.bilderreihe([testbild, testbild, testbild], { hoehe: 108 });
+const rahmen = mitBild.bildGross(testbild);
+mitBild.marke(rahmen, 0.25, 0.4, 1);
+mitBild.marke(rahmen, 0.8, 0.7, 12, [37, 99, 235]);
+const bb = mitBild.bytes();
+const bt = new TextDecoder('latin1').decode(bb);
+
+pruef('Bild nur einmal eingebettet trotz vierfacher Nutzung', mitBild.bilder.length === 1, mitBild.bilder.length + ' Bilder');
+pruef('XObject im Betriebsmittelverzeichnis', bt.includes('/XObject << /Im0'));
+pruef('Bildobjekt mit DCTDecode', bt.includes('/Subtype /Image') && bt.includes('/Filter /DCTDecode'));
+pruef('Masse im Bildobjekt', bt.includes('/Width 40 /Height 24'));
+pruef('Farbraum RGB', bt.includes('/ColorSpace /DeviceRGB'));
+pruef('Bild wird viermal gezeichnet', (bt.match(/\/Im0 Do/g) || []).length === 4, (bt.match(/\/Im0 Do/g) || []).length + ' Aufrufe');
+pruef('JPEG-Daten unveraendert eingebettet', bt.includes(String.fromCharCode(0xff, 0xd8, 0xff, 0xe0)));
+pruef('Marken als Bezierkurven', (bt.match(/ c /g) || []).length >= 8, (bt.match(/ c /g) || []).length + ' Boegen');
+const sx2 = Number(bt.slice(bt.lastIndexOf('startxref') + 9).trim().split('\n')[0]);
+pruef('Querverweistabelle stimmt trotz Bildobjekten', bt.slice(sx2, sx2 + 4) === 'xref', JSON.stringify(bt.slice(sx2, sx2 + 8)));
+const nummern = [...bt.matchAll(/^(\d+) 0 obj$/gm)].map((m) => Number(m[1]));
+pruef('Objektnummern eindeutig und lueckenlos', new Set(nummern).size === nummern.length && Math.max(...nummern) === nummern.length, nummern.length + ' Objekte, hoechste ' + Math.max(...nummern));
+
+const grau = new Blatt({ titel: 'Grau' });
+grau.bilderreihe([{ bytes: jpegBytes, breite: 40, hoehe: 24, kanaele: 1 }]);
+pruef('Ein Farbkanal ergibt Graustufen', new TextDecoder('latin1').decode(grau.bytes()).includes('/ColorSpace /DeviceGray'));
+
+const ohne = new Blatt({ titel: 'Ohne Bild' });
+ohne.absatz('nur Text');
+pruef('Ohne Bilder kein XObject-Verzeichnis', !new TextDecoder('latin1').decode(ohne.bytes()).includes('/XObject'));
+
+const viele = new Blatt({ titel: 'Umbruch' });
+viele.bilderreihe(Array.from({ length: 30 }, () => testbild), { hoehe: 108 });
+viele.bytes();
+pruef('Viele Bilder brechen auf mehrere Seiten um', viele.seiten.length >= 2, viele.seiten.length + ' Seiten');
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');
 process.exit(fehler ? 1 : 0);

@@ -27,8 +27,8 @@ finden, dort allerdings nur nach Anmeldung.
 | Baufinanzierung | Eigenkapital und Darlehen erfassen, oder erst rechnen lassen |
 | Tilgungsverlauf | Restschuld Jahr für Jahr, mit Sondertilgung, als PDF |
 | Baukasse | Budget, Rechnungen, Restbudget je Finanzierungsposten |
-| Anschlussplan | Grundriss hochladen, Steckdosen und Leitungen markieren |
-| Mängelliste | Mängel je Raum mit Foto, Gewerk, Frist und Status |
+| Anschlussplan | Grundriss hochladen, Anschlüsse markieren, als PDF mit Plan |
+| Mängelliste | Mängel je Raum mit Foto, Gewerk, Frist und Status, als PDF mit Bildern |
 | Bauablauf | Gewerke in der richtigen Reihenfolge, Termine rechnen sich |
 | Bauhelfertagebuch | Tageseinträge mit Wetter, Helfern und Fotos |
 | Kontakte | Firmen und Helfer, von den anderen Bereichen verlinkt |
@@ -104,9 +104,22 @@ Beispielhäuser der Website nach und schlägt an, wenn eine Formel abweicht.
 
 Die Ergebnisse sind Prognosen auf Grundlage realer Marktdaten, keine Angebote.
 
+## PDF-Ausgabe
+
+Vier Bereiche geben ein PDF aus: Tilgungsverlauf, Mängelliste, Bauablauf,
+Bauhelfertagebuch, dazu der Anschlussplan mit dem Grundriss und den
+nummerierten Markierungen.
+
+Der Schreiber in `www/pdf.js` ist selbst gebaut, keine Fremdbibliothek.
+Er kann Text, Tabellen, Seitenumbruch und JPEG-Bilder. Fotos werden
+unverändert als Datenstrom eingebettet (Filter DCTDecode), vorher aber auf
+900 Bildpunkte verkleinert: bei rund 100 Punkt Anzeigehöhe sind das immer
+noch etwa 600 dpi, und eine Mängelliste mit zwanzig Fotos bleibt unter einem
+Megabyte statt sechs. Ein Bild, das mehrfach vorkommt, liegt trotzdem nur
+einmal im Dokument.
+
 ## Was noch fehlt
 
 - Signatur für den Play Store; das Debug-Paket ist nur zum Ausprobieren
-- Fotos im PDF; sie liegen bisher nur in der App
 - Maßstab im Anschlussplan, um Abstände in Zentimetern abzulesen
 - Bauhelferstunden je Person summieren, für die Berufsgenossenschaft

@@ -11,7 +11,7 @@ import {
 import { daten, einstellung, bildUrl, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
 import { fotofeld } from '../fotos.js';
-import { Blatt, pdfTeilen } from '../pdf.js';
+import { Blatt, pdfTeilen, bildLaden } from '../pdf.js';
 
 export const WETTER = {
   sonnig: 'Sonnig', bewoelkt: 'Bewölkt', regen: 'Regen',
@@ -197,15 +197,36 @@ function eintragBearbeiten(eintrag, helfer, alleEintraege, nachher) {
 }
 
 async function pdfErzeugen(eintraege, kontakte) {
+  melde('PDF wird erstellt …');
   const projekt = (await einstellung('projektname')) || '';
   const blatt = new Blatt({
     titel: 'Bauhelfertagebuch',
     untertitel: (projekt ? projekt + ' · ' : '') + 'Stand ' + datumLang(heute()),
-    fusszeile: 'Hausbau App · Fotos liegen in der App beim jeweiligen Tag',
+    fusszeile: 'Hausbau App · Bauhelfertagebuch',
   });
 
   // Aelteste zuerst: ein Nachweis liest sich chronologisch.
-  for (const e of [...eintraege].reverse()) {
+  const chronologisch = [...eintraege].sort((a, b) => String(a.datum).localeCompare(String(b.datum)));
+
+  // Fotos vorab laden; der Schreiber braucht die Maße für den Seitenumbruch.
+  const fotos = new Map();
+  for (const e of chronologisch) {
+    const geladen = [];
+    for (const bildId of e.bildIds || []) {
+      const eintrag = await daten.holen('bilder', bildId);
+      const bild = eintrag ? await bildLaden(eintrag.blob) : null;
+      if (bild) geladen.push(bild);
+    }
+    fotos.set(e.id, geladen);
+  }
+
+  const einsaetze = chronologisch.reduce((s, e) => s + (e.helferIds || []).length, 0);
+  blatt.absatz(
+    `${chronologisch.length} Tage dokumentiert, ${einsaetze} Helfereinsätze erfasst. ` +
+    'Die Fotos stehen bei dem Tag, an dem sie aufgenommen wurden.'
+  );
+
+  for (const e of chronologisch) {
     const namen = (e.helferIds || [])
       .map((id) => (kontakte.find((k) => k.id === id) || {}).name)
       .filter(Boolean);
@@ -217,9 +238,11 @@ async function pdfErzeugen(eintraege, kontakte) {
         .filter(Boolean).join(', ')
     );
     blatt.wertzeile('Anwesend', namen.length ? namen.join(', ') : 'keine Helfer erfasst');
-    if (e.gemacht) { blatt.absatz('Ausgeführt: ' + e.gemacht, 9.5); }
-    if (e.offen) { blatt.absatz('Liegengeblieben: ' + e.offen, 9.5); }
-    if ((e.bildIds || []).length) { blatt.absatz((e.bildIds || []).length + ' Foto(s) in der App hinterlegt.', 8.5); }
+    if (e.gemacht) blatt.absatz('Ausgeführt: ' + e.gemacht, 9.5);
+    if (e.offen) blatt.absatz('Liegengeblieben: ' + e.offen, 9.5);
+
+    const bilder = fotos.get(e.id) || [];
+    if (bilder.length) blatt.bilderreihe(bilder, { hoehe: 108 });
   }
 
   try {

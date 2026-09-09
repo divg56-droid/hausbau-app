@@ -92,7 +92,13 @@ export async function einstellung(name, wert) {
 // Qualitaet 0,8 reicht fuer jede Dokumentation und landet bei etwa 300 KB.
 const MAX_KANTE = 1600;
 
-export function bildVerkleinern(datei) {
+/**
+ * @param {Blob} datei
+ * @param {number} maxKante  laengste Kante in Bildpunkten; fuers PDF wird
+ *                           kleiner verkleinert als fuer die Ablage
+ * @param {number} guete     JPEG-Qualitaet zwischen 0 und 1
+ */
+export function bildVerkleinern(datei, maxKante = MAX_KANTE, guete = 0.8) {
   return new Promise((fertig, fehler) => {
     const leser = new FileReader();
     leser.onerror = () => fehler(leser.error);
@@ -100,12 +106,12 @@ export function bildVerkleinern(datei) {
       const bild = new Image();
       bild.onerror = () => fehler(new Error('Bild nicht lesbar'));
       bild.onload = () => {
-        const faktor = Math.min(1, MAX_KANTE / Math.max(bild.width, bild.height));
+        const faktor = Math.min(1, maxKante / Math.max(bild.width, bild.height));
         const leinwand = document.createElement('canvas');
         leinwand.width = Math.round(bild.width * faktor);
         leinwand.height = Math.round(bild.height * faktor);
         leinwand.getContext('2d').drawImage(bild, 0, 0, leinwand.width, leinwand.height);
-        leinwand.toBlob((b) => (b ? fertig(b) : fehler(new Error('Umwandlung fehlgeschlagen'))), 'image/jpeg', 0.8);
+        leinwand.toBlob((b) => (b ? fertig(b) : fehler(new Error('Umwandlung fehlgeschlagen'))), 'image/jpeg', guete);
       };
       bild.src = leser.result;
     };

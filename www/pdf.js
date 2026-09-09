@@ -41,6 +41,16 @@ function textbreite(text, groesse) {
   return (summe / 1000) * groesse;
 }
 
+/** Kuerzt Text auf eine Breite und haengt Auslassungspunkte an. */
+function kuerzen(text, groesse, maxBreite) {
+  if (maxBreite <= 0 || textbreite(text, groesse) <= maxBreite) return text;
+  let gekuerzt = text;
+  while (gekuerzt.length > 1 && textbreite(gekuerzt + '…', groesse) > maxBreite) {
+    gekuerzt = gekuerzt.slice(0, -1);
+  }
+  return gekuerzt.trimEnd() + '…';
+}
+
 // PDF-Zeichenketten: Klammern und Rueckstrich muessen maskiert werden.
 function alsPdfText(text) {
   let raus = '';
@@ -55,6 +65,64 @@ const A4 = { breite: 595.28, hoehe: 841.89 };
 const RAND = 48;
 const INNEN = A4.breite - 2 * RAND;
 
+// --------------------------------------------------------------------- Bilder
+
+/**
+ * Liest Breite, Hoehe und Farbkanaele aus dem JPEG-Kopf.
+ *
+ * PDF kann JPEG-Daten unveraendert uebernehmen (Filter DCTDecode), aber es
+ * muss vorher wissen, wie gross das Bild ist. Diese Angaben stehen im
+ * SOF-Abschnitt, den wir uns hier heraussuchen.
+ */
+function jpegMasse(bytes) {
+  if (bytes[0] !== 0xff || bytes[1] !== 0xd8) return null; // kein JPEG
+  let i = 2;
+  while (i < bytes.length - 9) {
+    if (bytes[i] !== 0xff) { i++; continue; }
+    const marke = bytes[i + 1];
+    // SOF0 bis SOF15; C4, C8 und CC sind Huffman-Tabellen und kein Rahmen.
+    if (marke >= 0xc0 && marke <= 0xcf && marke !== 0xc4 && marke !== 0xc8 && marke !== 0xcc) {
+      return {
+        hoehe: (bytes[i + 5] << 8) | bytes[i + 6],
+        breite: (bytes[i + 7] << 8) | bytes[i + 8],
+        kanaele: bytes[i + 9],
+      };
+    }
+    const laenge = (bytes[i + 2] << 8) | bytes[i + 3];
+    if (laenge < 2) return null;
+    i += 2 + laenge;
+  }
+  return null;
+}
+
+// Fuers PDF reicht deutlich weniger als fuer die Ablage: bei etwa 100 Punkt
+// Anzeigehoehe sind 900 Bildpunkte immer noch rund 600 dpi. Ohne dieses
+// zweite Verkleinern waere eine Maengelliste mit zwanzig Fotos sechs
+// Megabyte gross und liesse sich nicht mehr per Mail verschicken.
+const PDF_KANTE = 900;
+
+/**
+ * Bereitet ein gespeichertes Foto fuer das PDF auf.
+ * Gibt null zurueck, wenn daraus kein einbettbares Bild wird (etwa bei einer
+ * hochgeladenen PDF-Rechnung).
+ *
+ * @param {Blob} blob
+ * @returns {Promise<{bytes: Uint8Array, breite: number, hoehe: number, kanaele: number} | null>}
+ */
+export async function bildLaden(blob) {
+  if (!blob || !String(blob.type).startsWith('image/')) return null;
+  try {
+    const { bildVerkleinern } = await import('./daten.js');
+    const klein = await bildVerkleinern(blob, PDF_KANTE, 0.72);
+    const bytes = new Uint8Array(await klein.arrayBuffer());
+    const masse = jpegMasse(bytes);
+    return masse ? { bytes, ...masse } : null;
+  } catch (fehler) {
+    console.error('Bild fuers PDF nicht lesbar', fehler);
+    return null;
+  }
+}
+
 export class Blatt {
   constructor({ titel, untertitel = '', fusszeile = '' } = {}) {
     this.titel = titel || 'Dokument';
@@ -63,7 +131,108 @@ export class Blatt {
     this.seiten = [];
     this.strom = '';
     this.y = 0;
+    this.bilder = [];   // eingebettete Bilder, Reihenfolge bestimmt den Namen
     this.neueSeite();
+  }
+
+  /** Ein Bild nur einmal einbetten, auch wenn es mehrfach vorkommt. */
+  bildRegistrieren(bild) {
+    let platz = this.bilder.indexOf(bild);
+    if (platz === -1) platz = this.bilder.push(bild) - 1;
+    return 'Im' + platz;
+  }
+
+  /**
+   * Fotos nebeneinander, bei Bedarf in mehreren Zeilen.
+   *
+   * @param {Array<{bytes: Uint8Array, breite: number, hoehe: number}>} bilder
+   * @param {{hoehe?: number, abstand?: number}} optionen
+   */
+  bilderreihe(bilder, { hoehe = 96, abstand = 7 } = {}) {
+    const brauchbar = bilder.filter(Boolean);
+    if (!brauchbar.length) return;
+
+    let x = RAND;
+    this.platz(hoehe + 8);
+
+    for (const bild of brauchbar) {
+      // Seitenverhaeltnis behalten, aber kein Panorama ueber die halbe Seite.
+      const breite = Math.min(INNEN / 2, hoehe * (bild.breite / bild.hoehe));
+
+      if (x > RAND && x + breite > A4.breite - RAND) {
+        // Zeile ist voll: umbrechen und notfalls die Seite wechseln.
+        this.y -= hoehe + abstand;
+        x = RAND;
+        this.platz(hoehe + 8);
+      }
+
+      const name = this.bildRegistrieren(bild);
+      this.strom +=
+        'q ' + breite.toFixed(2) + ' 0 0 ' + hoehe.toFixed(2) + ' ' +
+        x.toFixed(2) + ' ' + (this.y - hoehe).toFixed(2) + ' cm /' + name + ' Do Q\n';
+      x += breite + abstand;
+    }
+
+    this.y -= hoehe + 10;
+  }
+
+  /**
+   * Ein Bild gross und mittig, so gross wie Breite und Restplatz es zulassen.
+   * Gibt den belegten Rahmen zurueck, damit sich darauf zeichnen laesst.
+   */
+  bildGross(bild, { maxHoehe = 430 } = {}) {
+    // Erst schauen, ob ueberhaupt noch genug Platz auf der Seite ist.
+    if (this.y - 140 < RAND + 26) this.neueSeite();
+
+    const platzHoehe = Math.min(maxHoehe, this.y - RAND - 30);
+    let breite = INNEN;
+    let hoehe = breite * (bild.hoehe / bild.breite);
+    if (hoehe > platzHoehe) {
+      hoehe = platzHoehe;
+      breite = hoehe * (bild.breite / bild.hoehe);
+    }
+
+    const name = this.bildRegistrieren(bild);
+    const x = RAND + (INNEN - breite) / 2;
+    const unten = this.y - hoehe;
+    this.strom +=
+      'q ' + breite.toFixed(2) + ' 0 0 ' + hoehe.toFixed(2) + ' ' +
+      x.toFixed(2) + ' ' + unten.toFixed(2) + ' cm /' + name + ' Do Q\n';
+
+    this.y = unten - 12;
+    return { x, unten, breite, hoehe };
+  }
+
+  /**
+   * Nummerierte Marke auf einen zuvor gezeichneten Bildrahmen setzen.
+   *
+   * @param {{x:number, unten:number, breite:number, hoehe:number}} rahmen
+   * @param {number} relX  0 bis 1, von links
+   * @param {number} relY  0 bis 1, von oben - so liegen die Pins in der App
+   */
+  marke(rahmen, relX, relY, beschriftung, farbe = [232, 160, 32]) {
+    const x = rahmen.x + relX * rahmen.breite;
+    // In PDF zeigt die y-Achse nach oben, in der App nach unten.
+    const y = rahmen.unten + (1 - relY) * rahmen.hoehe;
+    const r = 8.5;
+    const k = r * 0.5523; // Bezier-Faktor fuer einen Kreis aus vier Boegen
+
+    const rgb = farbe.map((f) => (f / 255).toFixed(3)).join(' ');
+    this.strom +=
+      rgb + ' rg 1 1 1 RG 1.2 w\n' +
+      `${(x - r).toFixed(2)} ${y.toFixed(2)} m ` +
+      `${(x - r).toFixed(2)} ${(y + k).toFixed(2)} ${(x - k).toFixed(2)} ${(y + r).toFixed(2)} ${x.toFixed(2)} ${(y + r).toFixed(2)} c ` +
+      `${(x + k).toFixed(2)} ${(y + r).toFixed(2)} ${(x + r).toFixed(2)} ${(y + k).toFixed(2)} ${(x + r).toFixed(2)} ${y.toFixed(2)} c ` +
+      `${(x + r).toFixed(2)} ${(y - k).toFixed(2)} ${(x + k).toFixed(2)} ${(y - r).toFixed(2)} ${x.toFixed(2)} ${(y - r).toFixed(2)} c ` +
+      `${(x - k).toFixed(2)} ${(y - r).toFixed(2)} ${(x - r).toFixed(2)} ${(y - k).toFixed(2)} ${(x - r).toFixed(2)} ${y.toFixed(2)} c ` +
+      'B\n0 0 0 rg 0 G\n';
+
+    const text = String(beschriftung);
+    const groesse = text.length > 2 ? 7 : 8.5;
+    this.strom +=
+      'BT /F2 ' + groesse + ' Tf 1 1 1 rg 1 0 0 1 ' +
+      (x - textbreite(text, groesse) / 2).toFixed(2) + ' ' +
+      (y - groesse / 2.9).toFixed(2) + ' Tm (' + alsPdfText(text) + ') Tj ET\n0 0 0 rg\n';
   }
 
   neueSeite() {
@@ -165,12 +334,24 @@ export class Blatt {
     let lauf = RAND;
     for (const b of breiten) { x.push(lauf); lauf += b; }
 
+    // Abstand zwischen den Spalten. Ohne ihn stiess ein rechtsbuendiger Wert
+    // direkt an den linksbuendigen der naechsten Spalte: "30 cmLeerrohr".
+    const LUECKE = 8;
+
+    // Eine Zelle setzen, notfalls gekuerzt. Ueberlanger Text darf nicht in
+    // die Nachbarspalte laufen, sonst liest sich die Zeile falsch.
+    const zelleSetzen = (inhalt, i, groesse, fett, farbe) => {
+      const platzBreite = breiten[i] - LUECKE;
+      const text = kuerzen(String(inhalt ?? ''), groesse, platzBreite);
+      const pos = rechts.includes(i)
+        ? x[i] + breiten[i] - LUECKE - textbreite(text, groesse)
+        : x[i];
+      this.schreibe(text, { groesse, fett, x: pos, farbe });
+    };
+
     const kopfzeileZeichnen = () => {
       this.platz(26);
-      kopf.forEach((zelle, i) => {
-        const pos = rechts.includes(i) ? x[i] + breiten[i] - textbreite(zelle, 8.5) : x[i];
-        this.schreibe(zelle, { groesse: 8.5, fett: true, x: pos, farbe: [95, 103, 114] });
-      });
+      kopf.forEach((zelle, i) => zelleSetzen(zelle, i, 8.5, true, [95, 103, 114]));
       this.y -= 5;
       this.linie(0.6, 0.75);
       this.y -= 12;
@@ -183,11 +364,7 @@ export class Blatt {
         this.neueSeite();
         kopfzeileZeichnen();
       }
-      zeile.forEach((zelle, i) => {
-        const inhalt = String(zelle ?? '');
-        const pos = rechts.includes(i) ? x[i] + breiten[i] - textbreite(inhalt, 9.5) : x[i];
-        this.schreibe(inhalt, { groesse: 9.5, x: pos });
-      });
+      zeile.forEach((zelle, i) => zelleSetzen(zelle, i, 9.5, false, null));
       this.y -= 5;
       this.linie(0.3, 0.92);
       this.y -= 11;
@@ -214,6 +391,8 @@ export class Blatt {
     // danach je Seite ein Seiten- und ein Inhaltsobjekt.
     const objekte = [];
     const seitenIds = seitenStroeme.map((_, i) => 5 + i * 2);
+    // Die Bilder bekommen ihre Nummern hinter den Seiten.
+    const bildIds = this.bilder.map((_, i) => 5 + anzahl * 2 + i);
 
     objekte[1] = '<< /Type /Catalog /Pages 2 0 R >>';
     objekte[2] = '<< /Type /Pages /Count ' + anzahl + ' /Kids [' +
@@ -221,12 +400,32 @@ export class Blatt {
     objekte[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
     objekte[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
 
+    // Alle Bilder stehen in den Betriebsmitteln jeder Seite. Das kostet nur
+    // ein paar Zeichen im Verzeichnis; die Bilddaten selbst liegen genau
+    // einmal im Dokument.
+    const bildVerzeichnis = this.bilder.length
+      ? ' /XObject << ' + bildIds.map((id, i) => '/Im' + i + ' ' + id + ' 0 R').join(' ') + ' >>'
+      : '';
+
     seitenStroeme.forEach((strom, i) => {
       const seitenId = seitenIds[i];
       objekte[seitenId] =
         '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + A4.breite + ' ' + A4.hoehe + ']' +
-        ' /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ' + (seitenId + 1) + ' 0 R >>';
+        ' /Resources << /Font << /F1 3 0 R /F2 4 0 R >>' + bildVerzeichnis + ' >>' +
+        ' /Contents ' + (seitenId + 1) + ' 0 R >>';
       objekte[seitenId + 1] = { strom };
+    });
+
+    this.bilder.forEach((bild, i) => {
+      // Ein Farbkanal heisst Graustufen, vier heisst CMYK; alles andere ist RGB.
+      const farbraum = bild.kanaele === 1 ? '/DeviceGray'
+        : bild.kanaele === 4 ? '/DeviceCMYK' : '/DeviceRGB';
+      objekte[bildIds[i]] = {
+        roh: bild.bytes,
+        kopf: '/Type /XObject /Subtype /Image' +
+          ' /Width ' + bild.breite + ' /Height ' + bild.hoehe +
+          ' /ColorSpace ' + farbraum + ' /BitsPerComponent 8 /Filter /DCTDecode',
+      };
     });
 
     // Zusammenbauen und dabei die Byte-Abstaende fuer die Querverweistabelle
@@ -250,8 +449,11 @@ export class Blatt {
       if (typeof objekt === 'string') {
         dazu(i + ' 0 obj\n' + objekt + '\nendobj\n');
       } else {
-        const roh = Uint8Array.from(zuWinAnsi(objekt.strom));
-        dazu(i + ' 0 obj\n<< /Length ' + roh.length + ' >>\nstream\n');
+        // Bilddaten liegen schon als Bytes vor; Textstroeme muessen erst
+        // nach WinAnsi umgesetzt werden.
+        const roh = objekt.roh ?? Uint8Array.from(zuWinAnsi(objekt.strom));
+        const kopf = objekt.kopf ? objekt.kopf + ' ' : '';
+        dazu(i + ' 0 obj\n<< ' + kopf + '/Length ' + roh.length + ' >>\nstream\n');
         dazu(roh);
         dazu('\nendstream\nendobj\n');
       }

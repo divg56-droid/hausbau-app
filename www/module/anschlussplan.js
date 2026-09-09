@@ -7,9 +7,10 @@
 
 import {
   el, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile,
-  hinweisKasten, leerzustand, zuZahl, melde,
+  hinweisKasten, leerzustand, zuZahl, melde, datumLang, heute,
 } from '../hilfen.js';
-import { daten, bildUrl, bildAblegen, bildLoeschen } from '../daten.js';
+import { daten, einstellung, bildUrl, bildAblegen, bildLoeschen } from '../daten.js';
+import { Blatt, pdfTeilen, bildLaden } from '../pdf.js';
 import { blattOeffnen } from '../blatt.js';
 import { fotofeld, dateiWaehlen } from '../fotos.js';
 
@@ -174,6 +175,7 @@ async function zeichne(rahmen, gewaehltesGeschoss = null) {
   }
 
   rahmen.append(
+    knopf('Alle Geschosse als PDF teilen', () => pdfErzeugen(geschosse)),
     karte([
       el('h2', { text: 'Geschoss ' + aktuell.name }),
       el('div', { klasse: 'knopf-reihe' }, [
@@ -274,4 +276,81 @@ function pinBearbeiten(pin, nachher) {
         : null,
     }
   );
+}
+
+// ------------------------------------------------------------------ Ausgabe
+
+/**
+ * Ein Blatt je Geschoss: der Grundriss mit nummerierten Marken, darunter die
+ * Tabelle dazu. Genau das, was man beim spaeteren Nachruesten braucht -
+ * gedruckt im Ordner oder als Datei an den Elektriker.
+ */
+async function pdfErzeugen(geschosse) {
+  melde('PDF wird erstellt …');
+  const projekt = (await einstellung('projektname')) || '';
+  const blatt = new Blatt({
+    titel: 'Anschlussplan',
+    untertitel: (projekt ? projekt + ' · ' : '') + 'Stand ' + datumLang(heute()),
+    fusszeile: 'Hausbau App · Höhen in cm über Fertigfußboden',
+  });
+
+  let ohneBild = 0;
+
+  for (const [i, geschoss] of geschosse.entries()) {
+    const pins = await daten.nach('pins', 'geschossId', geschoss.id);
+    if (i > 0) blatt.neueSeite();
+    blatt.ueberschrift(geschoss.name);
+
+    const eintrag = await daten.holen('bilder', geschoss.bildId);
+    const plan = eintrag ? await bildLaden(eintrag.blob) : null;
+
+    if (plan) {
+      const rahmen = blatt.bildGross(plan);
+      pins.forEach((pin, n) => {
+        const art = PIN_ARTEN[pin.art] || PIN_ARTEN.sonstiges;
+        blatt.marke(rahmen, pin.x, pin.y, n + 1, farbeZuRgb(art.farbe));
+      });
+    } else {
+      // Als PDF hochgeladene Grundrisse lassen sich nicht einbetten.
+      ohneBild++;
+      blatt.absatz('Der Grundriss dieses Geschosses liegt als PDF vor und kann hier nicht abgebildet werden. Die Markierungen stehen trotzdem in der Tabelle.', 9);
+    }
+
+    if (pins.length) {
+      blatt.tabelle(
+        ['Nr.', 'Art', 'Höhe', 'Notiz'],
+        pins.map((pin, n) => [
+          String(n + 1),
+          (PIN_ARTEN[pin.art] || PIN_ARTEN.sonstiges).name,
+          pin.hoehe ? pin.hoehe + ' cm' : '',
+          pin.notiz || '',
+        ]),
+        [0.45, 1.75, 0.8, 3.6],
+        [2]
+      );
+    } else {
+      blatt.absatz('In diesem Geschoss ist noch nichts markiert.', 9.5);
+    }
+  }
+
+  if (ohneBild) {
+    blatt.absatz(
+      'Hinweis: ' + ohneBild + ' Geschoss(e) ohne abbildbaren Grundriss. ' +
+      'Wer den Plan als Foto statt als PDF hochlädt, bekommt ihn hier mit den Marken abgebildet.',
+      8.5
+    );
+  }
+
+  try {
+    await pdfTeilen(blatt.blob(), 'anschlussplan.pdf', 'Anschlussplan');
+  } catch (fehler) {
+    melde('PDF konnte nicht geteilt werden.');
+    console.error(fehler);
+  }
+}
+
+/** "#e8a020" zu [232, 160, 32] */
+function farbeZuRgb(hex) {
+  const wert = parseInt(String(hex).replace('#', ''), 16);
+  return [(wert >> 16) & 255, (wert >> 8) & 255, wert & 255];
 }

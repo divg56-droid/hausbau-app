@@ -12,13 +12,14 @@ import {
 import { daten, bildUrl, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
 import { fotofeld } from '../fotos.js';
-import { Blatt, pdfTeilen } from '../pdf.js';
+import { Blatt, pdfTeilen, bildLaden } from '../pdf.js';
 import { einstellung } from '../daten.js';
 
 export const STATUS = {
-  offen: { name: 'Offen', marke: 'marke-offen' },
-  arbeit: { name: 'In Bearbeitung', marke: 'marke-arbeit' },
-  behoben: { name: 'Behoben', marke: 'marke-fertig' },
+  // kurz steht in den PDF-Tabellen, wo die Spalte schmal ist.
+  offen: { name: 'Offen', kurz: 'Offen', marke: 'marke-offen' },
+  arbeit: { name: 'In Bearbeitung', kurz: 'In Arbeit', marke: 'marke-arbeit' },
+  behoben: { name: 'Behoben', kurz: 'Behoben', marke: 'marke-fertig' },
 };
 
 export const GEWERKE = [
@@ -207,38 +208,71 @@ function mangelBearbeiten(mangel, kontakte, nachher) {
 }
 
 async function pdfErzeugen(maengel, kontakte) {
+  melde('PDF wird erstellt …');
   const projekt = (await einstellung('projektname')) || '';
   const blatt = new Blatt({
     titel: 'Mängelliste',
     untertitel: (projekt ? projekt + ' · ' : '') + 'Stand ' + datumLang(heute()),
-    fusszeile: 'Hausbau App · Fotos liegen in der App zum jeweiligen Eintrag',
+    fusszeile: 'Hausbau App · Mängelliste',
   });
+
+  // Nach Raum sortieren und durchnummerieren: die Nummer verbindet die
+  // Übersicht vorn mit dem Nachweisblock hinten.
+  const sortiert = [...maengel].sort((a, b) => {
+    const raum = (a.raum || 'Ohne Raum').localeCompare(b.raum || 'Ohne Raum', 'de');
+    return raum !== 0 ? raum : String(a.angelegt).localeCompare(String(b.angelegt));
+  });
+  sortiert.forEach((m, i) => { m.nummer = i + 1; });
 
   const offen = maengel.filter((m) => m.status !== 'behoben').length;
   blatt.absatz(
     `${maengel.length} Einträge, davon ${offen} noch nicht behoben. ` +
-    'Zu jedem Eintrag sind in der App Fotos mit Aufnahmedatum hinterlegt.'
+    'Die Übersicht nennt jeden Mangel einmal, danach folgt zu jedem Eintrag ' +
+    'die Beschreibung mit den Fotos, die am Erfassungstag aufgenommen wurden.'
   );
 
-  const raeume = [...new Set(maengel.map((m) => m.raum || 'Ohne Raum'))].sort((a, b) => a.localeCompare(b, 'de'));
+  blatt.ueberschrift('Übersicht');
+  blatt.tabelle(
+    ['Nr.', 'Raum', 'Mangel', 'Gewerk', 'Frist', 'Status'],
+    sortiert.map((m) => {
+      return [
+        String(m.nummer),
+        m.raum || 'ohne Raum',
+        m.titel,
+        m.gewerk || '',
+        m.frist ? datumLang(m.frist) : '',
+        STATUS[m.status].kurz,
+      ];
+    }),
+    [0.45, 1.4, 2.5, 1.7, 0.95, 1.1]
+  );
 
-  for (const raum of raeume) {
-    const drin = maengel.filter((m) => (m.raum || 'Ohne Raum') === raum);
-    blatt.ueberschrift(raum);
-    blatt.tabelle(
-      ['Mangel', 'Gewerk', 'Zuständig', 'Frist', 'Status'],
-      drin.map((m) => {
-        const kontakt = kontakte.find((k) => k.id === m.kontaktId);
-        return [
-          m.titel,
-          m.gewerk || '',
-          kontakt ? kontakt.name : '',
-          m.frist ? datumLang(m.frist) : '',
-          STATUS[m.status].name,
-        ];
-      }),
-      [3.4, 1.5, 1.7, 1, 1.2]
-    );
+  // Alle Fotos vorab laden. Erst danach kann gezeichnet werden, weil der
+  // Schreiber die Bildmaße für den Seitenumbruch braucht.
+  const fotos = new Map();
+  for (const m of sortiert) {
+    const geladen = [];
+    for (const bildId of m.bildIds || []) {
+      const eintrag = await daten.holen('bilder', bildId);
+      const bild = eintrag ? await bildLaden(eintrag.blob) : null;
+      if (bild) geladen.push(bild);
+    }
+    fotos.set(m.id, geladen);
+  }
+
+  for (const m of sortiert) {
+    const kontakt = kontakte.find((k) => k.id === m.kontaktId);
+    const bilder = fotos.get(m.id) || [];
+
+    blatt.ueberschrift(`${m.nummer}. ${m.titel}`);
+    blatt.wertzeile('Raum', m.raum || 'ohne Angabe');
+    blatt.wertzeile('Gewerk', m.gewerk || 'ohne Angabe');
+    blatt.wertzeile('Erfasst am', datumLang(m.angelegt));
+    if (kontakt) blatt.wertzeile('Zuständig', [kontakt.name, kontakt.firma].filter(Boolean).join(', '));
+    if (m.frist) blatt.wertzeile('Frist', datumLang(m.frist));
+    blatt.wertzeile('Status', STATUS[m.status].name, true);
+    if (m.beschreibung) blatt.absatz(m.beschreibung, 9.5);
+    if (bilder.length) blatt.bilderreihe(bilder, { hoehe: 108 });
   }
 
   try {
