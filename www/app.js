@@ -5,62 +5,11 @@
 // den uebergebenen Knoten haengt.
 
 import { el, leeren } from './hilfen.js';
+import { BEREICHE, MODULE } from './bereiche.js';
 import { bildUrlsFreigeben } from './daten.js';
 
-export const MODULE = [
-  {
-    weg: 'baukosten', zeichen: '\u{1F3D7}', titel: 'Baukostenrechner',
-    text: 'Was das Haus samt Grundstück und Nebenkosten wirklich kostet.',
-  },
-  {
-    weg: 'finanzierung', zeichen: '\u{1F3E6}', titel: 'Baufinanzierung',
-    text: 'Eigenkapital und Darlehen erfassen oder erst einmal rechnen lassen.',
-  },
-  {
-    weg: 'tilgung', zeichen: '\u{1F4C9}', titel: 'Tilgungsverlauf',
-    text: 'Restschuld, Rate und Laufzeit Jahr für Jahr, als PDF zum Weitergeben.',
-  },
-  {
-    weg: 'baukasse', zeichen: '\u{1F4B6}', titel: 'Baukasse',
-    text: 'Budget, Rechnungen und Restbudget im Blick behalten.',
-  },
-  {
-    weg: 'angebote', zeichen: '\u{1F4C4}', titel: 'Angebote',
-    text: 'Mehrere Angebote je Gewerk nebeneinander legen und vergleichen.',
-  },
-  {
-    weg: 'raeume', zeichen: '\u{1F6CB}', titel: 'Räume',
-    text: 'Jeder Raum mit Fotos, Mängeln und dem, was er gekostet hat.',
-  },
-  {
-    weg: 'anschlussplan', zeichen: '\u{1F4CD}', titel: 'Anschlussplan',
-    text: 'Steckdosen, Schalter und Leitungen auf dem Grundriss markieren.',
-  },
-  {
-    weg: 'maengel', zeichen: '\u{1F50D}', titel: 'Mängelliste',
-    text: 'Jeden Schaden mit Foto, Raum, Gewerk und Status festhalten.',
-  },
-  {
-    weg: 'ablauf', zeichen: '\u{1F4C5}', titel: 'Bauablauf',
-    text: 'Reihenfolge der Gewerke planen, damit nichts zurückgebaut wird.',
-  },
-  {
-    weg: 'tagebuch', zeichen: '\u{1F4D3}', titel: 'Bauhelfertagebuch',
-    text: 'Täglich festhalten, wer da war und was gemacht wurde.',
-  },
-  {
-    weg: 'kontakte', zeichen: '\u{1F4C7}', titel: 'Kontakte',
-    text: 'Handwerker, Bauleiter und Ansprechpartner an einer Stelle.',
-  },
-  {
-    weg: 'konto', zeichen: '\u{2601}', titel: 'Konto',
-    text: 'Anmelden, damit App und Internetseite dieselben Daten zeigen.',
-  },
-  {
-    weg: 'einstellungen', zeichen: '\u{2699}', titel: 'Einstellungen',
-    text: 'Projektname, Daten sichern, alles löschen.',
-  },
-];
+export { BEREICHE, MODULE };
+
 
 const kopftitel = document.getElementById('kopftitel');
 const zurueckKnopf = document.getElementById('zurueck');
@@ -112,38 +61,81 @@ export function setzeKopf({ titel, aktion }) {
   }
 }
 
+const seitenleiste = document.getElementById('seitenleiste');
+const leistenSchatten = document.getElementById('leistenschatten');
+const menueKnopf = document.getElementById('menueknopf');
+
+/**
+ * Zeichnet die Seitenleiste einmal und haelt danach nur noch die Markierung
+ * nach. Sie neu aufzubauen waere einfacher, aber dann klappt bei jedem
+ * Bereichswechsel jede Gruppe wieder zu.
+ */
+function leisteBauen() {
+  seitenleiste.replaceChildren(
+    ...BEREICHE.map((gruppe) => {
+      // Gruppen mit nur einem Punkt brauchen keine Ueberschrift, die man
+      // aufklappen muss. Der Punkt steht dann fuer sich.
+      if (gruppe.punkte.length === 1) {
+        return el('a', {
+          klasse: 'leiste-punkt leiste-allein',
+          href: '#/' + gruppe.punkte[0].weg,
+          'data-weg': gruppe.punkte[0].weg,
+        }, [
+          el('span', { klasse: 'leiste-zeichen', text: gruppe.zeichen }),
+          gruppe.punkte[0].titel,
+        ]);
+      }
+      return el('details', { klasse: 'leiste-gruppe', open: true }, [
+        el('summary', {}, [
+          el('span', { klasse: 'leiste-zeichen', text: gruppe.zeichen }),
+          gruppe.titel,
+        ]),
+        ...gruppe.punkte.map((punkt) =>
+          el('a', {
+            klasse: 'leiste-punkt', href: '#/' + punkt.weg, 'data-weg': punkt.weg,
+          }, [punkt.titel])
+        ),
+      ]);
+    })
+  );
+}
+
+function leisteMarkieren(weg) {
+  for (const a of seitenleiste.querySelectorAll('.leiste-punkt')) {
+    const aktiv = a.dataset.weg === weg;
+    a.classList.toggle('aktiv', aktiv);
+    if (aktiv) a.setAttribute('aria-current', 'page');
+    else a.removeAttribute('aria-current');
+  }
+}
+
+/** Auf dem Telefon faehrt die Leiste als Schublade herein. */
+function leisteSchalten(offen) {
+  document.body.classList.toggle('leiste-offen', offen);
+  menueKnopf.setAttribute('aria-expanded', String(offen));
+}
+
+menueKnopf.addEventListener('click', () =>
+  leisteSchalten(!document.body.classList.contains('leiste-offen'))
+);
+leistenSchatten.addEventListener('click', () => leisteSchalten(false));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') leisteSchalten(false);
+});
+// Ein Klick in der Leiste schliesst sie; sonst verdeckt sie auf dem Telefon
+// genau den Bereich, den man gerade geoeffnet hat.
+seitenleiste.addEventListener('click', (e) => {
+  if (e.target.closest('.leiste-punkt')) leisteSchalten(false);
+});
+
+leisteBauen();
+
 zurueckKnopf.addEventListener('click', () => {
   // history.back() statt fester Route: so stimmt auch die Android-Zurücktaste,
   // die auf denselben Verlauf wirkt.
   if (history.length > 1) history.back();
   else location.hash = '';
 });
-
-function startseite() {
-  setzeKopf({ titel: APPNAME });
-  zurueckKnopf.hidden = true;
-
-  inhalt.append(
-    el('header', { klasse: 'seitenkopf' }, [
-      el('h1', { text: 'Dein Bauprojekt' }),
-      el('p', {
-        klasse: 'unterzeile',
-        text: 'Alle Daten bleiben auf diesem Gerät. Kein Konto, keine Übertragung.',
-      }),
-    ]),
-    el(
-      'div',
-      { klasse: 'kachelgitter' },
-      MODULE.map((m) =>
-        el('a', { klasse: 'kachel', href: '#/' + m.weg }, [
-          el('span', { klasse: 'kachel-zeichen', text: m.zeichen }),
-          el('span', { klasse: 'kachel-titel', text: m.titel }),
-          el('span', { klasse: 'kachel-text', text: m.text }),
-        ])
-      )
-    )
-  );
-}
 
 async function zeichne() {
   // Bild-URLs des vorherigen Bildschirms freigeben, sonst waechst der
@@ -154,22 +146,20 @@ async function zeichne() {
 
   const weg = location.hash.replace(/^#\/?/, '').split('/')[0];
 
-  if (!weg) {
-    startseite();
-    return;
-  }
-
   const modul = MODULE.find((m) => m.weg === weg);
   if (!modul) {
     location.hash = '';
     return;
   }
 
-  zurueckKnopf.hidden = false;
-  setzeKopf({ titel: modul.titel });
+  leisteMarkieren(weg);
+  // Auf der Uebersicht steht die Wortmarke im Kopf, sonst der Bereichsname.
+  // Der Zurueckpfeil entfaellt dort: Es gibt nichts, wohin er fuehren wuerde.
+  zurueckKnopf.hidden = weg === '';
+  setzeKopf({ titel: weg === '' ? APPNAME : modul.titel });
 
   try {
-    const geladen = await import('./module/' + weg + '.js');
+    const geladen = await import('./module/' + (weg || 'uebersicht') + '.js');
     await geladen.zeige(inhalt);
   } catch (fehler) {
     console.error(fehler);

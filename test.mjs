@@ -16,6 +16,7 @@ import { neueKennung, umschreiben } from './www/daten.js';
 import { postenRechnen } from './www/module/baukasse.js';
 import { helferVon, stundenJeHelfer } from './www/module/tagebuch.js';
 import { angeboteRechnen } from './www/module/angebote.js';
+import { BEREICHE, MODULE } from './www/bereiche.js';
 import { csvText, zelle } from './www/csv.js';
 import {
   KOSTENGRUPPEN, kostengruppeName, kostengruppeLang, hauptgruppe,
@@ -674,6 +675,45 @@ console.log('Helles und dunkles Design');
 
   const sw = readFileSync('./www/sw.js', 'utf8');
   pruef('thema.js liegt in der Offline-Schale', sw.includes("'./thema.js'"));
+}
+
+console.log('Gliederung und Seitenleiste');
+{
+  // Jeder Punkt braucht ein Modul unter module/, sonst laeuft der Router in
+  // die Fehlerseite. Die Uebersicht liegt als uebersicht.js dort.
+  const fehlend = MODULE
+    .map((m) => 'www/module/' + (m.weg || 'uebersicht') + '.js')
+    .filter((d) => { try { statSync('./' + d); return false; } catch { return true; } });
+  pruef('Zu jedem Punkt gibt es ein Modul', fehlend.length === 0, fehlend.join(', '));
+
+  const wege = MODULE.map((m) => m.weg);
+  pruef('Kein Weg kommt doppelt vor', new Set(wege).size === wege.length);
+  pruef('Die Uebersicht liegt auf dem leeren Weg', wege.includes(''));
+  pruef('Jeder Punkt hat einen Titel', MODULE.every((m) => m.titel && m.titel.length > 2));
+  pruef('Jeder Punkt hat eine Beschreibung', MODULE.every((m) => m.text && m.text.length > 10));
+  pruef('Jede Gruppe hat ein Zeichen', BEREICHE.every((g) => g.zeichen && g.titel));
+
+  // Sieben Gruppen sind das Maximum, das man ohne Scrollen erfasst. Waechst
+  // die Liste weiter, gehoert sie neu geschnitten und nicht verlaengert.
+  pruef('Hoechstens sieben Gruppen', BEREICHE.length <= 7, String(BEREICHE.length));
+
+  const html = readFileSync('./www/index.html', 'utf8');
+  pruef('Die Seitenleiste steht im HTML', html.includes('id="seitenleiste"'));
+  pruef('Es gibt einen Menueknopf', html.includes('id="menueknopf"'));
+  // Der Abdunkler darf kein hidden-Attribut tragen: [hidden] traegt
+  // !important und liesse sich per CSS nicht mehr einblenden.
+  pruef('Der Abdunkler traegt kein hidden',
+    /<div id="leistenschatten"><\/div>/.test(html));
+
+  const css = readFileSync('./www/stil.css', 'utf8');
+  pruef('Auf schmalen Geraeten faehrt die Leiste herein',
+    /@media \(max-width: 899px\)[\s\S]*?body\.leiste-offen #seitenleiste \{ transform: translateX\(0\)/.test(css));
+  // Ohne flex-grow bliebe der Inhalt neben der Leiste auf Inhaltsbreite stehen.
+  pruef('Der Inhalt nimmt den Platz neben der Leiste',
+    /#inhalt \{[\s\S]*?flex: 1 1 auto; min-width: 0;/.test(css));
+
+  const sw = readFileSync('./www/sw.js', 'utf8');
+  pruef('Die Uebersicht liegt in der Offline-Schale', sw.includes("'./module/uebersicht.js'"));
 }
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');

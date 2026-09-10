@@ -15,6 +15,10 @@
 </head>
 <body>
 <header id="kopf">
+  <button class="menue-knopf" id="menueknopf" type="button" aria-label="Menü"
+    aria-expanded="false" aria-controls="seitenleiste">
+    <span></span><span></span><span></span>
+  </button>
   <button class="zurueck" id="zurueck" aria-label="Zurück" hidden>&#8249;</button>
   <span class="titel" id="kopftitel"><span class="wortmarke"><svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="12" fill="#1f2a30"></rect><path d="M11 31 32 13 53 31Z" fill="#5fbabd"></path><rect x="16" y="31" width="32" height="20" fill="none" stroke="#f5f7f6" stroke-width="4"></rect><rect x="28" y="40" width="8" height="11" fill="#f5f7f6"></rect></svg><span class="wm-text">Bau<span class="wm-akzent">Zeuge</span><span class="wm-de">.de</span></span></span></span>
   <button class="kopf-aktion" id="kopfaktion" hidden></button>
@@ -22,7 +26,14 @@
     aria-label="Dunkles Design einschalten" title="Dunkles Design einschalten"><span class="kugel">☀️</span></button>
 </header>
 
-<main id="inhalt" aria-live="polite"></main>
+<div id="rumpf">
+  <nav id="seitenleiste" aria-label="Bereiche"></nav>
+  <!-- Kein hidden-Attribut: Die Regel [hidden] traegt !important und liesse
+       sich per CSS nicht mehr einblenden. Sichtbarkeit steuert die Klasse
+       leiste-offen am body. -->
+  <div id="leistenschatten"></div>
+  <main id="inhalt" aria-live="polite"></main>
+</div>
 
 <script type="module">
   // Vor app.js: Das Design muss stehen, bevor der erste Bildschirm gezeichnet

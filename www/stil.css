@@ -85,6 +85,11 @@ a { color: var(--akzent-dunkel); }
 }
 
 #inhalt {
+  /* Als Flex-Element neben der Seitenleiste: Ohne flex-grow bliebe es auf
+     Inhaltsbreite stehen, statt den Platz daneben zu nehmen. min-width: 0
+     erlaubt es, schmaler als sein Inhalt zu werden; sonst sprengen breite
+     Tabellen das Raster. */
+  flex: 1 1 auto; min-width: 0;
   padding: 16px;
   padding-bottom: calc(32px + env(safe-area-inset-bottom));
   max-width: 720px; margin: 0 auto;
@@ -451,3 +456,91 @@ html[data-thema="dunkel"] {
 }
 .wm-akzent { font-weight: 500; color: var(--akzent-dunkel); }
 .wm-de { font-size: 11px; font-weight: 500; color: var(--tinte-leise); }
+
+/* ---------------------------------------------------------- Seitenleiste
+
+   Auf dem Rechner steht sie fest links, auf dem Telefon faehrt sie als
+   Schublade herein. Der Inhalt bekommt deshalb keinen festen Rand, sondern
+   die Leiste ist Teil eines Rasters; sonst muesste jede Breite einzeln
+   nachgerechnet werden. */
+
+#rumpf { display: flex; align-items: flex-start; }
+
+#seitenleiste {
+  flex: none; width: 236px; align-self: stretch;
+  position: sticky; top: var(--kopf-hoehe);
+  max-height: calc(100vh - var(--kopf-hoehe));
+  overflow-y: auto; overscroll-behavior: contain;
+  padding: 10px 8px calc(24px + env(safe-area-inset-bottom));
+  background: var(--karte); border-right: 1px solid var(--linie);
+}
+
+.leiste-gruppe { margin-bottom: 2px; }
+.leiste-gruppe > summary {
+  display: flex; align-items: center; gap: 9px;
+  min-height: 44px; padding: 6px 10px; border-radius: 8px;
+  font-weight: 700; font-size: 14.5px; cursor: pointer;
+  list-style: none; user-select: none;
+}
+.leiste-gruppe > summary::-webkit-details-marker { display: none; }
+.leiste-gruppe > summary::after {
+  content: '\203A'; margin-left: auto; font-size: 18px; color: var(--tinte-leise);
+  transform: rotate(90deg); transition: transform 0.2s;
+}
+.leiste-gruppe[open] > summary::after { transform: rotate(-90deg); }
+.leiste-gruppe > summary:hover { background: var(--band); }
+
+.leiste-zeichen { font-size: 16px; line-height: 1; }
+
+.leiste-punkt {
+  display: flex; align-items: center; gap: 9px;
+  min-height: 42px; padding: 6px 10px 6px 34px; margin-bottom: 1px;
+  border-radius: 8px; font-size: 14.5px; color: var(--tinte);
+  text-decoration: none;
+}
+.leiste-allein { padding-left: 10px; font-weight: 700; }
+.leiste-punkt:hover { background: var(--band); }
+.leiste-punkt.aktiv { background: var(--akzent); color: var(--auf-akzent); font-weight: 700; }
+.leiste-punkt.aktiv .leiste-zeichen { filter: grayscale(1) brightness(3); }
+
+/* Der Hamburger gehoert dem Telefon; auf dem Rechner steht die Leiste ohnehin. */
+#kopf .menue-knopf {
+  display: none; width: 44px; height: 44px; flex: none;
+  flex-direction: column; justify-content: center; align-items: center; gap: 5px;
+  border: none; background: none; cursor: pointer; border-radius: 8px;
+}
+#kopf .menue-knopf span {
+  display: block; width: 22px; height: 2.5px; border-radius: 2px;
+  background: var(--tinte); transition: transform 0.25s, opacity 0.2s;
+}
+body.leiste-offen #kopf .menue-knopf span:nth-child(1) { transform: translateY(7.5px) rotate(-45deg); }
+body.leiste-offen #kopf .menue-knopf span:nth-child(2) { opacity: 0; }
+body.leiste-offen #kopf .menue-knopf span:nth-child(3) { transform: translateY(-7.5px) rotate(45deg); }
+
+#leistenschatten { display: none; }
+
+@media (max-width: 899px) {
+  #kopf .menue-knopf { display: flex; }
+  #seitenleiste {
+    position: fixed; top: var(--kopf-hoehe); left: 0; bottom: 0; z-index: 40;
+    width: min(280px, 84vw); max-height: none;
+    transform: translateX(-102%); transition: transform 0.28s ease;
+    box-shadow: 2px 0 16px rgba(0, 0, 0, .18);
+  }
+  body.leiste-offen #seitenleiste { transform: translateX(0); }
+  body.leiste-offen #leistenschatten {
+    display: block; position: fixed; inset: var(--kopf-hoehe) 0 0 0; z-index: 39;
+    background: var(--schleier);
+  }
+  body.leiste-offen { overflow: hidden; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #seitenleiste, #kopf .menue-knopf span { transition: none; }
+}
+
+/* --------------------------------------------------------- Projektuebersicht */
+
+.kennzahlen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.kennzahl { background: var(--karte); border: 1px solid var(--linie); border-radius: 12px; padding: 12px 14px; }
+.kennzahl .wert { font-size: 21px; font-weight: 700; display: block; line-height: 1.2; }
+.kennzahl .name { font-size: 13px; color: var(--tinte-leise); }
