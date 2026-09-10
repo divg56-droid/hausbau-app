@@ -16,7 +16,7 @@
 //              Abgleich vom anderen Geraet zurueck, weil der ihn noch kennt.
 
 const DB_NAME = 'hausbau';
-const DB_VERSION = 8;
+const DB_VERSION = 9;
 
 // Wo Eintraege zu einem Elternobjekt gehoeren (Pins zu einem Geschoss), steht
 // dessen Kennung als Feld drin und bekommt einen Index.
@@ -44,6 +44,9 @@ const SPEICHER = {
   // Dokumentenablage. Die Datei selbst liegt im Bilderspeicher; hier steht
   // nur, was sie ist und wozu sie gehoert.
   dokumente: { indizes: ['art'] },
+  // Baudokumentation: Fotos je Bauabschnitt. Getrennt vom Tagebuch, weil es
+  // den Zustand des Hauses festhaelt und nicht die Anwesenheit von Menschen.
+  baudoku: { indizes: ['phase'] },
   tagebuch: { indizes: ['datum'] },
   kontakte: { indizes: [] },
   bilder: { indizes: [] },
@@ -68,6 +71,7 @@ const VERWEISLISTEN = {
   raeume: { bildIds: 'bilder' },
   tagebuch: { bildIds: 'bilder', helferIds: 'kontakte' },
   dokumente: { bildIds: 'bilder' },
+  baudoku: { bildIds: 'bilder' },
 };
 
 /** Weltweit eindeutige Kennung, ohne Absprache zwischen den Geraeten. */
@@ -103,7 +107,7 @@ function db() {
       // Ab hier reicht Anlegen: anlegen() ueberspringt, was es schon gibt.
       // Die Wanderung auf Fassung 2 legt neue Speicher bereits mit an, ein
       // zweiter Aufruf schadet deshalb nicht.
-      if (ereignis.oldVersion < 8) {
+      if (ereignis.oldVersion < 9) {
         anlegen(d);
       }
     };

@@ -49,6 +49,8 @@ export const BEREICHE = [
         text: 'Jeden Schaden mit Foto, Raum, Gewerk und Status festhalten.' },
       { weg: 'raeume', titel: 'Räume',
         text: 'Jeder Raum mit Fotos, Mängeln und dem, was er gekostet hat.' },
+      { weg: 'baudoku', titel: 'Baudokumentation',
+        text: 'Fotos nach Bauabschnitt: was unter Putz und Estrich verschwindet.' },
       { weg: 'dokumente', titel: 'Dokumente',
         text: 'Genehmigung, Verträge, Pläne und Protokolle, mit Zuordnung.' },
     ],

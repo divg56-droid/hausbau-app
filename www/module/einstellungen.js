@@ -13,7 +13,7 @@ import { daten, einstellung } from '../daten.js';
 const SPEICHER = [
   'darlehen', 'leitfaden', 'posten', 'angebote', 'belege', 'geschosse',
   'raeume', 'pins', 'maengel', 'aufgaben', 'todos', 'tagebuch', 'dokumente',
-  'kontakte',
+  'baudoku', 'kontakte',
 ];
 
 export async function zeige(rahmen) {
@@ -123,6 +123,7 @@ async function zeichne(rahmen) {
       wertzeile('Abgehakte Leitfaden-Punkte', String(bestand.leitfaden)),
       wertzeile('Aufgaben und Checklistenpunkte', String(bestand.todos)),
       wertzeile('Abgelegte Dokumente', String(bestand.dokumente)),
+      wertzeile('Aufnahmen der Baudokumentation', String(bestand.baudoku)),
       wertzeile('Kostenpositionen', String(bestand.posten)),
       wertzeile('Angebote', String(bestand.angebote)),
       wertzeile('Rechnungen', String(bestand.belege)),

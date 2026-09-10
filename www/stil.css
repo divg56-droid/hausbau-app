@@ -255,6 +255,15 @@ tr.bindung td { background: var(--band); font-weight: 700; }
 .fotoreihe { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .fotoreihe figure { position: relative; margin: 0; }
 .fotoreihe img { width: 84px; height: 84px; object-fit: cover; border-radius: 8px; border: 1px solid var(--linie); }
+/* Ein Eintrag der Baudokumentation: Zeile plus Bilderstreifen. */
+.doku-eintrag { padding: 8px 0; border-top: 1px solid var(--linie); }
+.doku-eintrag:first-of-type { border-top: 0; }
+.doku-eintrag .fotoreihe { margin: 6px 0 0; }
+.doku-eintrag .fotoreihe img {
+  width: 84px; height: 84px; object-fit: cover; border-radius: 8px;
+  border: 1px solid var(--linie);
+}
+
 .dateikachel {
   width: 84px; height: 84px; border-radius: 8px; border: 1px solid var(--linie);
   background: var(--band); display: flex; flex-direction: column; gap: 4px;
