@@ -126,7 +126,7 @@ export async function bildLaden(blob) {
     const masse = jpegMasse(bytes);
     return masse ? { bytes, ...masse } : null;
   } catch (fehler) {
-    console.error('Bild fuers PDF nicht lesbar', fehler);
+    console.error('Bild fürs PDF nicht lesbar', fehler);
     return null;
   }
 }

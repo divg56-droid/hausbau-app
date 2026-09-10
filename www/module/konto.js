@@ -136,7 +136,7 @@ async function zeichne(rahmen, art = 'anmelden') {
     blattOeffnen('Konto wirklich löschen?', [
       el('p', {
         klasse: 'kasten kasten-warn',
-        text: 'Alles auf dem Server wird gelöscht und lässt sich nicht wiederholen. ' +
+        text: 'Alles auf dem Server wird gelöscht. Das lässt sich nicht rückgängig machen. ' +
               'Die Daten auf diesem Gerät bleiben.',
       }),
       feld('Zur Bestätigung dein Passwort', passwort),

@@ -330,8 +330,8 @@ async function bauweisekarte() {
     el('p', {
       klasse: 'unterzeile',
       text: 'Was du selbst machst: Maler, Bodenbeläge, Außenanlagen. Diese Gewerke ' +
-        'bleiben wichtig, auch wenn den Rest eine Firma übernimmt — und sie ' +
-        'gehören in den Vertrag, damit später niemand darüber streitet.',
+        'bleiben wichtig, auch wenn den Rest eine Firma übernimmt. Sie gehören ' +
+        'in den Vertrag, damit später niemand darüber streitet.',
     }),
     haken,
     art.id === SCHLUESSELFERTIG

@@ -331,7 +331,7 @@ function wetterkarte() {
         el('p', {
           klasse: 'unterzeile',
           text: 'Trage die Adresse deiner Baustelle ein, dann siehst du hier das ' +
-            'aktuelle Wetter — und im Bautagebuch trägt es sich von allein ein.',
+            'aktuelle Wetter. Im Bautagebuch trägt es sich danach von allein ein.',
         }),
         knopf('Projektadresse eintragen', () => { location.hash = '#/einstellungen'; }, 'knopf-haupt')
       );

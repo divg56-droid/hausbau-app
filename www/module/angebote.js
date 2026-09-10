@@ -405,7 +405,7 @@ function angebotBearbeiten(angebot, posten, kontakte, nachher) {
       feld('Datum des Angebots', datum),
       feld('Gültig bis', gueltig, 'Steht meist im Angebot. Danach ist der Preis nicht mehr bindend.'),
       feld('Status', status),
-      feld('Notiz', notiz, 'Was ist enthalten, was fehlt? Genau daran scheitern Vergleiche.'),
+      feld('Notiz', notiz, 'Was ist enthalten, was fehlt? Daran scheitern die meisten Vergleiche.'),
       el('span', { klasse: 'feld-name', text: 'Angebot als Foto oder PDF' }),
       fotos,
     ],

@@ -47,8 +47,8 @@ async function zeichne(rahmen) {
         leerzustand(
           'Noch keine Aufnahme',
           'Fotografiere jede Wand und jeden Boden, bevor Putz und Estrich darüber ' +
-            'gehen, mit einem Zollstock im Bild. Das ist die eine Dokumentation, ' +
-            'die sich später garantiert auszahlt.'
+            'gehen, mit einem Zollstock im Bild. Beim ersten Bohrloch in zehn Jahren ' +
+            'ist das die Aufnahme, die du suchst.'
         ),
         knopf('Erste Aufnahme anlegen', () => bearbeiten({}, neu), 'knopf-haupt'),
       ]),

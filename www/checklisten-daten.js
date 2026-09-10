@@ -38,7 +38,7 @@ export const VORLAGEN = [
       'Widerrufsbelehrung ist enthalten und in Ordnung',
       'Vertragsstrafe bei Verzug ist geregelt',
       'Was ist Eigenleistung, was schuldet die Firma: eindeutig aufgeteilt',
-      'Bemusterung: Budgets stehen im Vertrag, nicht "marktüblich"',
+      'Bemusterung: Budgets stehen im Vertrag, nicht „marktüblich“',
       'Erdarbeiten und Bodengutachten: wer trägt das Baugrundrisiko',
       'Hausanschlüsse, Baustrom und Bauwasser: wer bezahlt was',
       'Nachträge nur schriftlich und nur mit vorheriger Preisangabe',
@@ -93,7 +93,7 @@ export const VORLAGEN = [
   },
   {
     titel: 'Vor dem Einzug',
-    text: 'Der Papierkram, den man am Umzugstag garantiert nicht mehr erledigt.',
+    text: 'Der Papierkram, für den am Umzugstag niemand mehr Zeit hat.',
     punkte: [
       'Alle Zählerstände abgelesen und fotografiert',
       'Strom, Gas und Wasser auf den eigenen Namen angemeldet',

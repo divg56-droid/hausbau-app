@@ -331,9 +331,9 @@ async function zeigeKredite(rahmen) {
       ]),
       beste
         ? hinweisKasten(
-            `Am wenigsten Zinsen zahlt "${beste.name}": ${eur.format(beste.zinsInBindung)} ` +
+            `Am wenigsten Zinsen zahlt „${beste.name}“: ${eur.format(beste.zinsInBindung)} ` +
               `in ${eingaben.bindung} Jahren. Verglichen wird über die Zinskosten der ` +
-              'Bindung, nicht über die Rate — eine niedrige Rate heißt meist nur wenig ' +
+              'Bindung, nicht über die Rate. Eine niedrige Rate heißt meist nur wenig ' +
               'Tilgung, und die Restschuld steht danach immer noch da.',
             'gut'
           )

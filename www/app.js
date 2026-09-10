@@ -330,4 +330,4 @@ zeichne();
 // es beim naechsten Mal nach.
 import('./abgleich.js')
   .then((m) => m.stillAbgleichen())
-  .catch((fehler) => console.warn('Abgleich beim Start nicht moeglich:', fehler));
+  .catch((fehler) => console.warn('Abgleich beim Start nicht möglich:', fehler));

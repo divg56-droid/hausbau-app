@@ -114,7 +114,7 @@ export async function ruf(pfad, inhalt, optionen = {}) {
       ...optionen,
     });
   } catch {
-    throw new Error('Keine Verbindung. Auf der Baustelle passiert das; die Daten bleiben solange hier.');
+    throw new Error('Keine Verbindung. Auf der Baustelle passiert das; die Daten bleiben so lange hier.');
   }
 
   let daten = {};

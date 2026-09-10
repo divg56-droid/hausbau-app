@@ -486,7 +486,7 @@ async function balkenPdf(plan) {
 
   blatt.y -= 6;
   blatt.absatz(
-    'Farben: grün fertig, gelb läuft, grau offen.' +
+    'Farben: grün fertig, violett läuft, grau offen.' +
       (plan.ohneTermin.length
         ? ' Ohne Termin und deshalb nicht abgebildet: ' +
           plan.ohneTermin.map((a) => a.titel).join(', ') + '.'

@@ -685,8 +685,8 @@ function zeigeStatistik(rahmen, gerechnet, summe, stand, belege, art, neu) {
             ])
           ))]
         : [nochNichts('Hier stehen die fünf Positionen, bei denen Plan und Wirklichkeit ' +
-            'am weitesten auseinanderliegen. Solange nichts abweicht, bleibt es leer — ' +
-            'und das ist die gute Nachricht.')]
+            'am weitesten auseinanderliegen. Solange nichts abweicht, bleibt es leer. ' +
+            'Das ist die gute Nachricht.')]
     )
   );
 

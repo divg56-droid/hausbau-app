@@ -58,9 +58,9 @@ export const BAUWEISEN = [
     klammer: 'Umbau, Modernisierung oder Anbau im Bestand',
     text: 'Du baust an einem Haus, das schon steht. Vergeben wird meist einzeln, ' +
       'oft in Abschnitten, und die Überraschungen stecken im Bestand statt im ' +
-      'Bauplan. Deshalb bleibt hier alles sichtbar — und die Baudokumentation ' +
-      'zählt doppelt: Was vor dem Verschließen nicht fotografiert ist, findet ' +
-      'später niemand wieder.',
+      'Bauplan. Deshalb bleibt hier alles sichtbar. Die Baudokumentation zählt ' +
+      'doppelt: Was vor dem Verschließen nicht fotografiert ist, findet später ' +
+      'niemand wieder.',
   },
 ];
 

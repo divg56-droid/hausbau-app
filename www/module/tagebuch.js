@@ -562,7 +562,7 @@ function eintragBearbeiten(eintrag, helfer, alleEintraege, nachher) {
       await daten.sichern('tagebuch', wert);
 
       if (WETTER_STOPP.includes(wert.wetter) && !wert.offen) {
-        melde('Tipp: Bei diesem Wetter gehört ins Feld "liegengeblieben", was deshalb wartet.');
+        melde('Tipp: Bei diesem Wetter gehört ins Feld „liegengeblieben“, was deshalb wartet.');
       }
       await nachher();
     },
