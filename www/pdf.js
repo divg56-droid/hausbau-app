@@ -62,7 +62,7 @@ function alsPdfText(text) {
 }
 
 /*
- * Die Marke in der Fusszeile jedes PDF. Sie steht hier und nicht in den
+ * Die Marke im Kopf und in der Fusszeile jedes PDF. Sie steht hier und nicht in den
  * Modulen: Sonst schreibt sie jedes Blatt selbst hin, und beim naechsten
  * Namenswechsel bleibt eines davon stehen. Die Module liefern nur noch den
  * beschreibenden Teil.
@@ -298,7 +298,9 @@ export class Blatt {
   }
 
   kopfblock() {
-    this.schreibe('BAUZEUGE', { groesse: 9, fett: true, farbe: [10, 81, 85] });
+    // Dieselbe Schreibweise wie in der Fusszeile und auf der Seite: Das
+    // grosse Z in der Mitte ist die Marke, Versalsatz macht es kaputt.
+    this.schreibe(PDF_MARKE, { groesse: 9, fett: true, farbe: [10, 81, 85] });
     this.y -= 20;
     this.schreibe(this.titel, { groesse: 18, fett: true });
     this.y -= 15;

@@ -1757,5 +1757,16 @@ console.log('Raeume auf dem Grundriss');
     css.includes('color-mix(in srgb, var(--karte) 88%, transparent)'));
 }
 
+console.log('Die Marke im PDF')
+{
+  // Kopf und Fusszeile nehmen dieselbe Zeichenkette. Versalsatz machte
+  // aus BauZeuge einmal BAUZEUGE, und das grosse Z ist die Marke.
+  const p = readFileSync('./www/pdf.js', 'utf8');
+  pruef('Die Marke steht an einer Stelle',
+    p.includes("export const PDF_MARKE = 'BauZeuge.de';"));
+  pruef('Der Kopf benutzt sie', p.includes('this.schreibe(PDF_MARKE, {'));
+  pruef('Nirgends steht sie in Versalien', !p.includes('BAUZEUGE'));
+}
+
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');
 process.exit(fehler ? 1 : 0);
