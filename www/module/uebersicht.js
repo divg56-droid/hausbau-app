@@ -68,7 +68,7 @@ export async function zeige(rahmen) {
   if (nochNichts) {
     anhaengen(
       rahmen,
-      willkommen(projekt),
+      willkommen(),
       hinweisKasten(
         'Links in der Leiste stehen alle Bereiche. Auf dem Telefon öffnest du sie ' +
           'oben links über das Menü.',
@@ -356,7 +356,7 @@ export async function zeige(rahmen) {
  * Kachelwand. Wer hier laenger als drei Sekunden ueberlegen muss, was er
  * tun soll, kommt nicht wieder.
  */
-function willkommen(projekt) {
+function willkommen() {
   const einstiege = [
     {
       titel: 'Hausbau planen',
@@ -377,10 +377,7 @@ function willkommen(projekt) {
 
   return karte([
     el('p', { klasse: 'willkommen-marke', text: 'Willkommen bei BauZeuge.de' }),
-    el('h2', {
-      klasse: 'willkommen-titel',
-      text: projekt ? 'Leg los mit ' + projekt : 'Dein Bauvorhaben an einer Stelle',
-    }),
+    el('h2', { klasse: 'willkommen-titel', text: 'Dein Bauvorhaben an einer Stelle' }),
     el('p', {
       klasse: 'willkommen-text',
       text: 'Erstelle dein Projekt und behalte Kosten, Termine, Dokumente und Aufgaben ' +
