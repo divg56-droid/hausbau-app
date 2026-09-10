@@ -146,6 +146,28 @@ function projektwahl() {
   return rahmen;
 }
 
+/**
+ * Blendet aus, was bei dieser Bauweise nicht gebraucht wird.
+ *
+ * Nachtraeglich und nicht schon beim Bauen der Leiste: Die Leiste steht
+ * sofort, die Einstellung kommt aus der Datenbank. Auf das Warten hin waere
+ * die Leiste beim Start kurz leer.
+ */
+(async () => {
+  const { bauweise } = await import('./bauweise.js');
+  const { versteckt } = await bauweise();
+  if (!versteckt.size) return;
+
+  for (const a of seitenleiste.querySelectorAll('.leiste-punkt')) {
+    if (versteckt.has(a.dataset.weg)) a.hidden = true;
+  }
+  // Eine Gruppe, von der nichts uebrig ist, verschwindet mit.
+  for (const gruppe of seitenleiste.querySelectorAll('.leiste-gruppe')) {
+    const uebrig = [...gruppe.querySelectorAll('.leiste-punkt')].some((a) => !a.hidden);
+    gruppe.hidden = !uebrig;
+  }
+})();
+
 /** Auf dem Telefon faehrt die Leiste als Schublade herein. */
 function leisteSchalten(offen) {
   document.body.classList.toggle('leiste-offen', offen);

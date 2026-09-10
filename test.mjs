@@ -1300,8 +1300,7 @@ console.log('Bauleitfaden als Wizard');
   pruef('Die Stelle im Leitfaden wird gemerkt',
     f.includes("einstellung('leitfaden_punkt'"));
   pruef('Und sie gehoert zum Projekt, nicht zum Geraet',
-    readFileSync('./www/daten.js', 'utf8')
-      .includes("['projektname', 'baustelle', 'leitfaden_punkt']"));
+    readFileSync('./www/daten.js', 'utf8').includes("'leitfaden_punkt'"));
   // Vor und zurueck laeuft ueber alle Punkte, nicht nur innerhalb der Phase:
   // Sonst steht man am Phasenende vor einer Wand.
   pruef('Die Punkte liegen fuer den Weg vor und zurueck flach',
@@ -1317,6 +1316,53 @@ console.log('Bauleitfaden als Wizard');
   // zeigen.
   pruef('Eine verschwundene Stelle faellt auf den naechsten offenen Punkt zurueck',
     f.includes('if (stelle < 0)'));
+}
+
+console.log('Bauweise');
+{
+  const b = readFileSync('./www/bauweise.js', 'utf8');
+  // Beim Bautraeger steht im Vertrag eine Summe. Die gliedert niemand mehr
+  // nach DIN 276, also hat die Gliederung dort nichts zu suchen.
+  pruef('Der Bautraeger kennt keine Kostengruppen',
+    b.includes("zeigtKostengruppen: id !== TRAEGER"));
+  // Die Reihenfolge der Gewerke steuert die Firma. Ein Balkenplan, den man
+  // nicht beeinflusst, ist bestenfalls Beschaeftigung.
+  pruef('Der Bauablauf faellt beim Bautraeger immer weg',
+    b.includes("const weg = ['ablauf'];"));
+  // Wer selbst etwas uebernimmt, braucht Angebote und Gewerke wieder.
+  pruef('Eigenleistungen holen Angebote und Gewerke zurueck',
+    b.includes("if (!eigenleistungen.length) weg.push('angebote', 'kontakte/gewerke');"));
+  pruef('Bei Einzelvergabe wird nichts versteckt',
+    b.includes("if (id !== TRAEGER) return new Set();"));
+  // Sie gehoert zum Projekt: Wer zwei Haeuser baut, baut sie selten gleich.
+  pruef('Die Bauweise haengt am Projekt',
+    readFileSync('./www/daten.js', 'utf8').includes("'bauweise', 'eigenleistungen'"));
+
+  const k = readFileSync('./www/module/baukasse.js', 'utf8');
+  pruef('Die Kostengruppenspalte faellt mit weg',
+    k.includes("art.zeigtKostengruppen || s.feld !== 'kostengruppe'"));
+  // Ohne Kostengruppen waere "nach DIN 276" im Titel eine Behauptung, die
+  // das Blatt nicht einloest.
+  pruef('Das PDF heisst dann nicht mehr nach der Norm',
+    k.includes("art.zeigtKostengruppen ? 'Kostenaufstellung nach DIN 276' : 'Kostenaufstellung'"));
+  // Wer schluesselfertig kauft, braucht keine Liste der Gewerke, sondern
+  // die der Posten neben dem Kaufpreis.
+  pruef('Es gibt eine eigene Vorlage fuer den Bautraeger',
+    k.includes('const VORLAGE_TRAEGER = [') && k.includes('Kaufpreis laut Bauvertrag'));
+  // Ausgeblendet heisst nicht geloescht.
+  pruef('Ein vorhandener Kostengruppenwert bleibt stehen',
+    k.includes(': posten.kostengruppe || null,'));
+
+  pruef('Die Leiste blendet die versteckten Wege aus',
+    readFileSync('./www/app.js', 'utf8').includes('if (versteckt.has(a.dataset.weg))'));
+  pruef('Und leere Gruppen verschwinden mit',
+    readFileSync('./www/app.js', 'utf8').includes('gruppe.hidden = !uebrig;'));
+
+  // Jeder versteckte Weg muss es auch geben, sonst versteckt er nichts.
+  const wege = new Set(MODULE.map((m) => m.weg));
+  for (const w of ['ablauf', 'angebote', 'kontakte/gewerke']) {
+    pruef('Der versteckbare Weg ' + w + ' existiert', wege.has(w));
+  }
 }
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');

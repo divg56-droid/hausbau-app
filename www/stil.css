@@ -127,8 +127,11 @@ a { color: var(--akzent-dunkel); }
 .feld-name { display: block; font-size: 13px; font-weight: 600; color: var(--tinte-leise); margin-bottom: 5px; }
 .feld-hinweis { display: block; font-size: 12px; color: var(--tinte-leise); margin-top: 4px; }
 
-input[type="text"], input[type="date"], input[type="email"], input[type="tel"],
-input[type="number"], select, textarea {
+/* Umgekehrt aufgezaehlt: Nicht die erlaubten Arten nennen, sondern die
+   Ausnahmen. Sonst faellt bei jeder neuen Feldart eine durch -- so sah das
+   Passwortfeld lange schmaler aus als die E-Mail daneben. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+select, textarea {
   width: 100%; font: inherit; font-size: 16px;
   min-height: 48px; padding: 11px 12px;
   border: 1px solid var(--linie); border-radius: 8px;
@@ -329,6 +332,17 @@ tr.bindung td { background: var(--band); font-weight: 700; }
 }
 .sortknopf:hover { color: var(--akzent); }
 tbody tr:hover td { background: var(--band); }
+/* Eigenleistungen: viele kurze Haken, in Spalten statt in einer langen
+   Schlange. */
+.gewerkewahl {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 2px 12px; margin: 8px 0 12px;
+}
+.gewerkewahl label {
+  display: flex; align-items: center; gap: 9px; min-height: 40px; cursor: pointer;
+}
+h3.unterabschnitt { font-size: 15px; margin: 16px 0 4px; }
+
 .filterleiste { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 
 /* Die Leistungsliste steht in der Angebotskarte und teilt sich das

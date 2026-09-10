@@ -57,6 +57,8 @@ async function zeichne(rahmen) {
       }, 'knopf-haupt'),
     ]),
 
+    await bauweisekarte(),
+
     karte([
       el('h2', { text: 'Darstellung' }),
       el('p', {
@@ -253,6 +255,91 @@ function formatwahl() {
   };
   bauen();
   return leiste;
+}
+
+// ------------------------------------------------------------------ Bauweise
+
+/**
+ * Die Karte, mit der sich die Bauweise umstellen laesst.
+ *
+ * Sie steht weit oben, weil sie den Rest der App praegt: Wer schluesselfertig
+ * kauft, braucht keinen Bauzeitenplan je Gewerk und keine Gliederung nach
+ * DIN 276, und beides steht ihm sonst dauerhaft im Weg.
+ */
+async function bauweisekarte() {
+  const {
+    BAUWEISEN, TRAEGER, bauweise, bauweiseSetzen, eigenleistungenSetzen,
+  } = await import('../bauweise.js');
+  const { gewerkeListe } = await import('../gewerke.js');
+
+  const [art, gewerke] = await Promise.all([bauweise(), gewerkeListe()]);
+  const inhalt = el('div');
+
+  // Umgestellt wird sofort und ohne Speichern-Knopf: Es ist eine Entscheidung,
+  // keine Eingabe. Danach neu laden, weil die Leiste sich aendert.
+  const umstellen = async (id) => {
+    await bauweiseSetzen(id);
+    location.reload();
+  };
+
+  const gewaehlt = BAUWEISEN.find((b) => b.id === art.id) || BAUWEISEN[0];
+
+  inhalt.append(
+    el('div', { klasse: 'geschossleiste' }, BAUWEISEN.map((b) =>
+      el('button', {
+        type: 'button', text: b.name,
+        klasse: b.id === art.id ? 'aktiv' : null,
+        onclick: () => umstellen(b.id),
+      })
+    )),
+    el('p', { klasse: 'unterzeile', text: gewaehlt.text })
+  );
+
+  // Eigenleistungen zaehlen bei beiden Bauweisen. Beim Bautraeger sind sie
+  // der Grund, warum Angebote und Gewerkeliste stehen bleiben: Fuer das, was
+  // man selbst macht, holt man weiterhin Angebote ein.
+  const gesetzt = new Set(art.eigenleistungen);
+  const haken = el('div', { klasse: 'gewerkewahl' }, gewerke.map((g) =>
+    el('label', {}, [
+      el('input', {
+        type: 'checkbox',
+        checked: gesetzt.has(g),
+        onchange: async (e) => {
+          if (e.target.checked) gesetzt.add(g);
+          else gesetzt.delete(g);
+          await eigenleistungenSetzen([...gesetzt]);
+          // Beim Bautraeger haengt an der Auswahl, was in der Leiste steht.
+          if (art.id === TRAEGER) location.reload();
+        },
+      }),
+      el('span', { text: g }),
+    ])
+  ));
+
+  inhalt.append(
+    el('h3', { klasse: 'unterabschnitt', text: 'Eigenleistungen' }),
+    el('p', {
+      klasse: 'unterzeile',
+      text: 'Was du selbst machst: Maler, Bodenbeläge, Außenanlagen. Diese Gewerke ' +
+        'bleiben wichtig, auch wenn den Rest eine Firma übernimmt.',
+    }),
+    haken,
+    art.id === TRAEGER
+      ? hinweisKasten(
+          art.eigenleistungen.length
+            ? 'Weil du Eigenleistungen eingetragen hast, bleiben Angebote und ' +
+              'Gewerkeliste sichtbar. Ausgeblendet ist der Bauablauf: Die ' +
+              'Reihenfolge steuert die Firma, nicht du. Die Gliederung nach ' +
+              'DIN 276 entfällt ebenfalls.'
+            : 'Ausgeblendet sind Bauablauf, Angebote und Gewerkeliste sowie die ' +
+              'Gliederung nach DIN 276. Nichts davon ist gelöscht: Wer ' +
+              'zurückstellt, findet alles wieder.',
+          'info'
+        )
+      : null
+  );
+
+  return karte([el('h2', { text: 'Bauweise' }), inhalt]);
 }
 
 // ----------------------------------------------------------- CSV und Excel

@@ -19,6 +19,7 @@ import { blattOeffnen } from '../blatt.js';
 import { finanzierungsstand } from './finanzierung.js';
 import { fotofeld } from '../fotos.js';
 import { gewerkeListe } from '../gewerke.js';
+import { bauweise } from '../bauweise.js';
 import {
   kostengruppenOptionen, kostengruppeLang, kostengruppeVorschlag, nachHauptgruppen,
 } from '../din276.js';
@@ -84,7 +85,8 @@ export async function zeige(rahmen, unterweg) {
 async function zeichne(rahmen, ansicht) {
   rahmen.replaceChildren();
 
-  const [posten, belege, stand, kontakte, raeume, hausdaten, gewerke] = await Promise.all([
+  const [posten, belege, stand, kontakte, raeume, hausdaten, gewerke, art] =
+    await Promise.all([
     daten.alle('posten'),
     daten.alle('belege'),
     finanzierungsstand(),
@@ -92,6 +94,7 @@ async function zeichne(rahmen, ansicht) {
     daten.alle('raeume'),
     einstellung('baukosten_eingabe'),
     gewerkeListe(),
+    bauweise(),
   ]);
 
   const neu = () => zeichne(rahmen, ansicht);
@@ -105,10 +108,10 @@ async function zeichne(rahmen, ansicht) {
   };
 
   if (ansicht === 'kosten') {
-    return zeigeKostenaufstellung(rahmen, gerechnet, kontakte, raeume, gewerke, neu);
+    return zeigeKostenaufstellung(rahmen, gerechnet, kontakte, raeume, gewerke, art, neu);
   }
   if (ansicht === 'statistik') {
-    return zeigeStatistik(rahmen, gerechnet, summe, stand, belege, neu);
+    return zeigeStatistik(rahmen, gerechnet, summe, stand, belege, art, neu);
   }
   if (ansicht === 'rechnungen') {
     return zeigeRechnungen(rahmen, belege, posten, stand, kontakte, neu);
@@ -377,7 +380,12 @@ function sortieren(liste) {
   });
 }
 
-function zeigeKostenaufstellung(rahmen, gerechnet, kontakte, raeume, gewerkeReihe, neu) {
+function zeigeKostenaufstellung(rahmen, gerechnet, kontakte, raeume, gewerkeReihe, art, neu) {
+  // Ohne Kostengruppen faellt die Spalte weg, statt leer mitzulaufen.
+  const spalten = SPALTEN.filter((s) => art.zeigtKostengruppen || s.feld !== 'kostengruppe');
+  if (!art.zeigtKostengruppen && sortierung.feld === 'kostengruppe') {
+    sortierung = { feld: 'gewerk', ab: false };
+  }
   rahmen.append(
     kopfzeile('Kostenaufstellung', 'Alle Positionen an einer Stelle, sortierbar und filterbar.')
   );
@@ -392,7 +400,7 @@ function zeigeKostenaufstellung(rahmen, gerechnet, kontakte, raeume, gewerkeReih
             'Summe daneben, und die App zeigt dir die Abweichung.'
         ),
         knopf('Erste Position anlegen', () => postenBearbeiten({}, kontakte, raeume, neu), 'knopf-haupt'),
-        knopf('Übliche Positionen laden', () => vorlageLaden(neu)),
+        knopf('Übliche Positionen laden', () => vorlageLaden(art, neu)),
       ]),
       hinweisKasten(
         'Der Unterschied zu den Rechnungen: Hier steht, was etwas kosten soll ' +
@@ -450,7 +458,7 @@ function zeigeKostenaufstellung(rahmen, gerechnet, kontakte, raeume, gewerkeReih
       el('div', { klasse: 'tabelle-rolle' }, [
         el('table', {}, [
           el('thead', {}, [
-            el('tr', {}, SPALTEN.map((s) =>
+            el('tr', {}, spalten.map((s) =>
               el('th', {}, [
                 el('button', {
                   type: 'button', klasse: 'sortknopf',
@@ -476,7 +484,7 @@ function zeigeKostenaufstellung(rahmen, gerechnet, kontakte, raeume, gewerkeReih
             }, [
               el('td', { text: p.name }),
               el('td', { text: p.gewerk || 'Sonstiges' }),
-              el('td', { text: p.kostengruppe || '–' }),
+              art.zeigtKostengruppen ? el('td', { text: p.kostengruppe || '–' }) : null,
               el('td', { text: p.geplant ? eur.format(p.geplant) : '–' }),
               el('td', { text: p.massgeblich ? eur.format(p.massgeblich) : '–' }),
               el('td', {}, [abweichung(p.differenz)]),
@@ -491,7 +499,8 @@ function zeigeKostenaufstellung(rahmen, gerechnet, kontakte, raeume, gewerkeReih
                   ? 'Zusammen'
                   : `Zusammen (${zeilen.length} von ${gerechnet.length})`,
               }),
-              el('td', {}), el('td', {}),
+              el('td', {}),
+              art.zeigtKostengruppen ? el('td', {}) : null,
               el('td', { text: eur.format(teil.geplant) }),
               el('td', { text: eur.format(teil.tatsaechlich) }),
               el('td', {}, [abweichung(teil.differenz)]),
@@ -503,8 +512,8 @@ function zeigeKostenaufstellung(rahmen, gerechnet, kontakte, raeume, gewerkeReih
       ]),
     ]),
     knopf('Position hinzufügen', () => postenBearbeiten({}, kontakte, raeume, neu), 'knopf-haupt'),
-    knopf('Übliche Positionen ergänzen', () => vorlageLaden(neu), 'knopf-leise'),
-    knopf('Als PDF', () => kostenPdf(zeilen)),
+    knopf('Übliche Positionen ergänzen', () => vorlageLaden(art, neu), 'knopf-leise'),
+    knopf('Als PDF', () => kostenPdf(zeilen, art)),
     knopf('Als Excel', () => kostenTabelle(zeilen, 'xlsx')),
     knopf('Als CSV', () => kostenTabelle(zeilen, 'csv'), 'knopf-leise')
   );
@@ -522,7 +531,7 @@ const STATUSREIHE = [
   ['bezahlt', 'Bezahlt', 'marke-fertig'],
 ];
 
-function zeigeStatistik(rahmen, gerechnet, summe, stand, belege, neu) {
+function zeigeStatistik(rahmen, gerechnet, summe, stand, belege, art, neu) {
   rahmen.append(kopfzeile('Statistiken', 'Wo das Geld hingeht, aus vier Blickwinkeln.'));
 
   const gesamt = summe.tatsaechlich;
@@ -582,16 +591,20 @@ function zeigeStatistik(rahmen, gerechnet, summe, stand, belege, neu) {
   );
 
   // ------------------------------------------------------ Nach Kostengruppe
-  rahmen.append(el('h2', { klasse: 'abschnitt', text: 'Nach Kostengruppe' }));
-  if (gerechnet.length) {
-    zeigeKostengruppen(rahmen, gerechnet, summe, neu);
-  } else {
-    rahmen.append(
-      karte([
-        nochNichts('Die Gliederung nach DIN 276 fasst die Positionen so zusammen, wie ' +
-          'Banken und Architekten Baukosten rechnen.'),
-      ])
-    );
+  // Beim Bautraeger steht im Vertrag eine Summe, und die gliedert niemand
+  // mehr nach DIN 276. Der ganze Abschnitt entfaellt.
+  if (art.zeigtKostengruppen) {
+    rahmen.append(el('h2', { klasse: 'abschnitt', text: 'Nach Kostengruppe' }));
+    if (gerechnet.length) {
+      zeigeKostengruppen(rahmen, gerechnet, summe, neu);
+    } else {
+      rahmen.append(
+        karte([
+          nochNichts('Die Gliederung nach DIN 276 fasst die Positionen so zusammen, wie ' +
+            'Banken und Architekten Baukosten rechnen.'),
+        ])
+      );
+    }
   }
 
   // -------------------------------------------------------- Nach Geldmittel
@@ -770,22 +783,47 @@ async function gruppenVorschlagen(ohne, nachher) {
   await nachher();
 }
 
-async function kostenPdf(gerechnet) {
+async function kostenPdf(gerechnet, art) {
   const gruppen = nachHauptgruppen(gerechnet, (p) => p.massgeblich);
   const summe = { tatsaechlich: gerechnet.reduce((x, p) => x + p.massgeblich, 0) };
   melde('PDF wird erstellt …');
   const projekt = (await einstellung('projektname')) || '';
   const { Blatt, pdfTeilen } = await import('../pdf.js');
   const blatt = new Blatt({
-    titel: 'Kostenaufstellung nach DIN 276',
+    // Ohne Kostengruppen waere "nach DIN 276" im Titel eine Behauptung, die
+    // das Blatt nicht einloest.
+    titel: art.zeigtKostengruppen ? 'Kostenaufstellung nach DIN 276' : 'Kostenaufstellung',
     untertitel: (projekt ? projekt + ' · ' : '') + 'Stand ' + datumLang(heute()),
     fusszeile: 'Kostenaufstellung',
   });
 
   blatt.absatz(
-    'Gegliedert nach DIN 276:2018-12. Maßgeblich ist die tatsächliche Summe, ' +
-      'solange sie feststeht, sonst die geplante.'
+    (art.zeigtKostengruppen ? 'Gegliedert nach DIN 276:2018-12. ' : '') +
+      'Maßgeblich ist die tatsächliche Summe, solange sie feststeht, sonst die geplante.'
   );
+
+  if (!art.zeigtKostengruppen) {
+    blatt.ueberschrift('Positionen');
+    blatt.tabelle(
+      ['Position', 'Gewerk', 'Geplant', 'Tatsächlich', 'Bezahlt'],
+      [...gerechnet].map((p) => [
+        p.name, p.gewerk || '',
+        p.geplant ? eur.format(p.geplant) : '',
+        p.tatsaechlich ? eur.format(p.tatsaechlich) : '',
+        p.gezahlt ? eur.format(p.gezahlt) : '',
+      ]),
+      [2.8, 1.6, 1.2, 1.3, 1.2],
+      [2, 3, 4]
+    );
+    blatt.wertzeile('Zusammen', eur.format(summe.tatsaechlich), true);
+    try {
+      await pdfTeilen(blatt.blob(), 'kostenaufstellung.pdf', 'Kostenaufstellung');
+    } catch (fehler) {
+      melde('PDF konnte nicht geteilt werden.');
+      console.error(fehler);
+    }
+    return;
+  }
 
   blatt.ueberschrift('Zusammenfassung');
   blatt.tabelle(
@@ -860,8 +898,36 @@ async function kostenTabelle(gerechnet, art) {
   }
 }
 
-// Die Posten, die bei fast jedem Neubau vorkommen. Betraege bleiben leer:
-// Zahlen zu raten waere schlimmer, als sie fehlen zu lassen.
+// Wer schluesselfertig kauft, hat keine sechsundzwanzig Gewerke, sondern
+// einen Kaufpreis und das, was der Vertrag nicht enthaelt. Genau das ist die
+// Liste, an der solche Bauvorhaben teurer werden als gedacht.
+const VORLAGE_TRAEGER = [
+  ['Kaufpreis laut Bauvertrag', 'Sonstiges'],
+  ['Grundstück', 'Sonstiges'],
+  ['Grunderwerbsteuer', 'Sonstiges'],
+  ['Notar und Grundbuch', 'Sonstiges'],
+  ['Maklercourtage', 'Sonstiges'],
+  ['Sonderwünsche aus der Bemusterung', 'Sonstiges'],
+  ['Bodengutachten', 'Sonstiges'],
+  ['Mehraufwand Erdarbeiten und Gründung', 'Rohbau'],
+  ['Hausanschlüsse Strom, Wasser, Abwasser', 'Sonstiges'],
+  ['Telekommunikationsanschluss', 'Elektro'],
+  ['Baustrom und Bauwasser', 'Sonstiges'],
+  ['Vermessung und Absteckung', 'Sonstiges'],
+  ['Baugenehmigung und Gebühren', 'Sonstiges'],
+  ['Bauherrenhaftpflicht', 'Sonstiges'],
+  ['Baubegleitender Sachverständiger', 'Sonstiges'],
+  ['Außenanlagen und Einfriedung', 'Außenanlagen'],
+  ['Terrasse und Wege', 'Außenanlagen'],
+  ['Küche', 'Sonstiges'],
+  ['Bodenbeläge, soweit nicht enthalten', 'Bodenbelag'],
+  ['Malerarbeiten, soweit nicht enthalten', 'Maler'],
+  ['Umzug und Einrichtung', 'Sonstiges'],
+  ['Puffer für Unvorhergesehenes', 'Sonstiges'],
+];
+
+// Die Posten, die bei fast jedem Neubau in Einzelvergabe vorkommen. Betraege
+// bleiben leer: Zahlen zu raten waere schlimmer, als sie fehlen zu lassen.
 const VORLAGE = [
   ['Grundstück', 'Sonstiges'],
   ['Grunderwerbsteuer', 'Sonstiges'],
@@ -891,15 +957,21 @@ const VORLAGE = [
   ['Puffer für Unvorhergesehenes', 'Sonstiges'],
 ];
 
-async function vorlageLaden(nachher) {
-  if (!window.confirm(`${VORLAGE.length} übliche Positionen anlegen? Beträge bleiben leer.`)) return;
+async function vorlageLaden(art, nachher) {
+  // Zwei Vorlagen, weil es zwei Bauvorhaben sind. Wer schluesselfertig
+  // kauft, braucht keine Liste der Gewerke, sondern die der Posten neben dem
+  // Kaufpreis.
+  const liste = art.istTraeger ? VORLAGE_TRAEGER : VORLAGE;
+  if (!window.confirm(`${liste.length} übliche Positionen anlegen? Beträge bleiben leer.`)) return;
   const vorhanden = new Set((await daten.alle('posten')).map((p) => p.name));
   let angelegt = 0;
-  for (const [name, gewerk] of VORLAGE) {
+  for (const [name, gewerk] of liste) {
     if (vorhanden.has(name)) continue;
     await daten.sichern('posten', {
       name, gewerk, kontaktId: null, geplant: 0, tatsaechlich: 0,
-      kostengruppe: kostengruppeVorschlag(name, gewerk) || null,
+      kostengruppe: art.zeigtKostengruppen
+        ? kostengruppeVorschlag(name, gewerk) || null
+        : null,
       status: 'geplant', notiz: '',
     });
     angelegt++;
@@ -909,6 +981,7 @@ async function vorlageLaden(nachher) {
 }
 
 async function postenBearbeiten(posten, kontakte, raeume, nachher) {
+  const art = await bauweise();
   const name = eingabe({ value: posten.name || '', placeholder: 'z. B. Elektroinstallation' });
   const gewerke = await gewerkeListe();
   // Ein Gewerk, das aus der Liste geflogen ist, bleibt an der Position
@@ -981,8 +1054,12 @@ async function postenBearbeiten(posten, kontakte, raeume, nachher) {
     [
       feld('Bezeichnung', name),
       feld('Gewerk', gewerk),
-      feld('Kostengruppe (DIN 276)', kostengruppe,
-        'Die Gliederung, nach der Banken und Architekten rechnen. Wird vorgeschlagen, lässt sich ändern.'),
+      // Ohne Kostengruppen faellt das Feld weg. Ein vorhandener Wert bleibt
+      // trotzdem stehen: Wer zurueckstellt, findet ihn wieder.
+      art.zeigtKostengruppen
+        ? feld('Kostengruppe (DIN 276)', kostengruppe,
+            'Die Gliederung, nach der Banken und Architekten rechnen. Wird vorgeschlagen, lässt sich ändern.')
+        : null,
       feld('Geplante Kosten in €', geplant, 'Was du erwartest, bevor ein Angebot vorliegt.'),
       feld('Tatsächliche Kosten in €', tatsaechlich,
         'Auftrags- oder Schlusssumme. Leer lassen, solange nichts feststeht.'),
@@ -1000,7 +1077,9 @@ async function postenBearbeiten(posten, kontakte, raeume, nachher) {
         ...(posten.leistungen ? { leistungen: posten.leistungen } : {}),
         name: name.value.trim(),
         gewerk: gewerk.value,
-        kostengruppe: kostengruppe.value || null,
+        kostengruppe: art.zeigtKostengruppen
+          ? kostengruppe.value || null
+          : posten.kostengruppe || null,
         geplant: Math.max(0, zuZahl(geplant.value)),
         tatsaechlich: Math.max(0, zuZahl(tatsaechlich.value)),
         status: status.value,

@@ -39,6 +39,7 @@ const SCHALE = [
   './symbol-maskable-512.png',
   './abgleich.js',
   './app.js',
+  './bauweise.js',
   './bereiche.js',
   './blatt.js',
   './csv.js',
