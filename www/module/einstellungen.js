@@ -150,14 +150,16 @@ async function zeichne(rahmen) {
     ]),
 
     karte([
-      el('h2', { text: 'Daten als CSV' }),
+      el('h2', { text: 'Daten als Tabelle' }),
       el('p', {
         klasse: 'unterzeile',
         text:
-          'Für Excel oder LibreOffice: Semikolon als Trenner, Zahlen mit Komma, ' +
-          'sonst rechnet die Tabelle nicht. Fotos sind darin nicht enthalten, ' +
+          'Excel-Dateien haben Spaltenbreiten, eine feste Kopfzeile und Zahlen, ' +
+          'die überall Zahlen bleiben. CSV ist die Notlösung, wenn das ' +
+          'Zielprogramm kein Excel liest. Fotos sind in beidem nicht enthalten, ' +
           'dafür ist die Sicherung da.',
       }),
+      formatwahl(),
       el('div', { klasse: 'knopf-reihe' }, [
         knopf('Kostenpositionen', () => csvPosten()),
         knopf('Rechnungen', () => csvBelege()),
@@ -235,19 +237,52 @@ function themawahl() {
   return knoepfe;
 }
 
-// ------------------------------------------------------------------------ CSV
+/** Zwei Schaltflaechen, die bestimmen, was die Knoepfe darunter ausgeben. */
+function formatwahl() {
+  const leiste = el('div', { klasse: 'geschossleiste' });
+  const bauen = () => {
+    leiste.replaceChildren(
+      ...[['xlsx', 'Excel'], ['csv', 'CSV']].map(([wert, text]) =>
+        el('button', {
+          type: 'button', text,
+          klasse: format === wert ? 'aktiv' : null,
+          onclick: () => { format = wert; bauen(); },
+        })
+      )
+    );
+  };
+  bauen();
+  return leiste;
+}
 
+// ----------------------------------------------------------- CSV und Excel
+
+// Welches Format die Knoepfe gerade ausgeben. Haelt nur waehrend der
+// Sitzung: Es ist eine Frage an den Knopf, keine Eigenschaft des Projekts.
+let format = 'xlsx';
+
+/**
+ * Gibt eine Tabelle aus, im gewaehlten Format.
+ *
+ * Beide Wege gehen durch dieselbe Stelle, damit sie nicht auseinanderlaufen:
+ * Wer eine Spalte ergaenzt, ergaenzt sie in beiden.
+ */
 async function csvSicher(kopf, zeilen, dateiname, titel) {
   try {
     if (!zeilen.length) {
       melde('Dazu ist noch nichts erfasst.');
       return;
     }
-    const { csvTeilen } = await import('../csv.js');
-    await csvTeilen(kopf, zeilen, dateiname, titel);
+    if (format === 'csv') {
+      const { csvTeilen } = await import('../csv.js');
+      await csvTeilen(kopf, zeilen, dateiname, titel);
+      return;
+    }
+    const { xlsxTeilen } = await import('../xlsx.js');
+    await xlsxTeilen(kopf, zeilen, dateiname.replace(/\.csv$/, '.xlsx'), titel);
   } catch (fehler) {
     console.error(fehler);
-    melde('CSV konnte nicht geteilt werden.');
+    melde('Die Datei konnte nicht geteilt werden.');
   }
 }
 

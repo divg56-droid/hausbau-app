@@ -451,7 +451,8 @@ function zeigeKostenaufstellung(rahmen, gerechnet, kontakte, raeume, gewerkeReih
     knopf('Position hinzufügen', () => postenBearbeiten({}, kontakte, raeume, neu), 'knopf-haupt'),
     knopf('Übliche Positionen ergänzen', () => vorlageLaden(neu), 'knopf-leise'),
     knopf('Als PDF', () => kostenPdf(zeilen)),
-    knopf('Als CSV für Excel', () => kostenCsv(zeilen), 'knopf-leise')
+    knopf('Als Excel', () => kostenTabelle(zeilen, 'xlsx')),
+    knopf('Als CSV', () => kostenTabelle(zeilen, 'csv'), 'knopf-leise')
   );
 }
 
@@ -745,12 +746,17 @@ async function kostenPdf(gerechnet) {
   }
 }
 
-async function kostenCsv(gerechnet) {
+/**
+ * Gibt die gefilterte Aufstellung als Tabelle aus.
+ *
+ * Excel und CSV holen ihre Spalten aus derselben Stelle. Zwei Listen waeren
+ * zwei Gelegenheiten, eine Spalte zu vergessen.
+ */
+async function kostenTabelle(gerechnet, art) {
   try {
-    await csvTeilen(
-      ['Kostengruppe', 'Bezeichnung der Kostengruppe', 'Position', 'Gewerk',
-        'Geplant', 'Tatsaechlich', 'Bezahlt', 'Abweichung', 'Status'],
-      [...gerechnet]
+    const kopf = ['Kostengruppe', 'Bezeichnung der Kostengruppe', 'Position', 'Gewerk',
+      'Geplant', 'Tatsaechlich', 'Bezahlt', 'Abweichung', 'Status'];
+    const zeilen = [...gerechnet]
         .sort((a, b) => String(a.kostengruppe || 'zzz').localeCompare(String(b.kostengruppe || 'zzz')))
         .map((p) => [
           p.kostengruppe || '',
@@ -762,12 +768,16 @@ async function kostenCsv(gerechnet) {
           p.gezahlt || 0,
           p.differenz || 0,
           p.statusName,
-        ]),
-      'kostenaufstellung.csv',
-      'Kostenaufstellung'
-    );
+        ]);
+
+    if (art === 'csv') {
+      await csvTeilen(kopf, zeilen, 'kostenaufstellung.csv', 'Kostenaufstellung');
+      return;
+    }
+    const { xlsxTeilen } = await import('../xlsx.js');
+    await xlsxTeilen(kopf, zeilen, 'kostenaufstellung.xlsx', 'Kostenaufstellung');
   } catch (fehler) {
-    melde('CSV konnte nicht geteilt werden.');
+    melde('Die Datei konnte nicht geteilt werden.');
     console.error(fehler);
   }
 }

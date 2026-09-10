@@ -23,6 +23,7 @@ import { VORLAGEN } from './www/checklisten-daten.js';
 import { BEREICHE, MODULE } from './www/bereiche.js';
 import { PHASEN, ALLE_PUNKTE, leitfadenStand } from './www/leitfaden-daten.js';
 import { csvText, zelle } from './www/csv.js';
+import { xlsxBytes, spalte } from './www/xlsx.js';
 import {
   KOSTENGRUPPEN, kostengruppeName, kostengruppeLang, hauptgruppe,
   kostengruppenOptionen, kostengruppeVorschlag, nachHauptgruppen,
@@ -997,7 +998,11 @@ console.log('To-Dos und Checklisten');
 
   // Die Vorlage wird in echte Eintraege kopiert; der Listenname ist der
   // Schluessel, ueber den sie danach zusammenbleiben.
-  pruef('Fuenf Vorlagen', VORLAGEN.length === 5, String(VORLAGEN.length));
+  pruef('Sechs Vorlagen', VORLAGEN.length === 6, String(VORLAGEN.length));
+  // Der teuerste Nachmittag am Bau ist der, an dem man den Vertrag nicht
+  // gelesen hat. Die Liste dazu muss es geben.
+  pruef('Der Bauvertrag hat eine eigene Liste',
+    VORLAGEN.some((v) => v.titel === 'Bauvertrag prüfen'));
   const namen = VORLAGEN.map((v) => v.titel);
   pruef('Kein Vorlagenname kommt doppelt vor', new Set(namen).size === namen.length);
   pruef('Jede Vorlage hat Titel, Erklaerung und Punkte',
@@ -1184,6 +1189,59 @@ console.log('Mehrere Bauprojekte');
     readFileSync('./www/abgleich.js', 'utf8').includes("'projekte'"));
   pruef('Die Projektverwaltung steht in der Leiste',
     MODULE.some((m) => m.weg === 'projekte'));
+}
+
+console.log('Excel-Ausgabe');
+{
+  // Eine xlsx-Datei ist ein ZIP. Faellt der Aufbau auseinander, oeffnet
+  // Excel sie gar nicht erst -- und das merkt man sonst erst beim Empfaenger.
+  const bytes = xlsxBytes(
+    ['Position', 'Gewerk', 'Geplant'],
+    [['Rohbau', 'Rohbau', 180000], ['Dach & "Klempner"', 'Dach', 52000], ['Leer', null, '']],
+    'Kostenaufstellung'
+  );
+  const roh = new TextDecoder('latin1').decode(bytes);
+
+  pruef('Beginnt mit der ZIP-Kennung', roh.startsWith('PK\x03\x04'));
+  pruef('Endet mit dem Verzeichnisabschluss', roh.includes('PK\x05\x06'));
+  for (const teil of [
+    '[Content_Types].xml', '_rels/.rels', 'xl/workbook.xml',
+    'xl/_rels/workbook.xml.rels', 'xl/styles.xml', 'xl/worksheets/sheet1.xml',
+  ]) {
+    pruef('Enthaelt ' + teil, roh.includes(teil));
+  }
+
+  // Die Anzahl im Abschluss muss zu den Eintraegen passen, sonst gilt das
+  // Archiv als beschaedigt.
+  const anzahl = bytes[roh.lastIndexOf('PK\x05\x06') + 10] +
+    bytes[roh.lastIndexOf('PK\x05\x06') + 11] * 256;
+  pruef('Sechs Eintraege im Verzeichnis', anzahl === 6, String(anzahl));
+
+  // Zahlen muessen Zahlen bleiben. In CSV entscheidet das der Leser, hier
+  // steht es in der Datei.
+  pruef('Zahlen stehen als Zahl in der Zelle', roh.includes('<v>180000</v>'));
+  pruef('Text steht als Text', roh.includes('t="inlineStr"'));
+  pruef('Kaufmaennisches Und wird maskiert', roh.includes('Dach &amp;amp; "Klempner"') ||
+    roh.includes('Dach &amp; "Klempner"'));
+  pruef('Leere Zellen bleiben leer und werden nicht null', !roh.includes('>null<'));
+
+  pruef('Die Kopfzeile ist fett gesetzt', roh.includes('s="1"') && roh.includes('<b/>'));
+  pruef('Die Kopfzeile bleibt beim Rollen stehen', roh.includes('state="frozen"'));
+  pruef('Die Spalten haben Breiten', roh.includes('customWidth="1"'));
+  pruef('Der Blattname steht auf dem Reiter', roh.includes('name="Kostenaufstellung"'));
+
+  pruef('Spaltenbuchstaben zaehlen ueber Z hinaus',
+    spalte(1) === 'A' && spalte(26) === 'Z' && spalte(27) === 'AA' && spalte(52) === 'AZ',
+    [spalte(1), spalte(26), spalte(27), spalte(52)].join(','));
+
+  // Ein Blattname mit Doppelpunkt macht die Datei unlesbar, Excel erlaubt ihn
+  // nicht. Er darf nicht durchgereicht werden.
+  const wild = new TextDecoder('latin1').decode(
+    xlsxBytes(['A'], [['x']], 'Kosten: 2026/2027 [Entwurf]')
+  );
+  pruef('Verbotene Zeichen im Blattnamen fallen weg',
+    !/name="[^"]*[:/[\]][^"]*"/.test(wild),
+    (wild.match(/name="[^"]*"/) || [''])[0]);
 }
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');

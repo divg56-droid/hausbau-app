@@ -26,6 +26,28 @@ export const VORLAGEN = [
     ],
   },
   {
+    titel: 'Bauvertrag prüfen',
+    text: 'Der teuerste Nachmittag am ganzen Bau ist der, an dem man den Vertrag ' +
+      'nicht gelesen hat. Vor der Unterschrift abarbeiten, nicht danach.',
+    punkte: [
+      'Baubeschreibung liegt vollständig bei und ist Vertragsbestandteil',
+      'Verbindlicher Fertigstellungstermin steht drin, nicht nur eine Bauzeit in Wochen',
+      'Zahlungsplan folgt dem Baufortschritt, nicht dem Kalender',
+      'Keine Abschlagszahlung vor Leistung, insgesamt höchstens 90 Prozent vor Abnahme',
+      'Fertigstellungssicherheit von 5 Prozent ist vereinbart',
+      'Widerrufsbelehrung ist enthalten und in Ordnung',
+      'Vertragsstrafe bei Verzug ist geregelt',
+      'Was ist Eigenleistung, was schuldet die Firma: eindeutig aufgeteilt',
+      'Bemusterung: Budgets stehen im Vertrag, nicht "marktüblich"',
+      'Erdarbeiten und Bodengutachten: wer trägt das Baugrundrisiko',
+      'Hausanschlüsse, Baustrom und Bauwasser: wer bezahlt was',
+      'Nachträge nur schriftlich und nur mit vorheriger Preisangabe',
+      'Abnahme ist förmlich geregelt, keine fiktive Abnahme durch Einzug',
+      'Gewährleistung: fünf Jahre ab Abnahme, nicht ab Rechnungsstellung',
+      'Vertrag von einem Bausachverständigen oder Fachanwalt gegenlesen lassen',
+    ],
+  },
+  {
     titel: 'Vor Baubeginn',
     text: 'Alles, was stehen muss, bevor der erste Bagger kommt.',
     punkte: [

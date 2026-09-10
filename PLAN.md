@@ -89,10 +89,14 @@ gelaufen sein; bis dahin wird nicht gezaehlt, kaputt geht nichts.
 - [x] Projektverwaltung: anlegen, umbenennen, loeschen mit Grabsteinen
 - [x] Die Sicherung nimmt alle Projekte mit, nicht nur das offene
 
-## 10. Rest
+## 10. Rest — erledigt
 
-- [ ] Excel-Ausgabe neben CSV
-- [ ] Bauvertrag pruefen
+- [x] Excel-Ausgabe neben CSV, ohne Bibliothek: xlsx.js schreibt das ZIP
+      selbst. Zahlen bleiben Zahlen, Spalten haben Breiten, die Kopfzeile ist
+      fett und bleibt beim Rollen stehen.
+- [x] Bauvertrag pruefen als Checkliste mit fuenfzehn Punkten
+
+Damit ist die Liste abgearbeitet.
 
 ## Was BauZeuge schon hat und der Wettbewerb nicht
 

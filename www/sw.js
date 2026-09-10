@@ -42,6 +42,7 @@ const SCHALE = [
   './bereiche.js',
   './blatt.js',
   './csv.js',
+  './xlsx.js',
   './daten.js',
   './din276.js',
   './gewerke.js',
