@@ -1497,8 +1497,18 @@ console.log('Kopfzeile und Verweise auf einen Satz');
     readFileSync('./www/module/raeume.js', 'utf8').includes("klasse: 'raumgitter'"));
   pruef('Gewerke ebenso',
     readFileSync('./www/module/kontakte.js', 'utf8').includes("klasse: 'gewerkegitter'"));
+  const stil = readFileSync('./www/stil.css', 'utf8');
   pruef('Und beide Gitter richten sich nach dem Platz',
-    readFileSync('./www/stil.css', 'utf8').includes('.raumgitter, .gewerkegitter'));
+    stil.includes('.raumgitter, .gewerkegitter'));
+
+  // Ein Deckel auf der Karte verhindert jede weitere Spalte darin, egal wie
+  // breit der Bildschirm ist. Genau daran ist die Raumliste zweimal
+  // haengengeblieben: erst am Inhalt, dann an der Karte.
+  pruef('Keine Karte im Gitter traegt einen Deckel',
+    !/\.kartengitter > \.karte \{[^}]*max-width/.test(stil));
+  pruef('Die Spaltenzahl steht nirgends fest',
+    !/grid-template-columns:\s*repeat\(\s*[234]\s*,/.test(stil),
+    'feste Spaltenzahl gefunden');
   pruef('Der Raum laesst sich aus der Liste heraus aendern',
     readFileSync('./www/module/raeume.js', 'utf8')
       .includes('raumBearbeiten(r, geschosse, neu)'));

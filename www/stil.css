@@ -107,7 +107,7 @@ a { color: var(--akzent-dunkel); }
      entstehen kann, egal wie breit der Bildschirm ist. Kacheln, Listen und
      Tabellen wollen die Breite; der Fliesstext bekommt sie unten einzeln
      wieder abgenommen. */
-  max-width: 1180px; margin: 0 auto;
+  max-width: 1440px; margin: 0 auto;
 }
 
 /* Lange Saetze bleiben lesbar: Ueber etwa siebzig Zeichen je Zeile verliert
@@ -828,9 +828,6 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
     gap: 12px; align-items: start;
   }
   .kartengitter > .karte { margin-bottom: 0; }
-  /* Eine einzelne Karte soll sich nicht ueber die ganze Breite ziehen, nur
-     weil neben ihr gerade keine zweite steht. */
-  .kartengitter > .karte { max-width: 620px; }
 }
 
 /* ------------------------------------------------------------- Wetterkarte
@@ -909,10 +906,10 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
    und in der Mitte ein Loch hat. */
 
 .raumgitter, .gewerkegitter {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 10px;
 }
-.gewerkegitter { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.gewerkegitter { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
 
 .raumkachel, .gewerkekachel {
   border: 1px solid var(--linie); border-radius: 12px; background: var(--karte);
