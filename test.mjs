@@ -1739,6 +1739,10 @@ console.log('Auswertungen und Verknuepfungen');
   // streichen und umschreiben, nicht abhaken.
   pruef('Jeder Checklistenpunkt laesst sich aendern',
     t2.includes("text: 'Umbenennen'") && t2.includes("text: 'Löschen'"));
+  // Zwei ausgewachsene Knoepfe je Zeile machen aus neun Punkten eine
+  // Bildschirmhoehe. Der Punkt ist das Abhaken, nicht das Umbenennen.
+  pruef('Aber klein und ruhig', t2.includes("klasse: 'punktknopf'") &&
+    readFileSync('./www/stil.css', 'utf8').includes('.punktknopf {'));
   pruef('Aber nicht in der To-Do-Liste', /mitListe\s*\?\s*null/.test(t2));
 }
 

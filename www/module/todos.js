@@ -359,7 +359,10 @@ function zeile(todo, raeume, neu, mitListe) {
   const spaet = !todo.erledigt && todo.faellig && todo.faellig < heute();
 
   return el('li', {}, [
-    el('div', { klasse: 'leitfaden-zeile' + (todo.erledigt ? ' erledigt' : '') }, [
+    el('div', {
+      klasse: 'leitfaden-zeile' + (todo.erledigt ? ' erledigt' : '') +
+        (mitListe ? '' : ' punktzeile'),
+    }, [
       el('input', {
         type: 'checkbox',
         checked: todo.erledigt,
@@ -399,13 +402,13 @@ function zeile(todo, raeume, neu, mitListe) {
       // die Zeile sich antippen laesst, sieht man ihr nicht an.
       mitListe
         ? null
-        : el('span', { klasse: 'zeilen-aktionen' }, [
+        : el('span', { klasse: 'zeilen-aktionen punktknoepfe' }, [
             el('button', {
-              klasse: 'knopf knopf-schmal', type: 'button', text: 'Umbenennen',
+              klasse: 'punktknopf', type: 'button', text: 'Umbenennen',
               onclick: () => bearbeiten(todo, raeume, neu),
             }),
             el('button', {
-              klasse: 'knopf knopf-schmal', type: 'button', text: 'Löschen',
+              klasse: 'punktknopf', type: 'button', text: 'Löschen',
               onclick: async () => {
                 if (!window.confirm(`Punkt „${todo.titel}“ löschen?`)) return;
                 await daten.loeschen('todos', todo.id);
