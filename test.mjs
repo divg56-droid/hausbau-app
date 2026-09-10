@@ -11,6 +11,7 @@ import { terminePlanen, balkenPlan, tageZwischen } from './www/module/ablauf.js'
 import { Blatt } from './www/pdf.js';
 import { zuZahl } from './www/hilfen.js';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { join, relative, sep } from 'node:path';
 import { neueKennung, umschreiben } from './www/daten.js';
 import { postenRechnen } from './www/module/baukasse.js';
@@ -904,6 +905,62 @@ console.log('Leistungsvergleich');
   pruef('Die Position behaelt ihre Leistungen beim Bearbeiten',
     readFileSync('./www/module/baukasse.js', 'utf8')
       .includes('...(posten.leistungen ? { leistungen: posten.leistungen } : {})'));
+}
+
+console.log('Alle Dateien lesbar');
+{
+  // Nicht jede Datei wird von diesem Test eingelesen. Ein "await" in einer
+  // Funktion ohne "async" faellt sonst erst im Browser auf, und dort nur in
+  // dem einen Bildschirm, der die Datei laedt. Deshalb einmal alles durch den
+  // Parser schicken -- als Modul, denn nur so gelten die Modulregeln.
+  const dateien = [];
+  const sammeln = (ordner) => {
+    for (const name of readdirSync(ordner)) {
+      const weg = join(ordner, name);
+      if (statSync(weg).isDirectory()) sammeln(weg);
+      else if (name.endsWith('.js')) dateien.push(weg);
+    }
+  };
+  sammeln('./www');
+
+  const kaputt = [];
+  for (const datei of dateien) {
+    try {
+      execFileSync(process.execPath, ['--input-type=module', '--check'], {
+        input: readFileSync(datei, 'utf8'), stdio: ['pipe', 'pipe', 'pipe'],
+      });
+    } catch (fehler) {
+      kaputt.push(datei + ': ' + String(fehler.stderr).split('\n').filter(Boolean).slice(-1)[0]);
+    }
+  }
+  pruef(dateien.length + ' Dateien sind gueltige Module', kaputt.length === 0,
+    kaputt.join(' | '));
+}
+
+console.log('Gewerke');
+{
+  const gewerke = readFileSync('./www/gewerke.js', 'utf8');
+  pruef('Die Vorgabe steht in gewerke.js', gewerke.includes('GEWERKE_VORGABE'));
+  // Ein Gewerk ist ein Wort, kein Datensatz. Es haengt als Text an
+  // Positionen, Maengeln und Kontakten -- also muessen beim Umbenennen alle
+  // drei mitgezogen werden, sonst fallen sie aus jeder Gruppierung.
+  pruef('Beim Umbenennen ziehen alle drei Speicher mit',
+    /const TRAEGER = \['posten', 'maengel', 'kontakte'\]/.test(gewerke));
+  pruef('Die Liste liegt in den Einstellungen und wandert damit im Abgleich mit',
+    gewerke.includes("einstellung('gewerke')"));
+
+  // Kein Bildschirm darf die alte, fest verdrahtete Liste noch kennen.
+  const alt = [];
+  for (const datei of readdirSync('./www/module')) {
+    const t = readFileSync('./www/module/' + datei, 'utf8');
+    if (/\bGEWERKE\b(?!_VORGABE)/.test(t)) alt.push(datei);
+  }
+  pruef('Kein Modul haelt eine eigene Gewerkeliste', alt.length === 0, alt.join(', '));
+
+  const wege = MODULE.filter((m) => m.gruppe === 'Kontakte').map((m) => m.weg);
+  pruef('Die Kontakte fuehren auf drei Sichten',
+    JSON.stringify(wege) === JSON.stringify(
+      ['kontakte', 'kontakte/personen', 'kontakte/gewerke']), wege.join(', '));
 }
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');

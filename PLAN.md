@@ -51,10 +51,13 @@ Schritt 10.
 - [x] Leistungsumfang steht auch im Vergleichs-PDF
 - [x] Angebot in die Kostenaufstellung uebernehmen (stand schon)
 
-## 5. Kontakte aufteilen
+## 5. Kontakte aufteilen — erledigt
 
-- [ ] Firmen, Privatpersonen und Gewerke getrennt
-- [ ] Gewerkeliste selbst verwaltbar statt fest verdrahtet
+- [x] Firmen, Privatpersonen und Gewerke getrennt, jedes einzeln in der Leiste
+- [x] Gewerkeliste selbst verwaltbar statt fest verdrahtet, mit Zaehlung,
+      woran ein Gewerk haengt
+- [x] Umbenennen zieht Positionen, Maengel und Kontakte mit
+- [x] Loeschen nur, solange nichts daran haengt
 
 ## 6. Organisation
 

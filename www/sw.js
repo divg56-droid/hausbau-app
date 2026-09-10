@@ -44,6 +44,7 @@ const SCHALE = [
   './csv.js',
   './daten.js',
   './din276.js',
+  './gewerke.js',
   './leitfaden-daten.js',
   './fotos.js',
   './hilfen.js',

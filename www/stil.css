@@ -173,8 +173,8 @@ input[type="checkbox"] { width: 22px; height: 22px; min-height: 0; accent-color:
 }
 .listenzeile:last-child { border-bottom: none; }
 .listenzeile .zeilen-text { flex: 1; min-width: 0; }
-.listenzeile .zeilen-titel { font-weight: 600; display: block; }
-.listenzeile .zeilen-unter { font-size: 13px; color: var(--tinte-leise); display: block; }
+.zeilen-titel { font-weight: 600; display: block; }
+.zeilen-unter { font-size: 13px; color: var(--tinte-leise); display: block; }
 .listenzeile .zeilen-wert { font-weight: 700; white-space: nowrap; }
 .listenzeile .vorschau {
   width: 48px; height: 48px; flex: none; border-radius: 8px;

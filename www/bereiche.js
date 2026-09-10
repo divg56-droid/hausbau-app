@@ -63,8 +63,12 @@ export const BEREICHE = [
   {
     titel: 'Kontakte', zeichen: '\u{1F4C7}',
     punkte: [
-      { weg: 'kontakte', titel: 'Kontakte',
-        text: 'Firmen, Bauleiter und Helfer an einer Stelle.' },
+      { weg: 'kontakte', titel: 'Firmen',
+        text: 'Handwerker, Bauleiter und Planer, mit Anschrift für die Mängelrüge.' },
+      { weg: 'kontakte/personen', titel: 'Privatpersonen',
+        text: 'Bauhelfer, Nachbarn, Verwandte: alle, die keine Firma sind.' },
+      { weg: 'kontakte/gewerke', titel: 'Gewerke',
+        text: 'Die Liste, aus der Positionen, Mängel und Kontakte wählen.' },
     ],
   },
   {

@@ -13,6 +13,7 @@ import { daten, bildUrl, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
 import { fotofeld } from '../fotos.js';
 import { Blatt, pdfTeilen, bildLaden } from '../pdf.js';
+import { gewerkeListe } from '../gewerke.js';
 import { einstellung } from '../daten.js';
 
 export const STATUS = {
@@ -22,11 +23,9 @@ export const STATUS = {
   behoben: { name: 'Behoben', kurz: 'Behoben', marke: 'marke-fertig' },
 };
 
-export const GEWERKE = [
-  'Rohbau', 'Dach', 'Fenster und Türen', 'Elektro', 'Sanitär', 'Heizung',
-  'Estrich', 'Putz und Trockenbau', 'Fliesen', 'Maler', 'Bodenbelag',
-  'Treppe', 'Außenanlagen', 'Sonstiges',
-];
+// Die Gewerkeliste steht in gewerke.js und laesst sich vom Nutzer aendern.
+// Sie wird von hier aus weitergereicht, damit die uebrigen Bildschirme nicht
+// zwei Quellen kennen muessen.
 
 // Die Vorschlaege stehen im Raum-Modul; hier wird die dortige Liste um die
 // schon angelegten Raeume ergaenzt, sobald das Blatt aufgeht.
@@ -128,7 +127,7 @@ async function zeichne(rahmen, filter = 'alle') {
   );
 }
 
-function mangelBearbeiten(mangel, kontakte, nachher) {
+async function mangelBearbeiten(mangel, kontakte, nachher) {
   const titel = eingabe({ value: mangel.titel || '', placeholder: 'z. B. Kratzer in der Fensterbank' });
   const raum = el('input', {
     type: 'text', value: mangel.raum || '', list: 'raumliste', placeholder: 'z. B. Wohnzimmer',
@@ -142,7 +141,12 @@ function mangelBearbeiten(mangel, kontakte, nachher) {
     const alle = [...new Set([...vorhanden, ...RAUM_VORSCHLAEGE])];
     raumliste.replaceChildren(...alle.map((r) => el('option', { value: r })));
   })();
-  const gewerk = auswahl(GEWERKE.map((g) => [g, g]), mangel.gewerk || 'Sonstiges');
+  const gewerke = await gewerkeListe();
+  // Ein Gewerk, das aus der Liste geflogen ist, bleibt am Mangel waehlbar.
+  const bekannt = mangel.gewerk && !gewerke.includes(mangel.gewerk)
+    ? [mangel.gewerk, ...gewerke]
+    : gewerke;
+  const gewerk = auswahl(bekannt.map((g) => [g, g]), mangel.gewerk || bekannt[0]);
   const status = auswahl(Object.entries(STATUS).map(([w, s]) => [w, s.name]), mangel.status || 'offen');
   const beschreibung = el('textarea', {}, [mangel.beschreibung || '']);
   const kontakt = auswahl(

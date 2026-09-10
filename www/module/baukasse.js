@@ -18,7 +18,7 @@ import { daten, einstellung, bildUrl, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
 import { finanzierungsstand } from './finanzierung.js';
 import { fotofeld } from '../fotos.js';
-import { GEWERKE } from './maengel.js';
+import { gewerkeListe } from '../gewerke.js';
 import {
   kostengruppenOptionen, kostengruppeLang, kostengruppeVorschlag, nachHauptgruppen,
 } from '../din276.js';
@@ -84,13 +84,14 @@ export async function zeige(rahmen, unterweg) {
 async function zeichne(rahmen, ansicht) {
   rahmen.replaceChildren();
 
-  const [posten, belege, stand, kontakte, raeume, hausdaten] = await Promise.all([
+  const [posten, belege, stand, kontakte, raeume, hausdaten, gewerke] = await Promise.all([
     daten.alle('posten'),
     daten.alle('belege'),
     finanzierungsstand(),
     daten.alle('kontakte'),
     daten.alle('raeume'),
     einstellung('baukosten_eingabe'),
+    gewerkeListe(),
   ]);
 
   const neu = () => zeichne(rahmen, ansicht);
@@ -104,7 +105,7 @@ async function zeichne(rahmen, ansicht) {
   };
 
   if (ansicht === 'kosten') {
-    return zeigeKostenaufstellung(rahmen, gerechnet, kontakte, raeume, neu);
+    return zeigeKostenaufstellung(rahmen, gerechnet, kontakte, raeume, gewerke, neu);
   }
   if (ansicht === 'statistik') {
     return zeigeStatistik(rahmen, gerechnet, summe, stand, belege, neu);
@@ -322,7 +323,7 @@ function sortieren(liste) {
   });
 }
 
-function zeigeKostenaufstellung(rahmen, gerechnet, kontakte, raeume, neu) {
+function zeigeKostenaufstellung(rahmen, gerechnet, kontakte, raeume, gewerkeReihe, neu) {
   rahmen.append(
     kopfzeile('Kostenaufstellung', 'Alle Positionen an einer Stelle, sortierbar und filterbar.')
   );
@@ -349,8 +350,14 @@ function zeigeKostenaufstellung(rahmen, gerechnet, kontakte, raeume, neu) {
     return;
   }
 
+  // Nach der Reihenfolge der Gewerkeliste, also so, wie gebaut wird. Was
+  // nicht mehr in der Liste steht, faellt ans Ende.
+  const stelle = (g) => {
+    const i = gewerkeReihe.indexOf(g);
+    return i === -1 ? gewerkeReihe.length : i;
+  };
   const gewerke = [...new Set(gerechnet.map((p) => p.gewerk || 'Sonstiges'))].sort(
-    (a, b) => GEWERKE.indexOf(a) - GEWERKE.indexOf(b)
+    (a, b) => stelle(a) - stelle(b)
   );
   const zustaende = [...new Set(gerechnet.map((p) => p.statusName))];
 
@@ -813,9 +820,15 @@ async function vorlageLaden(nachher) {
   await nachher();
 }
 
-function postenBearbeiten(posten, kontakte, raeume, nachher) {
+async function postenBearbeiten(posten, kontakte, raeume, nachher) {
   const name = eingabe({ value: posten.name || '', placeholder: 'z. B. Elektroinstallation' });
-  const gewerk = auswahl(GEWERKE.map((g) => [g, g]), posten.gewerk || 'Sonstiges');
+  const gewerke = await gewerkeListe();
+  // Ein Gewerk, das aus der Liste geflogen ist, bleibt an der Position
+  // waehlbar. Sonst wechselte sie beim naechsten Speichern unbemerkt.
+  const bekannt = posten.gewerk && !gewerke.includes(posten.gewerk)
+    ? [posten.gewerk, ...gewerke]
+    : gewerke;
+  const gewerk = auswahl(bekannt.map((g) => [g, g]), posten.gewerk || bekannt[0]);
   // Bei einer neuen Position gleich einen Vorschlag setzen, sonst ordnet
   // niemand sechsundzwanzig Positionen von Hand zu.
   const kostengruppe = auswahl(
