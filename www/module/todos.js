@@ -393,6 +393,26 @@ function zeile(todo, raeume, neu, mitListe) {
           ].filter(Boolean).join(' · ') || 'ohne Frist',
         }),
       ]),
+      // In der Checkliste stehen die beiden Knoepfe sichtbar daneben. Eine
+      // Vorlage bringt Punkte mit, die auf das eigene Vorhaben nicht passen
+      // -- die will man streichen und umschreiben, nicht abhaken, und dass
+      // die Zeile sich antippen laesst, sieht man ihr nicht an.
+      mitListe
+        ? null
+        : el('span', { klasse: 'zeilen-aktionen' }, [
+            el('button', {
+              klasse: 'knopf knopf-schmal', type: 'button', text: 'Umbenennen',
+              onclick: () => bearbeiten(todo, raeume, neu),
+            }),
+            el('button', {
+              klasse: 'knopf knopf-schmal', type: 'button', text: 'Löschen',
+              onclick: async () => {
+                if (!window.confirm(`Punkt „${todo.titel}“ löschen?`)) return;
+                await daten.loeschen('todos', todo.id);
+                await neu();
+              },
+            }),
+          ]),
     ]),
   ]);
 }

@@ -336,13 +336,21 @@ async function bearbeiten(kontakt, nachher) {
   const epost = el('input', { type: 'email', value: kontakt.epost || '', placeholder: 'name@betrieb.de' });
   const notiz = el('textarea', {}, [kontakt.notiz || '']);
 
+  // Die Art steht beim Anlegen schon fest: Man kommt aus der Liste der
+  // Firmen oder aus der der Privatpersonen und hat sie damit gewaehlt. Nur
+  // beim Bearbeiten bleibt sie sichtbar -- ein falsch abgelegter Kontakt
+  // waere sonst nicht mehr zu verschieben.
+  const artName = (kontakt.art || 'firma') === 'helfer' ? 'Privatperson' : 'Firma';
+
   blattOeffnen(
-    kontakt.id ? 'Kontakt bearbeiten' : 'Kontakt anlegen',
+    kontakt.id ? artName + ' bearbeiten' : artName + ' anlegen',
     [
-      feld('Art', art),
+      kontakt.id ? feld('Art', art) : null,
       feld('Name', name, 'Name oder Firma genügt.'),
       feld('Firma', firma),
-      firmen.length
+      // Nur bei Firmen: Ein Bauhelfer gehoert nicht zu einer Firma, sonst
+      // waere er keine Privatperson.
+      firmen.length && (kontakt.art || 'firma') === 'firma'
         ? feld('Gehört zu', gehoertZu,
             'Für Ansprechpartner: Bauleiter, Polier, Sachbearbeiter einer Firma.')
         : null,
@@ -352,7 +360,7 @@ async function bearbeiten(kontakt, nachher) {
       feld('Telefon', telefon),
       feld('E-Mail', epost),
       feld('Notiz', notiz),
-    ],
+    ].filter(Boolean),
     async () => {
       const wert = {
         art: art.value,

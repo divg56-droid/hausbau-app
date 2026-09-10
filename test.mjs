@@ -1726,6 +1726,20 @@ console.log('Auswertungen und Verknuepfungen');
   // Die Sichten duerfen nicht als Kennung durchgehen.
   pruef('Sichten bleiben Sichten',
     k.includes("ansicht !== 'firmen' && ansicht !== 'personen'"));
+  // Beim Anlegen steht die Art schon fest: Man kommt aus der einen oder der
+  // anderen Liste. Beim Bearbeiten bleibt sie da, sonst waere ein falsch
+  // abgelegter Kontakt nicht zu verschieben.
+  pruef('Die Art wird nur beim Bearbeiten gefragt',
+    k.includes("kontakt.id ? feld('Art', art) : null"));
+  pruef('Und das Blatt sagt, was es anlegt',
+    k.includes("artName + ' anlegen'"));
+
+  const t2 = readFileSync('./www/module/todos.js', 'utf8');
+  // Eine Vorlage bringt Punkte mit, die nicht passen. Die will man
+  // streichen und umschreiben, nicht abhaken.
+  pruef('Jeder Checklistenpunkt laesst sich aendern',
+    t2.includes("text: 'Umbenennen'") && t2.includes("text: 'Löschen'"));
+  pruef('Aber nicht in der To-Do-Liste', /mitListe\s*\?\s*null/.test(t2));
 }
 
 console.log('Raeume auf dem Grundriss');
