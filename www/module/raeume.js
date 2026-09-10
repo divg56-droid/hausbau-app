@@ -137,26 +137,40 @@ async function zeichne(rahmen) {
           .filter((p) => p.raumId === r.id)
           .reduce((s, p) => s + postenRechnen(p, belege).massgeblich, 0);
 
+        // Die Zeile oeffnet den Raum, die Knoepfe rechts aendern ihn. Beides
+        // in einer Schaltflaeche waere ein Klick, der zweierlei tut.
         return el('li', {}, [
-          el('button', {
-            klasse: 'listenzeile',
-            onclick: () => { location.hash = '#/raeume/' + r.id; },
-          }, [
-            url ? el('img', { klasse: 'vorschau', src: url, alt: '' }) : el('span', { klasse: 'vorschau' }),
-            el('span', { klasse: 'zeilen-text' }, [
-              el('span', { klasse: 'zeilen-titel', text: r.name }),
-              el('span', {
-                klasse: 'zeilen-unter',
-                text: [
-                  r.flaeche ? zahl(r.flaeche, 1) + ' m²' : null,
-                  (r.bildIds || []).length ? (r.bildIds || []).length + ' Fotos' : null,
-                  kosten ? eur.format(kosten) : null,
-                ].filter(Boolean).join(' · ') || 'noch nichts erfasst',
+          el('div', { klasse: 'raumzeile' }, [
+            el('button', {
+              klasse: 'listenzeile',
+              onclick: () => { location.hash = '#/raeume/' + r.id; },
+            }, [
+              url ? el('img', { klasse: 'vorschau', src: url, alt: '' }) : el('span', { klasse: 'vorschau' }),
+              el('span', { klasse: 'zeilen-text' }, [
+                el('span', { klasse: 'zeilen-titel', text: r.name }),
+                el('span', {
+                  klasse: 'zeilen-unter',
+                  text: [
+                    r.flaeche ? zahl(r.flaeche, 1) + ' m²' : null,
+                    (r.bildIds || []).length ? (r.bildIds || []).length + ' Fotos' : null,
+                    kosten ? eur.format(kosten) : null,
+                  ].filter(Boolean).join(' · ') || 'noch nichts erfasst',
+                }),
+              ]),
+              offen
+                ? el('span', { klasse: 'marke marke-offen', text: offen + ' offen' })
+                : null,
+            ]),
+            el('span', { klasse: 'zeilen-aktionen' }, [
+              el('button', {
+                klasse: 'knopf knopf-schmal', type: 'button', text: 'Öffnen',
+                onclick: () => { location.hash = '#/raeume/' + r.id; },
+              }),
+              el('button', {
+                klasse: 'knopf knopf-schmal', type: 'button', text: 'Ändern',
+                onclick: () => raumBearbeiten(r, geschosse, neu),
               }),
             ]),
-            offen
-              ? el('span', { klasse: 'marke marke-offen', text: offen + ' offen' })
-              : null,
           ]),
         ]);
       })

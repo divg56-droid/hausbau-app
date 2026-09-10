@@ -75,6 +75,9 @@ a { color: var(--akzent-dunkel); }
   font-size: 26px; line-height: 1; cursor: pointer; border-radius: 8px;
 }
 #kopf .zurueck:active { background: var(--band); }
+/* Die Marke ist ein Weg zur Uebersicht, kein Schmuck. Sie soll aber auch
+   nicht wie ein Verweis aussehen. */
+#kopf a.titel { text-decoration: none; color: inherit; }
 #kopf .titel {
   font-weight: 700; font-size: 17px; flex: 1;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -751,9 +754,21 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
 .leitfaden-zeile {
   display: flex; align-items: flex-start; gap: 11px;
   padding: 9px 0; min-height: 44px;
+  /* Umbrechen statt quetschen: Zwei Knoepfe neben einem langen Namen lassen
+     auf dem Telefon sonst eine Spalte von drei Zeichen Breite uebrig. */
+  flex-wrap: wrap;
 }
+.leitfaden-zeile .knopf-schmal { white-space: nowrap; }
+.zeilen-aktionen { display: flex; gap: 8px; flex: none; margin-left: auto; }
+
+/* Raumzeile: die Zeile selbst oeffnet den Raum, die Knoepfe rechts aendern
+   ihn. Auf dem Telefon rutschen sie unter den Namen. */
+.raumzeile { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.raumzeile > .listenzeile { flex: 1 1 190px; }
+.raumzeile .zeilen-aktionen { padding-bottom: 8px; }
+.zeilen-aktionen .knopf-schmal { flex: none; }
 .leitfaden-zeile input[type="checkbox"] { margin-top: 3px; flex: none; }
-.leitfaden-zeile .zeilen-text { flex: 1; min-width: 0; }
+.leitfaden-zeile .zeilen-text { flex: 1 1 150px; min-width: 0; }
 .leitfaden-zeile .zeilen-unter { white-space: normal; }
 /* Erledigtes bleibt lesbar, tritt aber zurueck. Durchstreichen waere hier
    falsch: Die Begruendung soll man auch spaeter noch lesen koennen. */

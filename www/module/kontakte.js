@@ -219,14 +219,18 @@ async function zeigeGewerke(rahmen, neu) {
                   : 'noch nicht verwendet',
               }),
             ]),
-            el('button', {
-              klasse: 'knopf knopf-schmal', type: 'button', text: 'Umbenennen',
-              onclick: () => umbenennen(g, gewerke, neu),
-            }),
-            el('button', {
-              klasse: 'knopf knopf-schmal', type: 'button', text: 'Löschen',
-              onclick: () => loeschen(g, wo, gewerke, neu),
-            }),
+            // Beide Knoepfe in einem Behaelter: So brechen sie als Paar um
+            // und nicht einzeln, wenn der Name lang und das Telefon schmal ist.
+            el('span', { klasse: 'zeilen-aktionen' }, [
+              el('button', {
+                klasse: 'knopf knopf-schmal', type: 'button', text: 'Umbenennen',
+                onclick: () => umbenennen(g, gewerke, neu),
+              }),
+              el('button', {
+                klasse: 'knopf knopf-schmal', type: 'button', text: 'Löschen',
+                onclick: () => loeschen(g, wo, gewerke, neu),
+              }),
+            ]),
           ]),
         ]);
       })),

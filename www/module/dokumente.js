@@ -146,16 +146,18 @@ async function zeichne(rahmen) {
                   ].filter(Boolean).join(' · '),
                 }),
               ]),
-              (d.bildIds || []).length
-                ? el('button', {
-                    klasse: 'knopf knopf-schmal', type: 'button', text: 'Öffnen',
-                    onclick: () => oeffnen(d),
-                  })
-                : null,
-              el('button', {
-                klasse: 'knopf knopf-schmal', type: 'button', text: 'Ändern',
-                onclick: () => bearbeiten(d, bezugsdaten, neu),
-              }),
+              el('span', { klasse: 'zeilen-aktionen' }, [
+                (d.bildIds || []).length
+                  ? el('button', {
+                      klasse: 'knopf knopf-schmal', type: 'button', text: 'Öffnen',
+                      onclick: () => oeffnen(d),
+                    })
+                  : null,
+                el('button', {
+                  klasse: 'knopf knopf-schmal', type: 'button', text: 'Ändern',
+                  onclick: () => bearbeiten(d, bezugsdaten, neu),
+                }),
+              ]),
             ]),
           ])
         )),

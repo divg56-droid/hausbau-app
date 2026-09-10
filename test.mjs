@@ -1456,5 +1456,39 @@ console.log('Leitfaden je Bauweise');
     modul.includes('stand.phasen.filter((p) => p.gesamt > 0)'));
 }
 
+console.log('Kopfzeile und Verweise auf einen Satz');
+{
+  const app = readFileSync('./www/app.js', 'utf8');
+  // Ein Bereich, der einen einzelnen Satz oeffnet, haengt dessen Kennung
+  // hinten an: "#/raeume/<kennung>". Ohne den Rueckfall auf den ersten Teil
+  // landet jeder solche Verweis auf der Uebersicht -- der Nutzer wird
+  // herausgeworfen, statt in den Raum zu kommen.
+  pruef('Ein Weg mit Kennung findet trotzdem sein Modul',
+    app.includes('MODULE.find((m) => m.weg === weg) || MODULE.find((m) => m.weg === datei)'));
+  pruef('Markiert wird der Bereich, nicht der ganze Weg',
+    app.includes('leisteMarkieren(modul.weg)'));
+
+  // Die Marke steht in jedem Bereich und fuehrt zur Uebersicht.
+  pruef('Der Kopf traegt immer die Wortmarke',
+    app.includes("if (!kopftitel.querySelector('.wortmarke'))"));
+  pruef('Und sie ist ein Weg zur Uebersicht',
+    readFileSync('./www/index.html', 'utf8')
+      .includes('<a class="titel" id="kopftitel" href="#/"'));
+  // Welcher Bereich offen ist, gehoert trotzdem in den Fenstertitel.
+  pruef('Der Bereichsname steht im Fenstertitel',
+    app.includes("modul.titel + ' · ' + APPNAME"));
+
+  // Zeilen mit mehreren Knoepfen: Sie muessen als Paar umbrechen, sonst
+  // steht auf dem Telefon ein Knopf allein und der Name in drei Zeichen.
+  for (const datei of ['kontakte', 'dokumente', 'projekte', 'raeume']) {
+    pruef(datei + ': die Knoepfe einer Zeile stehen zusammen',
+      readFileSync('./www/module/' + datei + '.js', 'utf8')
+        .includes("klasse: 'zeilen-aktionen'"));
+  }
+  pruef('Der Raum laesst sich aus der Liste heraus aendern',
+    readFileSync('./www/module/raeume.js', 'utf8')
+      .includes('raumBearbeiten(r, geschosse, neu)'));
+}
+
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');
 process.exit(fehler ? 1 : 0);

@@ -23,8 +23,11 @@ const APPNAME = 'BauZeuge';
  * dann "Bau" in Tinte und "Zeuge" im Akzent. Das grosse Z traegt die
  * Trennung, deshalb steht sie farbig und nicht als ein Wort.
  *
- * Sie erscheint nur auf der Startseite. Wer in einem Bereich steht, braucht
- * dort den Namen des Bereichs; die Marke waere ihm dann im Weg.
+ * Sie steht in jedem Bereich, nicht nur auf der Startseite, und fuehrt beim
+ * Antippen zur Projektuebersicht -- so, wie das Logo auf jeder Internetseite
+ * zur Startseite fuehrt. Welcher Bereich offen ist, sagt ohnehin schon die
+ * Ueberschrift darunter und die Markierung in der Leiste; im Kopf waere es
+ * ein zweites Mal dasselbe.
  */
 function wortmarke() {
   const zeichen = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -48,10 +51,10 @@ function wortmarke() {
 
 // Die Kopfzeile gehoert dem Gehaeuse. Module melden hier an, was rechts oben
 // stehen soll, statt sich eine eigene Leiste zu bauen.
-export function setzeKopf({ titel, aktion }) {
-  const name = titel || APPNAME;
-  if (name === APPNAME) kopftitel.replaceChildren(wortmarke());
-  else kopftitel.textContent = name;
+export function setzeKopf({ aktion } = {}) {
+  if (!kopftitel.querySelector('.wortmarke')) {
+    kopftitel.replaceChildren(wortmarke());
+  }
   kopfaktion.hidden = !aktion;
   if (aktion) {
     kopfaktion.textContent = aktion.text;
@@ -209,17 +212,25 @@ async function zeichne() {
   const weg = location.hash.replace(/^#\/?/, '').replace(/\/$/, '');
   const [datei, unterweg] = weg.split('/');
 
-  const modul = MODULE.find((m) => m.weg === weg);
+  // Erst den ganzen Weg suchen, dann nur den ersten Teil. Das zweite ist der
+  // Fall "#/raeume/<kennung>": Ein Bereich, der einen einzelnen Satz oeffnet,
+  // haengt dessen Kennung hinten an. Ohne diesen Rueckfall landet jeder
+  // solche Verweis auf der Uebersicht -- der Nutzer wird herausgeworfen,
+  // statt in den Raum zu kommen.
+  const modul = MODULE.find((m) => m.weg === weg) || MODULE.find((m) => m.weg === datei);
   if (!modul) {
     location.hash = '';
     return;
   }
 
-  leisteMarkieren(weg);
-  // Auf der Uebersicht steht die Wortmarke im Kopf, sonst der Bereichsname.
-  // Der Zurueckpfeil entfaellt dort: Es gibt nichts, wohin er fuehren wuerde.
-  zurueckKnopf.hidden = weg === '';
-  setzeKopf({ titel: weg === '' ? APPNAME : modul.titel });
+  leisteMarkieren(modul.weg);
+  // Im Kopf steht immer die Wortmarke. Der Zurueckpfeil entfaellt auf der
+  // Uebersicht: Es gibt nichts, wohin er fuehren wuerde.
+  zurueckKnopf.hidden = modul.weg === '';
+  setzeKopf({});
+  // Der Bereichsname gehoert trotzdem in den Fenstertitel: Er steht im
+  // Reiter des Browsers und im Verlauf.
+  document.title = modul.weg === '' ? APPNAME : modul.titel + ' · ' + APPNAME;
 
   // Bleibt der Bereich leer, sagt der Bildschirm es, statt weiss zu bleiben.
   // Ein Modul, das haengt, sieht sonst genauso aus wie eines, das nichts zu

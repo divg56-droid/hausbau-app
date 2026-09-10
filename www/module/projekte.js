@@ -44,22 +44,24 @@ async function zeichne(rahmen) {
                 ].filter(Boolean).join(' · '),
               }),
             ]),
-            p.id === aktiv
-              ? null
-              : el('button', {
-                  klasse: 'knopf knopf-schmal', type: 'button', text: 'Öffnen',
-                  onclick: () => wechseln(p),
-                }),
-            el('button', {
-              klasse: 'knopf knopf-schmal', type: 'button', text: 'Umbenennen',
-              onclick: () => umbenennen(p, neu),
-            }),
-            liste.length > 1
-              ? el('button', {
-                  klasse: 'knopf knopf-schmal', type: 'button', text: 'Löschen',
-                  onclick: () => loeschen(p, bestand.get(p.id), neu),
-                })
-              : null,
+            el('span', { klasse: 'zeilen-aktionen' }, [
+              p.id === aktiv
+                ? null
+                : el('button', {
+                    klasse: 'knopf knopf-schmal', type: 'button', text: 'Öffnen',
+                    onclick: () => wechseln(p),
+                  }),
+              el('button', {
+                klasse: 'knopf knopf-schmal', type: 'button', text: 'Umbenennen',
+                onclick: () => umbenennen(p, neu),
+              }),
+              liste.length > 1
+                ? el('button', {
+                    klasse: 'knopf knopf-schmal', type: 'button', text: 'Löschen',
+                    onclick: () => loeschen(p, bestand.get(p.id), neu),
+                  })
+                : null,
+            ]),
           ]),
         ])
       )),
