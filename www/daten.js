@@ -361,7 +361,8 @@ const OHNE_PROJEKT = new Set(['einstellungen', 'projekte', 'bilder']);
 // Projekt behalten sie ihren blanken Namen, damit die vorhandenen Werte
 // stehen bleiben.
 const PROJEKTSACHEN = new Set([
-  'projektname', 'baustelle', 'leitfaden_punkt', 'bauweise', 'bauphase', 'eigenleistungen',
+  'projektname', 'baustelle', 'baubeginn', 'leitfaden_punkt', 'bauweise', 'bauphase',
+  'eigenleistungen',
   // Der gemerkte Wetterwert haengt an der Baustelle, also am Projekt.
   'wetter_stand',
   // Die Eingaben der Rechner beschreiben dieses Haus, nicht dieses Geraet.

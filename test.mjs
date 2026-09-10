@@ -1361,7 +1361,7 @@ console.log('Bauweise');
     !b.includes('SANIERUNG'.toLowerCase() + "'") || b.includes('gewaehlt.id !== SCHLUESSELFERTIG'));
   // Sie gehoert zum Projekt: Wer zwei Haeuser baut, baut sie selten gleich.
   pruef('Die Bauweise haengt am Projekt',
-    readFileSync('./www/daten.js', 'utf8').includes("'bauweise', 'bauphase', 'eigenleistungen'"));
+    readFileSync('./www/daten.js', 'utf8').includes("'bauweise', 'bauphase',"));
 
   const k = readFileSync('./www/module/baukasse.js', 'utf8');
   pruef('Die Kostengruppenspalte faellt mit weg',

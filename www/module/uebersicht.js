@@ -36,7 +36,7 @@ import { todoStand, todosSortieren } from './todos.js';
 
 export async function zeige(rahmen) {
   const [projekt, stand, posten, belege, aufgaben, maengel, tagebuch, haken, todos, art,
-    projekte, ort] =
+    projekte, ort, baubeginn] =
     await Promise.all([
     einstellung('projektname'),
     finanzierungsstand(),
@@ -50,6 +50,7 @@ export async function zeige(rahmen) {
     bauweise(),
     projekteListe(),
     einstellung('baustelle'),
+    einstellung('baubeginn'),
   ]);
   const leitfaden = leitfadenStand(haken, art.id);
 
@@ -81,7 +82,7 @@ export async function zeige(rahmen) {
   anhaengen(
     rahmen,
     kopfzeile(projekt || 'Dein Bauprojekt', null),
-    projektkopf(art, leitfaden, todos, maengel, ort || {}),
+    projektkopf(art, leitfaden, todos, ort || {}, baubeginn),
     projektaktionen(projekte.length)
   );
 
@@ -438,7 +439,7 @@ function projektBlatt(einstieg) {
  * aus dem Bauleitfaden: Der hat die Phasen ohnehin, und eine zweite,
  * daneben gefuehrte Einteilung waere eine, die irgendwann widerspricht.
  */
-function projektkopf(art, leitfaden, todos, maengel, ort) {
+function projektkopf(art, leitfaden, todos, ort, baubeginn) {
   const anteil = leitfaden.gesamt
     ? Math.round((leitfaden.erledigt / leitfaden.gesamt) * 100) : 0;
   const offen = todos.filter((t) => !t.erledigt).length +
@@ -456,6 +457,7 @@ function projektkopf(art, leitfaden, todos, maengel, ort) {
           art.name,
           phase ? phase.name : null,
           ort.ort || ort.name || null,
+          baubeginn ? baubeginnText(baubeginn) : null,
         ].filter(Boolean).join(' · '),
       }),
       el('span', {
@@ -469,6 +471,28 @@ function projektkopf(art, leitfaden, todos, maengel, ort) {
     ]),
     el('span', { klasse: 'projektkopf-stand', text: 'Stand ' + datumLang(heute()) }),
   ]);
+}
+
+/**
+ * "Baubeginn Mai 2027 (in 8 Monaten)".
+ *
+ * Der Abstand steht dabei, weil das Datum allein wenig sagt: Ob bis dahin
+ * acht Monate oder acht Wochen sind, aendert alles an dem, was jetzt dran
+ * ist. Liegt der Monat zurueck, zaehlt es aufwaerts.
+ */
+function baubeginnText(monat) {
+  const [jahr, m] = String(monat).split('-').map(Number);
+  if (!jahr || !m) return '';
+  const name = new Date(Date.UTC(jahr, m - 1, 1))
+    .toLocaleDateString('de-DE', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const jetzt = new Date();
+  const abstand = (jahr - jetzt.getFullYear()) * 12 + (m - 1 - jetzt.getMonth());
+  const wie = abstand === 0 ? 'dieser Monat'
+    : abstand === 1 ? 'nächster Monat'
+    : abstand > 1 ? 'in ' + abstand + ' Monaten'
+    : abstand === -1 ? 'seit einem Monat'
+    : 'seit ' + Math.abs(abstand) + ' Monaten';
+  return `Baubeginn ${name} (${wie})`;
 }
 
 /** Die Phasen des Leitfadens als Band: wo man war, ist und hinwill. */

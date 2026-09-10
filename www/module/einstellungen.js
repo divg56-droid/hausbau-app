@@ -30,6 +30,11 @@ async function zeichne(rahmen) {
     value: (await einstellung('projektname')) || '',
     placeholder: 'z. B. Neubau Musterweg 3',
   });
+  // Monat statt Datum: Ein Baubeginn im naechsten Jahr ist nie taggenau,
+  // und ein erfundener Tag im Formular sieht aus wie ein Termin.
+  const baubeginn = el('input', {
+    type: 'month', value: (await einstellung('baubeginn')) || '',
+  });
   const baustelle = (await einstellung('baustelle')) || {};
   const ortfeld = eingabe({ value: baustelle.ort || '', placeholder: 'z. B. Kaiserslautern' });
   const ortstand = el('p', { klasse: 'unterzeile' });
@@ -55,8 +60,11 @@ async function zeichne(rahmen) {
     karte([
       el('h2', { text: 'Projekt' }),
       feld('Projektname', projektname, 'Erscheint in der Kopfzeile jedes PDF.'),
+      feld('Geplanter Baubeginn', baubeginn,
+        'Monat und Jahr genügen. Steht dann oben auf der Übersicht.'),
       knopf('Speichern', async () => {
         await einstellung('projektname', projektname.value.trim());
+        await einstellung('baubeginn', baubeginn.value || null);
         melde('Gespeichert.');
       }, 'knopf-haupt'),
     ]),
