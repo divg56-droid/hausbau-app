@@ -13,6 +13,7 @@
 import {
   el, eur, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile,
   wertzeile, hinweisKasten, leerzustand, zuZahl, melde, datumLang, heute,
+  anhaengen,
 } from '../hilfen.js';
 import { daten, einstellung, bildUrl, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -176,13 +177,14 @@ function zeigeBudgetplanung(rahmen, stand, summe, belege, hausdaten, neu) {
   const rest = budget - summe.tatsaechlich;
   const flaeche = Number(hausdaten.flaeche) || 0;
 
-  rahmen.append(kopfzeile('Budgetplanung', 'Woher das Geld kommt und wie weit es reicht.'));
+  anhaengen(rahmen, kopfzeile('Budgetplanung', 'Woher das Geld kommt und wie weit es reicht.'));
 
   // Kein frueher Ausstieg, auch wenn noch nichts erfasst ist: Der Bildschirm
   // steht dann mit Nullen da und zeigt, was spaeter darin steht. Eine
   // Sackgasse mit einem einzigen Knopf sagt darueber nichts.
   if (!stand.posten.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       hinweisKasten(
         'Noch kein Budget. Lege in der Baufinanzierung Eigenkapital, Zuschüsse und ' +
           'Darlehen an, dann füllen sich die Zahlen hier von allein.',
@@ -205,7 +207,8 @@ function zeigeBudgetplanung(rahmen, stand, summe, belege, hausdaten, neu) {
     await neu();
   });
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     karte([
       el('div', { klasse: 'grosszahl' }, [
         el('span', { klasse: 'grosszahl-name', text: 'Gesamtbudget' }),
@@ -237,7 +240,8 @@ function zeigeBudgetplanung(rahmen, stand, summe, belege, hausdaten, neu) {
       ? { text: 'über Budget', marke: 'marke-offen' }
       : { text: 'im Budget', marke: 'marke-fertig' };
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     el('div', { klasse: 'kachelreihe' }, [
       budgetkachel('Geplante Kosten', eur.format(summe.geplant), imBudget(summe.geplant),
         jeQm(summe.geplant)),
@@ -255,7 +259,8 @@ function zeigeBudgetplanung(rahmen, stand, summe, belege, hausdaten, neu) {
 
   // ---------------------------------------------------------- Was noch bleibt
   const anteil = budget > 0 ? Math.min(100, (summe.tatsaechlich / budget) * 100) : 0;
-  rahmen.append(
+  anhaengen(
+    rahmen,
     karte([
       el('div', { klasse: 'fortschrittsbalken' }, [
         el('div', {
@@ -278,7 +283,8 @@ function zeigeBudgetplanung(rahmen, stand, summe, belege, hausdaten, neu) {
   );
 
   // ------------------------------------------------------------- Geldmittel
-  rahmen.append(
+  anhaengen(
+    rahmen,
     el('h2', { klasse: 'abschnitt', text: 'Geldmittel' }),
     el('p', {
       klasse: 'unterzeile',
@@ -318,7 +324,8 @@ function zeigeBudgetplanung(rahmen, stand, summe, belege, hausdaten, neu) {
 
   // ---------------------------------------------------------- Zahlungsverlauf
   const verlauf = zahlungsverlauf(belege);
-  rahmen.append(
+  anhaengen(
+    rahmen,
     el('h2', { klasse: 'abschnitt', text: 'Zahlungsverlauf' }),
     el('p', {
       klasse: 'unterzeile',
@@ -331,7 +338,8 @@ function zeigeBudgetplanung(rahmen, stand, summe, belege, hausdaten, neu) {
 
   if (verlauf.length) {
     const hoechste = Math.max(...verlauf.map((m) => m.betrag));
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte(verlauf.map((m) =>
         el('div', { klasse: 'balkenzeile' }, [
           el('div', { klasse: 'wertzeile' }, [
@@ -397,12 +405,14 @@ function zeigeKostenaufstellung(rahmen, gerechnet, kontakte, raeume, gewerkeReih
   if (!art.zeigtKostengruppen && sortierung.feld === 'kostengruppe') {
     sortierung = { feld: 'gewerk', ab: false };
   }
-  rahmen.append(
+  anhaengen(
+    rahmen,
     kopfzeile('Kostenaufstellung', 'Alle Positionen an einer Stelle, sortierbar und filterbar.')
   );
 
   if (!gerechnet.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         leerzustand(
           'Was soll das Haus kosten?',
@@ -463,7 +473,8 @@ function zeigeKostenaufstellung(rahmen, gerechnet, kontakte, raeume, gewerkeReih
     gezahlt: zeilen.reduce((s, p) => s + p.gezahlt, 0),
   };
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     el('div', { klasse: 'filterleiste' }, [gewerkFeld, statusFeld]),
     karte([
       el('div', { klasse: 'tabelle-rolle' }, [
@@ -543,13 +554,14 @@ const STATUSREIHE = [
 ];
 
 function zeigeStatistik(rahmen, gerechnet, summe, stand, belege, art, neu) {
-  rahmen.append(kopfzeile('Statistiken', 'Wo das Geld hingeht, aus vier Blickwinkeln.'));
+  anhaengen(rahmen, kopfzeile('Statistiken', 'Wo das Geld hingeht, aus vier Blickwinkeln.'));
 
   const gesamt = summe.tatsaechlich;
 
   // ------------------------------------------------------------ Nach Status
   // Zeigt, wie viel vom Bau ueberhaupt schon verbindlich ist.
-  rahmen.append(
+  anhaengen(
+    rahmen,
     el('h2', { klasse: 'abschnitt', text: 'Nach Status' }),
     el('div', { klasse: 'kachelreihe' }, STATUSREIHE.map(([schluessel, name, marke]) => {
       const drin = gerechnet.filter((p) => p.status === schluessel);
@@ -587,7 +599,8 @@ function zeigeStatistik(rahmen, gerechnet, summe, stand, belege, art, neu) {
     gewerke.set(name, k);
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     el('h2', { klasse: 'abschnitt', text: 'Nach Gewerk' }),
     karte(
       gewerke.size
@@ -605,11 +618,12 @@ function zeigeStatistik(rahmen, gerechnet, summe, stand, belege, art, neu) {
   // Beim Bautraeger steht im Vertrag eine Summe, und die gliedert niemand
   // mehr nach DIN 276. Der ganze Abschnitt entfaellt.
   if (art.zeigtKostengruppen) {
-    rahmen.append(el('h2', { klasse: 'abschnitt', text: 'Nach Kostengruppe' }));
+    anhaengen(rahmen, el('h2', { klasse: 'abschnitt', text: 'Nach Kostengruppe' }));
     if (gerechnet.length) {
       zeigeKostengruppen(rahmen, gerechnet, summe, neu);
     } else {
-      rahmen.append(
+      anhaengen(
+        rahmen,
         karte([
           nochNichts('Die Gliederung nach DIN 276 fasst die Positionen so zusammen, wie ' +
             'Banken und Architekten Baukosten rechnen.'),
@@ -620,7 +634,8 @@ function zeigeStatistik(rahmen, gerechnet, summe, stand, belege, art, neu) {
 
   // -------------------------------------------------------- Nach Geldmittel
   // Aus welchem Topf die Rechnungen bezahlt wurden.
-  rahmen.append(
+  anhaengen(
+    rahmen,
     el('h2', { klasse: 'abschnitt', text: 'Nach Geldmittel' }),
     el('p', {
       klasse: 'unterzeile',
@@ -650,7 +665,8 @@ function zeigeStatistik(rahmen, gerechnet, summe, stand, belege, art, neu) {
     .sort((a, b) => Math.abs(b.differenz) - Math.abs(a.differenz))
     .slice(0, 5);
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     el('h2', { klasse: 'abschnitt', text: 'Größte Abweichungen' }),
     karte(
       auffaellig.length
@@ -675,7 +691,8 @@ function zeigeStatistik(rahmen, gerechnet, summe, stand, belege, art, neu) {
   );
 
   if (!gerechnet.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       knopf('Positionen anlegen', () => { location.hash = '#/baukasse/kosten'; }, 'knopf-haupt')
     );
   }
@@ -690,7 +707,8 @@ function zeigeKostengruppen(rahmen, gerechnet, summe, neu) {
   const ohne = gerechnet.filter((p) => !p.kostengruppe);
   const gruppen = nachHauptgruppen(gerechnet, (p) => p.massgeblich);
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     karte([
       el('h2', { text: 'Kosten nach DIN 276' }),
       el('p', {
@@ -722,7 +740,8 @@ function zeigeKostengruppen(rahmen, gerechnet, summe, neu) {
   );
 
   if (ohne.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       hinweisKasten(
         ohne.length === 1
           ? 'Eine Position ist noch keiner Kostengruppe zugeordnet und fällt in der Gliederung durch.'
@@ -736,7 +755,8 @@ function zeigeKostengruppen(rahmen, gerechnet, summe, neu) {
   // Die Einzelpositionen je Gruppe. Ohne sie ist nicht nachvollziehbar,
   // warum eine Gruppe so gross ausfaellt.
   for (const g of gruppen.filter((x) => x.nr)) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         el('h2', { text: g.nr + ' ' + g.name }),
         el('ul', { klasse: 'liste' }, g.saetze
@@ -757,7 +777,8 @@ function zeigeKostengruppen(rahmen, gerechnet, summe, neu) {
     );
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     hinweisKasten(
       'Die Gliederung folgt DIN 276:2018-12. Für eine förmliche Einreichung gleiche ' +
         'die Bezeichnungen einmal mit dem Normtext ab; einzelne Untergruppen werden ' +
@@ -1157,7 +1178,8 @@ async function postenBearbeiten(posten, kontakte, raeume, nachher) {
 // ----------------------------------------------------------------- Rechnungen
 
 async function zeigeRechnungen(rahmen, belege, posten, stand, kontakte, neu) {
-  rahmen.append(
+  anhaengen(
+    rahmen,
     kopfzeile('Rechnungen', 'Was tatsächlich abgeflossen ist, mit Beleg und Zuordnung.'),
     karte([
       el('h2', { text: 'Rechnung erfassen' }),
@@ -1174,7 +1196,7 @@ async function zeigeRechnungen(rahmen, belege, posten, stand, kontakte, neu) {
   );
 
   if (!belege.length) {
-    rahmen.append(karte([el('p', { klasse: 'unterzeile', text: 'Noch keine Rechnung erfasst.' })]));
+    anhaengen(rahmen, karte([el('p', { klasse: 'unterzeile', text: 'Noch keine Rechnung erfasst.' })]));
     return;
   }
 
@@ -1205,7 +1227,7 @@ async function zeigeRechnungen(rahmen, belege, posten, stand, kontakte, neu) {
     ]);
   }));
 
-  rahmen.append(karte([el('h2', { text: 'Alle Rechnungen' }), el('ul', { klasse: 'liste' }, zeilen)]));
+  anhaengen(rahmen, karte([el('h2', { text: 'Alle Rechnungen' }), el('ul', { klasse: 'liste' }, zeilen)]));
 }
 
 function belegBearbeiten(beleg, posten, stand, kontakte, nachher) {

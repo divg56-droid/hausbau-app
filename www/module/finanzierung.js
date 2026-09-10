@@ -6,6 +6,7 @@
 import {
   el, eur, zahl, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile,
   wertzeile, hinweisKasten, leerzustand, zuZahl, melde, datumLang,
+  anhaengen,
 } from '../hilfen.js';
 import { daten, einstellung } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -263,10 +264,11 @@ async function zeichne(rahmen) {
   const geschaetzteKosten = (await einstellung('finanzierung_kosten')) || 0;
   const neu = () => zeichne(rahmen);
 
-  rahmen.append(kopfzeile('Baufinanzierung', 'Eigenkapital und Darlehen an einer Stelle.'));
+  anhaengen(rahmen, kopfzeile('Baufinanzierung', 'Eigenkapital und Darlehen an einer Stelle.'));
 
   if (!stand.posten.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         leerzustand(
           'Starte mit deiner Finanzierungsbasis',
@@ -290,7 +292,8 @@ async function zeichne(rahmen) {
   }
 
   // Übersicht
-  rahmen.append(
+  anhaengen(
+    rahmen,
     karte([
       el('h2', { text: 'Finanzierungsbasis' }),
       wertzeile('Eigenkapital', eur.format(stand.ekSumme)),
@@ -303,7 +306,8 @@ async function zeichne(rahmen) {
 
   if (geschaetzteKosten > 0) {
     const luecke = geschaetzteKosten - stand.gesamt;
-    rahmen.append(
+    anhaengen(
+      rahmen,
       hinweisKasten(
         luecke > 1000
           ? `Deine Baukosten liegen bei ${eur.format(geschaetzteKosten)}. Es fehlen noch ${eur.format(luecke)}.`
@@ -314,7 +318,8 @@ async function zeichne(rahmen) {
   }
 
   if (stand.eigenmittel > 0 && stand.gesamt > 0 && stand.eigenmittel / stand.gesamt < 0.15) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       hinweisKasten(
         'Deine Eigenmittel aus Eigenkapital und Zuschüssen liegen unter 15 Prozent des ' +
           'Volumens. Rechne mit einem Zinsaufschlag der Bank.',
@@ -330,7 +335,8 @@ async function zeichne(rahmen) {
     ['darlehen', 'Darlehen'],
   ]) {
     const liste = stand.posten.filter((p) => p.art === art);
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         el('h2', { text: ueberschrift }),
         liste.length
@@ -375,7 +381,8 @@ async function zeichne(rahmen) {
     );
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     hinweisKasten(
       'Nicht mehr verfügbar: Das Baukindergeld ist seit Ende 2022 beendet, die alte ' +
         'Neubauförderung für Effizienzhäuser wurde durch den Klimafreundlichen Neubau ' +

@@ -10,6 +10,7 @@
 import {
   el, eur, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile,
   wertzeile, hinweisKasten, leerzustand, zuZahl, melde, datumLang, zahl,
+  anhaengen,
 } from '../hilfen.js';
 import { daten, bildUrl, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -90,10 +91,11 @@ async function zeichne(rahmen) {
 
   const neu = () => zeichne(rahmen);
 
-  rahmen.append(kopfzeile('Räume', 'Fotos, Mängel und Kosten je Raum.'));
+  anhaengen(rahmen, kopfzeile('Räume', 'Fotos, Mängel und Kosten je Raum.'));
 
   if (nachgezogen) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       hinweisKasten(
         `${nachgezogen} Raum/Räume aus deinen Mängeln übernommen. Die Zuordnung bleibt erhalten.`,
         'gut'
@@ -102,7 +104,8 @@ async function zeichne(rahmen) {
   }
 
   if (!raeume.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         leerzustand(
           'Noch keine Räume',
@@ -183,7 +186,7 @@ async function zeichne(rahmen) {
       })
     );
 
-    rahmen.append(karte([
+    anhaengen(rahmen, karte([
       g.name ? el('h2', { text: g.name }) : null,
       el('ul', { klasse: 'liste' }, zeilen),
     ].filter(Boolean)));
@@ -191,7 +194,8 @@ async function zeichne(rahmen) {
 
   const gesamtflaeche = raeume.reduce((s, r) => s + (r.flaeche || 0), 0);
   if (gesamtflaeche) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         wertzeile('Erfasste Fläche', zahl(gesamtflaeche, 1) + ' m²', true),
         el('p', {
@@ -204,7 +208,8 @@ async function zeichne(rahmen) {
     );
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     knopf('Raum hinzufügen', () => raumBearbeiten({}, geschosse, neu), 'knopf-haupt'),
     knopf('Übliche Räume ergänzen', () => vorlageLaden(neu), 'knopf-leise')
   );
@@ -230,7 +235,8 @@ async function zeigeRaum(rahmen, kennung) {
 
   const raum = await daten.holen('raeume', kennung);
   if (!raum) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([leerzustand('Diesen Raum gibt es nicht mehr', 'Vielleicht wurde er gelöscht.',
         knopf('Zur Übersicht', () => { location.hash = '#/raeume'; }, 'knopf-haupt'))]),
     );
@@ -248,7 +254,8 @@ async function zeigeRaum(rahmen, kennung) {
   const eigenePosten = posten.filter((p) => p.raumId === raum.id)
     .map((p) => ({ ...p, ...postenRechnen(p, belege) }));
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     kopfzeile(raum.name, [
       geschoss ? geschoss.name : null,
       raum.flaeche ? zahl(raum.flaeche, 1) + ' m²' : null,
@@ -257,7 +264,8 @@ async function zeigeRaum(rahmen, kennung) {
 
   // Fotos: der eigentliche Grund fuer diese Ansicht.
   const bilder = [...(raum.bildIds || [])];
-  rahmen.append(
+  anhaengen(
+    rahmen,
     karte([
       el('h2', { text: 'Fotos' }),
       el('p', {
@@ -272,11 +280,12 @@ async function zeigeRaum(rahmen, kennung) {
   );
 
   if (raum.notiz) {
-    rahmen.append(karte([el('h2', { text: 'Notiz' }), el('p', { text: raum.notiz })]));
+    anhaengen(rahmen, karte([el('h2', { text: 'Notiz' }), el('p', { text: raum.notiz })]));
   }
 
   // Maengel in diesem Raum
-  rahmen.append(
+  anhaengen(
+    rahmen,
     karte([
       el('h2', { text: `Mängel (${eigeneMaengel.length})` }),
       eigeneMaengel.length
@@ -305,7 +314,8 @@ async function zeigeRaum(rahmen, kennung) {
 
   // Kosten dieses Raums
   const summe = eigenePosten.reduce((s, p) => s + p.massgeblich, 0);
-  rahmen.append(
+  anhaengen(
+    rahmen,
     karte([
       el('h2', { text: 'Kosten' }),
       eigenePosten.length
@@ -328,7 +338,8 @@ async function zeigeRaum(rahmen, kennung) {
     ])
   );
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     knopf('Raum bearbeiten', () => raumBearbeiten(raum, geschosse, neu), 'knopf-haupt'),
     knopf('Zurück zur Übersicht', () => { location.hash = '#/raeume'; })
   );

@@ -6,6 +6,7 @@
 
 import {
   el, feld, eingabe, knopf, karte, kopfzeile, hinweisKasten, melde, datumLang,
+  anhaengen,
 } from '../hilfen.js';
 import { projektAktiv, projektWechseln } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -25,7 +26,8 @@ async function zeichne(rahmen) {
   const bestand = new Map();
   for (const p of liste) bestand.set(p.id, await projektBestand(p.id));
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     kopfzeile('Bauprojekte', 'Getrennte Bestände für getrennte Bauvorhaben.'),
     karte([
       el('ul', { klasse: 'liste' }, liste.map((p) =>

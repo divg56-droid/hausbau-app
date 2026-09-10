@@ -47,6 +47,20 @@ const ZEICHEN = {
   dielen: ['M3 6h18v12H3z', 'M3 10h18', 'M3 14h18', 'M8 6v4', 'M14 10v4', 'M9 14v4'],
   werkzeug: ['M14 4a4 4 0 0 0 5 5l-9 9-5-5z', 'M5 18l-1 2 2-1'],
 
+  // Wetter. Dieselbe Einteilung wie im Bautagebuch, damit dasselbe Wetter
+  // nicht an zwei Stellen verschieden aussieht.
+  sonnig: ['M12 7.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9z', 'M12 1v3', 'M12 20v3',
+    'M1 12h3', 'M20 12h3', 'M4.2 4.2 6.3 6.3', 'M17.7 17.7l2.1 2.1',
+    'M19.8 4.2 17.7 6.3', 'M6.3 17.7 4.2 19.8'],
+  bewoelkt: ['M7 18h9.5a4 4 0 0 0 .5-8 6 6 0 0 0-11.4 1.6A3.5 3.5 0 0 0 7 18z'],
+  regen: ['M7 15h9.5a4 4 0 0 0 .5-8 6 6 0 0 0-11.4 1.6A3.5 3.5 0 0 0 7 15z',
+    'M8 18l-1 3', 'M12 18l-1 3', 'M16 18l-1 3'],
+  schnee: ['M7 15h9.5a4 4 0 0 0 .5-8 6 6 0 0 0-11.4 1.6A3.5 3.5 0 0 0 7 15z',
+    'M8 19h.01', 'M12 21h.01', 'M16 19h.01', 'M10 21h.01', 'M14 19h.01'],
+  sturm: ['M4 9h11a3 3 0 1 0-3-3', 'M4 13h13a3 3 0 1 1-3 3', 'M4 17h6'],
+  frost: ['M12 3v18', 'M4.5 7.5l15 9', 'M19.5 7.5l-15 9', 'M12 7l-2.5-2.5',
+    'M12 7l2.5-2.5', 'M12 17l-2.5 2.5', 'M12 17l2.5 2.5'],
+
   // Kontakte
   firma: ['M3 21h18', 'M5 21V6l7-3 7 3v15', 'M9 9h2', 'M13 9h2', 'M9 13h2', 'M13 13h2', 'M10 21v-4h4v4'],
   person: ['M12 4a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z', 'M5 21v-1a7 7 0 0 1 14 0v1'],
@@ -132,6 +146,16 @@ export const dokumentZeichen = (art) => suche(DOKUMENTE, art, 'blatt');
  * Steht ein Gewerk dabei, sagt dessen Zeichen mehr als ein Haus oder ein
  * Kopf: In einer Liste von zwanzig Firmen sucht man den Elektriker.
  */
+/**
+ * Das Zeichen zu einer Wetterlage.
+ *
+ * Die Lagen sind dieselben wie im Bautagebuch. Eine eigene Einteilung waere
+ * eine zweite Wahrheit darueber, was gerade draussen los ist.
+ */
+export const wetterZeichen = (lage) =>
+  ({ sonnig: 'sonnig', bewoelkt: 'bewoelkt', regen: 'regen',
+    schnee: 'schnee', sturm: 'sturm', frost: 'frost' }[lage] || 'bewoelkt');
+
 export const kontaktZeichen = (kontakt) => {
   if (kontakt && kontakt.gewerk) return gewerkZeichen(kontakt.gewerk);
   return kontakt && kontakt.art === 'helfer' ? 'person' : 'firma';

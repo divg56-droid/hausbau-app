@@ -9,7 +9,8 @@
 // kostet das nichts und kann dafuer nicht veralten.
 
 import {
-  el, eur, knopf, karte, kopfzeile, hinweisKasten, datumLang, heute, zahl,
+  el, eur, knopf, karte, kopfzeile, hinweisKasten, datumLang, heute, zahl, fuellen,
+  anhaengen,
 } from '../hilfen.js';
 import { daten, einstellung } from '../daten.js';
 import { finanzierungsstand } from './finanzierung.js';
@@ -18,6 +19,7 @@ import { terminePlanen } from './ablauf.js';
 import { STATUS } from './maengel.js';
 import { leitfadenStand } from '../leitfaden-daten.js';
 import { bauweise } from '../bauweise.js';
+import { zeichen, wetterZeichen } from '../zeichen.js';
 import { todoStand, todosSortieren } from './todos.js';
 
 export async function zeige(rahmen) {
@@ -43,7 +45,8 @@ export async function zeige(rahmen) {
   const mehr = gerechnet.reduce((s, p) => s + p.differenz, 0);
   const rest = stand.gesamt - auftrag;
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     kopfzeile(
       projekt || 'Dein Bauprojekt',
       stand.gesamt > 0 || posten.length
@@ -55,7 +58,8 @@ export async function zeige(rahmen) {
   // Erst gar nichts erfasst: Dann hilft keine Kennzahl, sondern ein Weg hinein.
   if (!stand.posten.length && !posten.length && !aufgaben.length && !maengel.length &&
       !todos.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         el('h2', { text: 'Fang mit dem Geld an' }),
         el('p', {
@@ -71,12 +75,14 @@ export async function zeige(rahmen) {
         'Links in der Leiste stehen alle Bereiche. Auf dem Telefon öffnest du sie ' +
           'oben links über das Menü.',
         'info'
-      )
+      ),
+      wetterkarte()
     );
     return;
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     el('div', { klasse: 'kennzahlen' }, [
       kennzahl('Budget', eur.format(stand.gesamt)),
       kennzahl('Geplante Kosten', eur.format(geplant)),
@@ -86,8 +92,11 @@ export async function zeige(rahmen) {
     ])
   );
 
+  anhaengen(rahmen, wetterkarte());
+
   const lfAnteil = Math.round((leitfaden.erledigt / leitfaden.gesamt) * 100);
-  rahmen.append(
+  anhaengen(
+    rahmen,
     karte([
       el('h2', { text: 'Bauleitfaden' }),
       el('p', {
@@ -113,7 +122,8 @@ export async function zeige(rahmen) {
 
   if (stand.gesamt > 0) {
     const anteil = Math.min(100, (auftrag / stand.gesamt) * 100);
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         el('h2', { text: 'Restbudget' }),
         el('div', { klasse: 'fortschrittsbalken' }, [
@@ -140,7 +150,8 @@ export async function zeige(rahmen) {
   const todoZahlen = todoStand(todos, heute());
   if (todoZahlen.offen) {
     const naechsteTodos = todosSortieren(todos.filter((t) => !t.erledigt)).slice(0, 4);
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         el('h2', { text: 'Offene To-Dos' }),
         el('p', {
@@ -185,7 +196,8 @@ export async function zeige(rahmen) {
   const fertig = geplantTermine.filter((a) => a.status === 'fertig').length;
 
   if (aufgaben.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         el('h2', { text: 'Bauablauf' }),
         el('p', {
@@ -220,7 +232,8 @@ export async function zeige(rahmen) {
       .sort((a, b) => a.frist.localeCompare(b.frist));
     const ueberfaellig = mitFrist.filter((m) => m.frist < heute());
 
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         el('h2', { text: 'Offene Mängel' }),
         el('p', {
@@ -261,7 +274,8 @@ export async function zeige(rahmen) {
     const letzter = [...tagebuch].sort((a, b) => String(b.datum).localeCompare(String(a.datum)))[0];
     const stunden = tagebuch.reduce(
       (s, e) => s + (e.helfer || []).reduce((x, h) => x + (Number(h.stunden) || 0), 0), 0);
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         el('h2', { text: 'Bauhelfertagebuch' }),
         el('p', {
@@ -273,6 +287,153 @@ export async function zeige(rahmen) {
       ])
     );
   }
+}
+
+// ------------------------------------------------------------------ Wetter
+//
+// Das Wetter auf der Baustelle, nicht am Wohnort. Es entscheidet, ob heute
+// betoniert, gedeckt oder geputzt wird, und ob ein Kran stillsteht.
+//
+// Die Karte steht auch dann da, wenn keine Adresse hinterlegt ist -- dann
+// sagt sie, was sie zeigen wuerde. Ein Bildschirm, auf dem etwas fehlt,
+// erklaert besser als einer, auf dem nichts steht.
+
+const WETTERNAMEN = {
+  sonnig: 'Sonnig', bewoelkt: 'Bewölkt', regen: 'Regen',
+  sturm: 'Sturm', schnee: 'Schnee', frost: 'Frost',
+};
+
+// Einmal je Stunde reicht. Der Deutsche Wetterdienst misst stuendlich, und
+// oefter zu fragen belastet nur einen fremden Dienst, den wir umsonst nutzen.
+const HALTBAR = 60 * 60 * 1000;
+
+/**
+ * Baut die Wetterkarte und traegt die Werte nach, sobald sie da sind.
+ *
+ * Die Karte wird sofort zurueckgegeben und fuellt sich danach: Der ganze
+ * Bildschirm auf eine fremde Netzantwort warten zu lassen waere der falsche
+ * Tausch, gerade auf der Baustelle mit einem Balken Empfang.
+ */
+function wetterkarte() {
+  const inhalt = el('div');
+  const karteInhalt = karte([el('h2', { text: 'Wetter auf der Baustelle' }), inhalt]);
+
+  inhalt.append(el('p', { klasse: 'unterzeile', text: 'Wird geholt …' }));
+
+  (async () => {
+    const ort = (await einstellung('baustelle')) || {};
+
+    if (!ort.lat || !ort.lon) {
+      inhalt.replaceChildren(
+        el('p', {
+          klasse: 'unterzeile',
+          text: 'Trage die Adresse deiner Baustelle ein, dann siehst du hier das ' +
+            'aktuelle Wetter — und im Bautagebuch trägt es sich von allein ein.',
+        }),
+        knopf('Projektadresse eintragen', () => { location.hash = '#/einstellungen'; }, 'knopf-haupt')
+      );
+      return;
+    }
+
+    const stand = await wetterStand(ort);
+    if (!stand) {
+      inhalt.replaceChildren(
+        el('p', {
+          klasse: 'unterzeile',
+          text: 'Der Wetterdienst ist gerade nicht erreichbar. Ohne Empfang auf der ' +
+            'Baustelle ist das normal.',
+        })
+      );
+      return;
+    }
+
+    const w = stand.wetter;
+    const hinweis = wetterHinweisText(w);
+
+    fuellen(
+      inhalt,
+      el('div', { klasse: 'wetterkopf' }, [
+        el('span', { klasse: 'wetterzeichen' }, [zeichen(wetterZeichen(w.wetter), { groesse: 46 })]),
+        el('div', {}, [
+          el('span', { klasse: 'wettergrad', text: zahl(w.temperatur, 0) + ' °C' }),
+          el('span', { klasse: 'wetterlage', text: WETTERNAMEN[w.wetter] || w.wetter }),
+        ]),
+      ]),
+      el('p', {
+        klasse: 'unterzeile',
+        text: [
+          w.min !== null && w.max !== null ? `${zahl(w.min, 0)} bis ${zahl(w.max, 0)} °C` : null,
+          w.niederschlag ? `${zahl(w.niederschlag, 1)} mm Niederschlag` : 'kein Niederschlag',
+          w.wind ? `Wind bis ${zahl(w.wind, 0)} km/h` : null,
+        ].filter(Boolean).join(' · '),
+      }),
+      el('p', {
+        klasse: 'unterzeile leise',
+        text: [
+          ort.name || ort.ort,
+          w.station ? 'Station ' + w.station : null,
+          stand.alt ? 'Stand ' + stand.alt : null,
+        ].filter(Boolean).join(' · '),
+      }),
+      hinweis ? hinweisKasten(hinweis, 'warn') : null,
+      knopf('Ins Bautagebuch übernehmen', () => { location.hash = '#/tagebuch'; }, 'knopf-leise')
+    );
+  })();
+
+  return karteInhalt;
+}
+
+/**
+ * Holt das Wetter, hoechstens einmal je Stunde.
+ *
+ * Der letzte Wert bleibt gespeichert. Ohne Netz ist ein Wert von vorhin
+ * besser als keiner -- er steht dann mit seinem Alter da, damit niemand ihn
+ * fuer den jetzigen haelt.
+ */
+async function wetterStand(ort) {
+  const gemerkt = (await einstellung('wetter_stand')) || null;
+  const jetzt = Date.now();
+  const passt = gemerkt
+    && gemerkt.lat === ort.lat && gemerkt.lon === ort.lon
+    && gemerkt.datum === heute();
+
+  if (passt && jetzt - gemerkt.geholt < HALTBAR) {
+    return { wetter: gemerkt.wetter, alt: null };
+  }
+
+  try {
+    const { wetterHolen } = await import('../wetter.js');
+    const wetter = await wetterHolen(ort.lat, ort.lon, heute());
+    await einstellung('wetter_stand', {
+      lat: ort.lat, lon: ort.lon, datum: heute(), geholt: jetzt, wetter,
+    });
+    return { wetter, alt: null };
+  } catch {
+    // Ohne Netz der letzte bekannte Wert, mit seinem Alter davor.
+    if (!gemerkt) return null;
+    const stunden = Math.round((jetzt - gemerkt.geholt) / 3600000);
+    return {
+      wetter: gemerkt.wetter,
+      alt: gemerkt.datum === heute() && stunden < 24
+        ? (stunden < 1 ? 'von eben' : 'von vor ' + stunden + ' Stunden')
+        : 'vom ' + datumLang(gemerkt.datum),
+    };
+  }
+}
+
+/** Der Satz, der auf der Baustelle zaehlt: Ruht die Arbeit? */
+function wetterHinweisText(w) {
+  if (w.wetter === 'sturm') {
+    return `Böen bis ${zahl(w.wind, 0)} km/h. Kran- und Gerüstarbeiten ruhen üblicherweise.`;
+  }
+  if (w.wetter === 'frost') {
+    return `Frost bis ${zahl(w.min, 0)} °C. Beton, Mörtel und Putz brauchen Schutz oder Pause.`;
+  }
+  if (w.wetter === 'schnee') return 'Schnee. Zufahrt und Gerüst prüfen, bevor jemand kommt.';
+  if (w.wetter === 'regen' && w.niederschlag >= 5) {
+    return `${zahl(w.niederschlag, 1)} mm Regen. Estrich, Putz und Malerarbeiten im Freien warten.`;
+  }
+  return '';
 }
 
 function kennzahl(name, wert, klasse) {

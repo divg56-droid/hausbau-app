@@ -11,6 +11,7 @@
 import {
   el, eur, zahl, feld, zahlfeld, auswahl, knopf, karte, kopfzeile, wertzeile,
   hinweisKasten, zuZahl,
+  anhaengen,
 } from '../hilfen.js';
 import { einstellung } from '../daten.js';
 import { LAENDER } from './baukosten.js';
@@ -156,7 +157,8 @@ async function zeigeNebenkosten(rahmen) {
     f.addEventListener('change', rechnen);
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     kopfzeile('Kaufnebenkosten', 'Was zum Kaufpreis dazukommt, bevor irgendetwas gebaut ist.'),
     karte([
       feld('Kaufpreis in €', preis, 'Grundstück oder Bestandshaus, so wie er im Vertrag steht.'),
@@ -239,7 +241,8 @@ async function zeigeBebauung(rahmen) {
     f.addEventListener('change', rechnen);
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     kopfzeile('Bebauung: GRZ und GFZ', 'Was auf das Grundstück überhaupt darf.'),
     karte([
       feld('Grundstücksfläche in m²', flaeche),
@@ -346,7 +349,8 @@ async function zeigeKredite(rahmen) {
     f.addEventListener('change', rechnen);
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     kopfzeile('Kreditvergleich', 'Dieselbe Summe, verschiedene Angebote.'),
     karte([
       feld('Darlehensbetrag in €', betrag),

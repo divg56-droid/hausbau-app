@@ -15,6 +15,7 @@
 import {
   el, feld, eingabe, auswahl, knopf, karte, kopfzeile, hinweisKasten,
   leerzustand, melde, datumLang, heute,
+  anhaengen,
 } from '../hilfen.js';
 import { daten, bildUrl, bildLoeschen, einstellung } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -33,12 +34,14 @@ async function zeichne(rahmen) {
 
   const bilder = eintraege.reduce((s, e) => s + (e.bildIds || []).length, 0);
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     kopfzeile('Baudokumentation', 'Wie das Haus aussah, Bauabschnitt für Bauabschnitt.')
   );
 
   if (!eintraege.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         leerzustand(
           'Noch keine Aufnahme',
@@ -57,7 +60,8 @@ async function zeichne(rahmen) {
     return;
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     karte([
       el('h2', { text: 'Stand' }),
       el('p', {
@@ -82,7 +86,8 @@ async function zeichne(rahmen) {
     if (!drin.length) continue;
     drin.sort((a, b) => String(b.datum || '').localeCompare(String(a.datum || '')));
 
-    rahmen.append(
+    anhaengen(
+      rahmen,
       el('details', { klasse: 'karte phasenblock', open: true }, [
         el('summary', {}, [
           el('span', { klasse: 'phasen-titel', text: phase }),
@@ -96,7 +101,8 @@ async function zeichne(rahmen) {
     );
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     knopf('Baudokumentation als PDF', () => pdfErzeugen(eintraege), 'knopf-leise')
   );
 }

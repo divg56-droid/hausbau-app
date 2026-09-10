@@ -37,6 +37,24 @@ export function el(tag, eigenschaften = {}, kinder = []) {
   return knoten;
 }
 
+/**
+ * Haengt Kinder an und laesst weg, was keines ist.
+ *
+ * el() ueberspringt null von sich aus, append() und replaceChildren() nicht:
+ * Dort wird aus null das Wort "null" mitten im Text. Wer eine Bedingung im
+ * Anhaengen hat, nimmt deshalb diese Funktion.
+ */
+export function anhaengen(knoten, ...kinder) {
+  knoten.append(...kinder.flat().filter((k) => k !== null && k !== undefined && k !== false));
+  return knoten;
+}
+
+/** Ersetzt den Inhalt und laesst dabei weg, was kein Kind ist. */
+export function fuellen(knoten, ...kinder) {
+  knoten.replaceChildren();
+  return anhaengen(knoten, ...kinder);
+}
+
 export const leeren = (knoten) => {
   while (knoten.firstChild) knoten.removeChild(knoten.firstChild);
   return knoten;

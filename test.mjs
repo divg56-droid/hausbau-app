@@ -27,7 +27,7 @@ import {
 import { csvText, zelle } from './www/csv.js';
 import {
   ZEICHENNAMEN, ZUORDNUNGEN, raumZeichen, gewerkZeichen, dokumentZeichen,
-  kontaktZeichen,
+  kontaktZeichen, wetterZeichen,
 } from './www/zeichen.js';
 import { xlsxBytes, spalte } from './www/xlsx.js';
 import {
@@ -1528,8 +1528,16 @@ console.log('Zeichen');
   pruef('Auch ohne Namen kommt ein Zeichen', raumZeichen(null) === 'haus');
 
   // Jedes Zeichen muss auch benutzt werden, sonst ist es toter Text.
+  // Die Wetterlagen kommen aus dem Bautagebuch und stehen deshalb nicht in
+  // den Zuordnungslisten; benutzt werden sie trotzdem.
+  const LAGEN = ['sonnig', 'bewoelkt', 'regen', 'sturm', 'schnee', 'frost'];
+  pruef('Jede Wetterlage hat ihr Zeichen',
+    LAGEN.every((l) => ZEICHENNAMEN.includes(wetterZeichen(l))));
+  pruef('Eine unbekannte Lage bekommt die Wolke', wetterZeichen('nebel') === 'bewoelkt');
+
   const benutzt = new Set([
     ...Object.values(ZUORDNUNGEN).flatMap((l) => l.map(([, z]) => z)),
+    ...LAGEN.map((l) => wetterZeichen(l)),
     'haus', 'werkzeug', 'blatt', 'firma', 'person',
   ]);
   const unbenutzt = ZEICHENNAMEN.filter((z) => !benutzt.has(z));
@@ -1556,6 +1564,67 @@ console.log('Zeichen');
     pruef(was + ' zeigen Zeichen',
       readFileSync('./www/module/' + datei + '.js', 'utf8').includes("from '../zeichen.js'"));
   }
+}
+
+console.log('Wetter auf der Startseite');
+{
+  const u = readFileSync('./www/module/uebersicht.js', 'utf8');
+  // Auch ohne Adresse muss die Karte dastehen und sagen, was sie zeigen
+  // wuerde. Ein Bildschirm, auf dem etwas fehlt, erklaert besser als einer,
+  // auf dem nichts steht.
+  pruef('Ohne Adresse fragt die Karte nach ihr',
+    u.includes('Projektadresse eintragen'));
+  pruef('Die Karte steht auch im leeren Projekt',
+    (u.match(/wetterkarte\(\)/g) || []).length >= 3);
+  // Einmal je Stunde reicht: Der DWD misst stuendlich, und oefter zu fragen
+  // belastet einen fremden Dienst, den wir umsonst nutzen.
+  pruef('Gefragt wird hoechstens stuendlich',
+    u.includes('const HALTBAR = 60 * 60 * 1000;'));
+  // Ohne Netz ist ein Wert von vorhin besser als keiner -- aber nur mit
+  // seinem Alter davor, sonst haelt ihn jemand fuer den jetzigen.
+  pruef('Der letzte Wert bleibt, mit seinem Alter',
+    u.includes("'von vor ' + stunden + ' Stunden'"));
+  // Der ganze Bildschirm darf nicht auf eine fremde Netzantwort warten.
+  pruef('Die Karte fuellt sich nach', u.includes("text: 'Wird geholt …'"));
+  pruef('Der gemerkte Wert haengt am Projekt',
+    readFileSync('./www/daten.js', 'utf8').includes("'wetter_stand'"));
+  // Dieselbe Einteilung wie im Tagebuch, sonst sieht dasselbe Wetter an zwei
+  // Stellen verschieden aus.
+  const w = readFileSync('./www/wetter.js', 'utf8');
+  for (const lage of ['sturm', 'schnee', 'regen', 'frost']) {
+    pruef('Das Tagebuch kennt die Lage ' + lage, w.includes("'" + lage + "'"));
+  }
+}
+
+console.log('Anhaengen und Anordnung');
+{
+  // el() ueberspringt null von sich aus, append() und replaceChildren()
+  // nicht: Dort wird aus null das Wort "null" mitten im Text. Deshalb geht
+  // das Anhaengen in den Modulen ueber die Helfer.
+  const h = readFileSync('./www/hilfen.js', 'utf8');
+  pruef('Es gibt einen Helfer, der null ueberspringt', h.includes('export function anhaengen'));
+  pruef('Und einen zum Ersetzen', h.includes('export function fuellen'));
+
+  const roh = [];
+  for (const datei of readdirSync('./www/module')) {
+    const t = readFileSync('./www/module/' + datei, 'utf8');
+    // rahmen.append() ohne Argumente ist harmlos, mit Argumenten nicht.
+    if (/\brahmen\.append\(\s*[^)\s]/.test(t)) roh.push(datei);
+  }
+  pruef('Kein Modul haengt roh an den Rahmen an', roh.length === 0, roh.join(', '));
+
+  // Auf dem Telefon untereinander, daneben nebeneinander -- und zwar ohne
+  // dass jedes Modul sich eine eigene Anordnung baut.
+  const css = readFileSync('./www/stil.css', 'utf8');
+  pruef('Die Karten ordnen ihre Felder selbst',
+    css.includes('.karte > .feld, .blatt > .feld'));
+  pruef('Und alles andere nimmt die ganze Breite',
+    css.includes('.karte > *, .blatt > * { flex: 1 1 100%; min-width: 0; }'));
+  pruef('Erst ab einem Bildschirm, nicht auf dem Telefon',
+    css.includes('@media (min-width: 760px)'));
+  pruef('Die Phasen des Leitfadens stehen in einem Gitter',
+    css.includes('.phasengitter') &&
+    readFileSync('./www/module/leitfaden.js', 'utf8').includes("klasse: 'phasengitter'"));
 }
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');

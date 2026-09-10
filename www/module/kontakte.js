@@ -13,6 +13,7 @@
 import {
   el, feld, eingabe, auswahl, knopf, karte, kopfzeile, leerzustand,
   hinweisKasten, melde,
+  anhaengen,
 } from '../hilfen.js';
 import { daten } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -66,10 +67,11 @@ async function zeigePersonen(rahmen, art, neu) {
     .filter((k) => (k.art || 'firma') === art)
     .sort((a, b) => a.name.localeCompare(b.name, 'de'));
 
-  rahmen.append(kopfzeile(was.titel, was.unter));
+  anhaengen(rahmen, kopfzeile(was.titel, was.unter));
 
   if (!drin.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         leerzustand(was.leer, was.leerText),
         knopf(was.knopf, () => bearbeiten({ art }, neu), 'knopf-haupt'),
@@ -78,7 +80,8 @@ async function zeigePersonen(rahmen, art, neu) {
     return;
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     karte([
       el('ul', { klasse: 'liste' }, drin.map((k) =>
         el('li', {}, [
@@ -201,7 +204,8 @@ async function zeigeGewerke(rahmen, neu) {
     if (e.key === 'Enter') { e.preventDefault(); anlegen(); }
   });
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     kopfzeile('Gewerke', 'Die Liste, aus der Positionen, Mängel und Kontakte wählen.'),
     karte([
       el('ul', { klasse: 'liste' }, gewerke.map((g) => {

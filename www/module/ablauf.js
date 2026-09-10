@@ -8,6 +8,7 @@
 import {
   el, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile, hinweisKasten,
   leerzustand, zuZahl, melde, datumLang, heute,
+  anhaengen,
 } from '../hilfen.js';
 import { daten, einstellung } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -183,10 +184,11 @@ async function zeichne(rahmen, ansicht = 'liste') {
   ]);
   const neu = () => zeichne(rahmen, ansicht);
 
-  rahmen.append(kopfzeile('Bauablauf', 'Was muss zuerst, was kann parallel, was später.'));
+  anhaengen(rahmen, kopfzeile('Bauablauf', 'Was muss zuerst, was kann parallel, was später.'));
 
   if (!roh.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         leerzustand(
           'Starte mit einer Vorlage',
@@ -209,7 +211,8 @@ async function zeichne(rahmen, ansicht = 'liste') {
   const offen = aufgaben.filter((a) => a.status !== 'fertig').length;
   const ende = aufgaben.map((a) => a.ende).filter(Boolean).sort().pop();
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     el('div', { klasse: 'geschossleiste' }, [
       ['liste', 'Liste'],
       ['balken', 'Balkenplan'],
@@ -222,7 +225,8 @@ async function zeichne(rahmen, ansicht = 'liste') {
     ))
   );
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     karte([
       el('h2', { text: 'Stand' }),
       el('p', {
@@ -237,10 +241,10 @@ async function zeichne(rahmen, ansicht = 'liste') {
   );
 
   if (aufgaben.some((a) => a.ring)) {
-    rahmen.append(hinweisKasten('Zwei Aufgaben verweisen im Kreis aufeinander. Bitte einen Vorgänger lösen.', 'warn'));
+    anhaengen(rahmen, hinweisKasten('Zwei Aufgaben verweisen im Kreis aufeinander. Bitte einen Vorgänger lösen.', 'warn'));
   }
   if (aufgaben.every((a) => !a.start)) {
-    rahmen.append(hinweisKasten('Noch kein Startdatum gesetzt. Trage es bei der ersten Aufgabe ein, der Rest rechnet sich daraus.', 'info'));
+    anhaengen(rahmen, hinweisKasten('Noch kein Startdatum gesetzt. Trage es bei der ersten Aufgabe ein, der Rest rechnet sich daraus.', 'info'));
   }
 
   if (ansicht === 'balken') {
@@ -253,7 +257,8 @@ async function zeichne(rahmen, ansicht = 'liste') {
 
   for (const phase of [...phasen, ...rest]) {
     const drin = aufgaben.filter((a) => a.phase === phase);
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         el('h2', { text: phase }),
         el('ul', { klasse: 'liste' }, drin.map((a) => {
@@ -284,7 +289,8 @@ async function zeichne(rahmen, ansicht = 'liste') {
     );
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     knopf('Arbeitsschritt hinzufügen', () => aufgabeBearbeiten({ status: 'offen' }, roh, kontakte, maengel, neu), 'knopf-haupt'),
     knopf('Plan als PDF teilen', () => pdfErzeugen(aufgaben, kontakte))
   );
@@ -302,7 +308,8 @@ function zeigeBalken(rahmen, aufgaben, roh, kontakte, maengel, neu) {
   const plan = balkenPlan(aufgaben);
 
   if (!plan.zeilen.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         leerzustand(
           'Noch keine Termine',
@@ -366,7 +373,8 @@ function zeigeBalken(rahmen, aufgaben, roh, kontakte, maengel, neu) {
       : null,
   ]);
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     karte([
       el('h2', { text: 'Balkenplan' }),
       el('p', {
@@ -393,7 +401,8 @@ function zeigeBalken(rahmen, aufgaben, roh, kontakte, maengel, neu) {
   );
 
   if (plan.ohneTermin.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       hinweisKasten(
         (plan.ohneTermin.length === 1
           ? 'Ein Arbeitsschritt hat keinen Termin und steht deshalb nicht im Balken: '
@@ -404,7 +413,8 @@ function zeigeBalken(rahmen, aufgaben, roh, kontakte, maengel, neu) {
     );
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     knopf('Balkenplan als PDF teilen', () => balkenPdf(plan), 'knopf-haupt'),
     knopf('Plan als Tabelle teilen', () => pdfErzeugen(aufgaben, kontakte), 'knopf-leise')
   );

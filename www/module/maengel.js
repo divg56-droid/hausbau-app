@@ -8,6 +8,7 @@
 import {
   el, feld, eingabe, auswahl, knopf, karte, kopfzeile, hinweisKasten,
   leerzustand, melde, datumLang, heute,
+  anhaengen,
 } from '../hilfen.js';
 import { daten, bildUrl, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -40,10 +41,11 @@ async function zeichne(rahmen, filter = 'alle') {
   const [maengel, kontakte] = await Promise.all([daten.alle('maengel'), daten.alle('kontakte')]);
   const neu = () => zeichne(rahmen, filter);
 
-  rahmen.append(kopfzeile('Mängelliste', 'Jeder Schaden mit Foto, Raum, Gewerk und Status.'));
+  anhaengen(rahmen, kopfzeile('Mängelliste', 'Jeder Schaden mit Foto, Raum, Gewerk und Status.'));
 
   if (!maengel.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         leerzustand(
           'Halte den ersten Mangel fest',
@@ -68,7 +70,8 @@ async function zeichne(rahmen, filter = 'alle') {
     behoben: maengel.filter((m) => m.status === 'behoben').length,
   };
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     el('div', { klasse: 'geschossleiste' }, [
       ['alle', `Alle (${zahlen.alle})`],
       ['offen', `Offen (${zahlen.offen})`],
@@ -91,12 +94,13 @@ async function zeichne(rahmen, filter = 'alle') {
   const raeume = [...new Set(sichtbar.map((m) => m.raum || 'Ohne Raum'))].sort((a, b) => a.localeCompare(b, 'de'));
 
   if (!sichtbar.length) {
-    rahmen.append(karte([el('p', { klasse: 'unterzeile', text: 'In dieser Ansicht ist nichts.' })]));
+    anhaengen(rahmen, karte([el('p', { klasse: 'unterzeile', text: 'In dieser Ansicht ist nichts.' })]));
   }
 
   for (const raum of raeume) {
     const drin = sichtbar.filter((m) => (m.raum || 'Ohne Raum') === raum);
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         el('h2', { text: raum }),
         el('ul', { klasse: 'liste' }, await Promise.all(drin.map(async (m) => {
@@ -126,7 +130,8 @@ async function zeichne(rahmen, filter = 'alle') {
     );
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     knopf('Mangel erfassen', () => mangelBearbeiten({ status: 'offen' }, kontakte, neu), 'knopf-haupt'),
     knopf('Liste als PDF teilen', () => pdfErzeugen(maengel, kontakte)),
     knopf('Mängelrüge an eine Firma', () => ruegeBlatt(maengel, kontakte))

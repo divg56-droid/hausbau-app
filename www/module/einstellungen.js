@@ -2,6 +2,7 @@
 
 import {
   el, feld, eingabe, knopf, karte, kopfzeile, wertzeile, hinweisKasten, melde, heute,
+  anhaengen,
 } from '../hilfen.js';
 import { daten, einstellung } from '../daten.js';
 
@@ -45,7 +46,8 @@ async function zeichne(rahmen) {
     bestand[name] = (await daten.alle(name)).length;
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     kopfzeile('Einstellungen', 'Projekt, Datensicherung und Löschen.'),
 
     karte([
@@ -322,7 +324,8 @@ async function bauweisekarte() {
     ])
   ));
 
-  inhalt.append(
+  anhaengen(
+    inhalt,
     el('h3', { klasse: 'unterabschnitt', text: 'Eigenleistungen' }),
     el('p', {
       klasse: 'unterzeile',

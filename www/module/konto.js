@@ -7,6 +7,7 @@
 import {
   el, feld, eingabe, knopf, karte, kopfzeile, wertzeile,
   hinweisKasten, melde, datumLang,
+  anhaengen,
 } from '../hilfen.js';
 import { daten } from '../daten.js';
 import {
@@ -29,7 +30,7 @@ async function zeichne(rahmen, art = 'anmelden') {
     return;
   }
 
-  rahmen.append(kopfzeile('Konto', 'Angemeldet als ' + (epost() || '')));
+  anhaengen(rahmen, kopfzeile('Konto', 'Angemeldet als ' + (epost() || '')));
 
   // Bestand auf diesem Geraet
   const zahlen = {};
@@ -61,7 +62,8 @@ async function zeichne(rahmen, art = 'anmelden') {
     }
   }, 'knopf-haupt');
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     karte([
       el('h2', { text: 'Abgleich' }),
       anzeige,
@@ -179,7 +181,8 @@ function zeigeAnmeldung(rahmen, art, nachher) {
     });
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     kopfzeile('Konto', 'Damit App und Internetseite dieselben Daten zeigen.'),
 
     el('div', { klasse: 'geschossleiste' }, [

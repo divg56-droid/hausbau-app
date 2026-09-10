@@ -8,6 +8,7 @@
 import {
   el, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile,
   hinweisKasten, leerzustand, zuZahl, melde, datumLang, heute,
+  anhaengen,
 } from '../hilfen.js';
 import { daten, einstellung, bildUrl, bildAblegen, bildLoeschen } from '../daten.js';
 import { Blatt, pdfTeilen, bildLaden } from '../pdf.js';
@@ -37,10 +38,11 @@ async function zeichne(rahmen, gewaehltesGeschoss = null) {
     (a, b) => (a.reihenfolge ?? 0) - (b.reihenfolge ?? 0)
   );
 
-  rahmen.append(kopfzeile('Anschlussplan', 'Grundriss hochladen, Anschlüsse markieren.'));
+  anhaengen(rahmen, kopfzeile('Anschlussplan', 'Grundriss hochladen, Anschlüsse markieren.'));
 
   if (!geschosse.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         leerzustand(
           'Lade zuerst einen Grundriss',
@@ -67,7 +69,8 @@ async function zeichne(rahmen, gewaehltesGeschoss = null) {
   const neu = (id) => zeichne(rahmen, id ?? aktuell.id);
 
   // Geschossleiste
-  rahmen.append(
+  anhaengen(
+    rahmen,
     el('div', { klasse: 'geschossleiste' }, [
       ...geschosse.map((g) =>
         el('button', {
@@ -134,7 +137,8 @@ async function zeichne(rahmen, gewaehltesGeschoss = null) {
     setzenKnopf.className = setzenAktiv ? 'knopf-haupt' : 'knopf';
   });
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     karte([
       flaeche,
       el('p', { klasse: 'unterzeile', stil: { margin: '10px 0 0' }, text: `${pins.length} Markierungen in ${aktuell.name}` }),
@@ -144,7 +148,8 @@ async function zeichne(rahmen, gewaehltesGeschoss = null) {
 
   // Liste der Pins, damit man sie auch ohne Zielen findet
   if (pins.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         el('h2', { text: 'Markierungen in ' + aktuell.name }),
         el('ul', { klasse: 'liste' }, pins.map((pin) => {
@@ -174,7 +179,8 @@ async function zeichne(rahmen, gewaehltesGeschoss = null) {
     );
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     knopf('Alle Geschosse als PDF teilen', () => pdfErzeugen(geschosse)),
     karte([
       el('h2', { text: 'Geschoss ' + aktuell.name }),

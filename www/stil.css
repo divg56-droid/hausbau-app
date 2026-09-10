@@ -706,7 +706,7 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
 /* Die Aufgabe links, die Phasenliste rechts. Auf dem Telefon untereinander,
    dort ist fuer zwei Spalten kein Platz. */
 .wizard { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
-@media (min-width: 900px) {
+@media (min-width: 860px) {
   .wizard { grid-template-columns: minmax(0, 2fr) minmax(230px, 1fr); align-items: start; }
 }
 .wizard > .karte { margin-bottom: 0; }
@@ -760,6 +760,47 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
 }
 .leitfaden-zeile .knopf-schmal { white-space: nowrap; }
 .zeilen-aktionen { display: flex; gap: 8px; flex: none; margin-left: auto; }
+
+/* ------------------------------------------------ Kaesten statt Kolonnen
+
+   Auf dem Telefon steht alles untereinander, das ist dort richtig. Auf einem
+   Bildschirm daneben ist es Platzverschwendung: Sechs Eingabefelder in einer
+   Kolonne zwingen zum Rollen, obwohl rechts die halbe Karte leer bleibt.
+
+   Statt in jedem Modul eine eigene Anordnung zu bauen, ordnet sich hier alles
+   selbst: Die Karte wird zum umbrechenden Flusskasten, alles darin nimmt
+   standardmaessig die ganze Breite -- Ueberschriften, Balken, Tabellen,
+   Knoepfe -- und nur die Dinge, die nebeneinander Sinn ergeben, bekommen eine
+   Grundbreite. Reicht die Zeile nicht, brechen sie von allein um. */
+
+@media (min-width: 760px) {
+  .karte, .blatt {
+    display: flex; flex-wrap: wrap; align-items: flex-start; column-gap: 16px;
+  }
+  .karte > *, .blatt > * { flex: 1 1 100%; min-width: 0; }
+
+  /* Eingabefelder: zwei bis drei je Zeile, je nach Platz. */
+  .karte > .feld, .blatt > .feld, .felderblock > .feld { flex: 1 1 250px; }
+
+  /* Zahlenzeilen und Balken der Statistiken, ebenfalls nebeneinander. */
+  .karte > .balkenzeile { flex: 1 1 300px; }
+  .karte > .wertzeile { flex: 1 1 280px; }
+
+  /* Die Phasen des Leitfadens in zwei Spalten, statt sechs Bloecke
+     untereinander. */
+  .phasengitter {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 12px; align-items: start;
+  }
+  .phasengitter > .karte { margin-bottom: 0; }
+}
+
+/* Wetterkarte: Zeichen und Grad nebeneinander, gross genug fuer einen Blick
+   im Vorbeigehen. */
+.wetterkopf { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+.wetterzeichen { flex: none; color: var(--akzent-dunkel); }
+.wettergrad { display: block; font-size: 30px; font-weight: 700; line-height: 1.1; }
+.wetterlage { display: block; font-size: 14px; color: var(--tinte-leise); }
 
 /* Zeichen stehen in der Schriftfarbe und tragen sie mit: In einer
    markierten Zeile wechseln sie mit, ohne eine eigene Regel zu brauchen. */

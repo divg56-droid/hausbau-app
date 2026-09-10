@@ -5,7 +5,10 @@
 // hier mitgezogen werden - deshalb stehen die Zahlen offen im Kopf der Datei
 // und nicht verstreut im Code.
 
-import { el, eur, zahl, feld, zahlfeld, auswahl, knopf, karte, kopfzeile, wertzeile, hinweisKasten, zuZahl, melde } from '../hilfen.js';
+import {
+  el, eur, zahl, feld, zahlfeld, auswahl, knopf, karte, kopfzeile, wertzeile,
+  hinweisKasten, zuZahl, melde, anhaengen,
+} from '../hilfen.js';
 import { einstellung } from '../daten.js';
 
 // Baukosten je m2 (schluesselfertig, Stand 08.2026) und Grunderwerbsteuer.
@@ -136,7 +139,8 @@ export async function zeige(rahmen) {
     f.addEventListener('input', rechne);
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     kopfzeile('Baukostenrechner', 'Sechs Angaben, daraus die vollständige Bausumme.'),
     karte([
       feld('Bundesland', landFeld),

@@ -16,6 +16,7 @@
 
 import {
   el, feld, auswahl, knopf, karte, kopfzeile, hinweisKasten, melde, datumLang, heute, zahl,
+  anhaengen,
 } from '../hilfen.js';
 import { daten, einstellung } from '../daten.js';
 import { leitfadenStand } from '../leitfaden-daten.js';
@@ -41,7 +42,8 @@ async function zeichne(rahmen) {
 
   const anteil = stand.gesamt ? Math.round((stand.erledigt / stand.gesamt) * 100) : 0;
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     kopfzeile(
       'Bauleitfaden',
       'Die Reihenfolge ist der Inhalt: Fast jeder teure Fehler kommt zu spät. ' +
@@ -200,10 +202,11 @@ function zeigeWizard(rahmen, stand, gemerkt, neu) {
     })),
   ]);
 
-  rahmen.append(el('div', { klasse: 'wizard' }, [aufgabe, uebersicht]));
+  anhaengen(rahmen, el('div', { klasse: 'wizard' }, [aufgabe, uebersicht]));
 
   if (!stand.naechster) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       hinweisKasten(
         'Alle Punkte des Leitfadens sind erledigt. Was jetzt noch kommt, steht in ' +
           'der Mängelliste und in den Gewährleistungsfristen.',
@@ -216,11 +219,17 @@ function zeigeWizard(rahmen, stand, gemerkt, neu) {
 // --------------------------------------------------------------- Alle Phasen
 
 function zeigeAllePhasen(rahmen, stand, neu) {
+  // Sechs Bloecke untereinander sind auf einem Bildschirm eine Kolonne mit
+  // viel Luft daneben. In zwei Spalten sieht man den ganzen Bau auf einmal.
+  const gitter = el('div', { klasse: 'phasengitter' });
+  anhaengen(rahmen, gitter);
+
   for (const phase of stand.phasen) {
     const anteil = Math.round((phase.fertig / phase.gesamt) * 100);
     const offen = phase.gesamt - phase.fertig;
 
-    rahmen.append(
+    anhaengen(
+      gitter,
       el('details', {
         klasse: 'karte phasenblock',
         // Die laufende Phase steht offen, die anderen zugeklappt. Sechs

@@ -362,6 +362,8 @@ const OHNE_PROJEKT = new Set(['einstellungen', 'projekte', 'bilder']);
 // stehen bleiben.
 const PROJEKTSACHEN = new Set([
   'projektname', 'baustelle', 'leitfaden_punkt', 'bauweise', 'eigenleistungen',
+  // Der gemerkte Wetterwert haengt an der Baustelle, also am Projekt.
+  'wetter_stand',
 ]);
 
 let aktivesProjekt = null;

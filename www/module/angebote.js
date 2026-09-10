@@ -12,6 +12,7 @@
 import {
   el, eur, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile,
   hinweisKasten, leerzustand, zuZahl, melde, datumLang, heute, zahl,
+  anhaengen,
 } from '../hilfen.js';
 import { daten, bildUrl, bildLoeschen, einstellung, neueKennung } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -126,10 +127,11 @@ async function zeichne(rahmen) {
   ]);
   const neu = () => zeichne(rahmen);
 
-  rahmen.append(kopfzeile('Angebote', 'Mehrere Angebote je Position nebeneinander legen.'));
+  anhaengen(rahmen, kopfzeile('Angebote', 'Mehrere Angebote je Position nebeneinander legen.'));
 
   if (!posten.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         leerzustand(
           'Erst die Positionen, dann die Angebote',
@@ -155,7 +157,8 @@ async function zeichne(rahmen) {
 
   const ohneZuordnung = angebote.filter((a) => !posten.some((p) => p.id === a.postenId));
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     karte([
       el('h2', { text: 'Angebot erfassen' }),
       knopf('Angebot hinzufügen', () =>
@@ -169,7 +172,8 @@ async function zeichne(rahmen) {
   );
 
   if (!jePosten.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       hinweisKasten(
         'Noch kein Angebot erfasst. Hol dir je Gewerk mindestens drei. Die Spanne ' +
           'zwischen dem günstigsten und dem teuersten Angebot liegt am Bau ' +
@@ -183,7 +187,8 @@ async function zeichne(rahmen) {
   const gesamtErsparnis = jePosten.reduce((s, g) => s + g.ersparnis, 0);
   const einzeln = jePosten.filter((g) => g.anzahl === 1);
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     karte([
       el('h2', { text: 'Stand' }),
       el('p', {
@@ -200,7 +205,8 @@ async function zeichne(rahmen) {
   );
 
   if (einzeln.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       hinweisKasten(
         `Zu ${einzeln.length} ${einzeln.length === 1 ? 'Position liegt' : 'Positionen liegt'} ` +
           'nur ein Angebot vor: ' + einzeln.map((g) => g.posten.name).join(', ') +
@@ -211,11 +217,12 @@ async function zeichne(rahmen) {
   }
 
   for (const gruppe of jePosten) {
-    rahmen.append(gruppenkarte(gruppe, posten, kontakte, neu));
+    anhaengen(rahmen, gruppenkarte(gruppe, posten, kontakte, neu));
   }
 
   if (ohneZuordnung.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       hinweisKasten(
         `${ohneZuordnung.length} Angebote hängen an einer gelöschten Position. ` +
           'Öffne sie und ordne sie neu zu.',
@@ -241,7 +248,8 @@ async function zeichne(rahmen) {
     );
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     knopf('Vergleich als PDF teilen', () => pdfErzeugen(jePosten, kontakte)),
     knopf('Angebote als CSV', () => csvErzeugen(angebote, posten, kontakte), 'knopf-leise')
   );

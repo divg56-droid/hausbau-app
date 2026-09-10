@@ -17,6 +17,7 @@
 import {
   el, feld, eingabe, auswahl, knopf, karte, kopfzeile, hinweisKasten,
   leerzustand, melde, datumLang, heute,
+  anhaengen,
 } from '../hilfen.js';
 import { daten, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -58,12 +59,14 @@ async function zeichne(rahmen) {
   const bezugsdaten = { maengel, posten, kontakte };
   const neu = () => zeichne(rahmen);
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     kopfzeile('Dokumente', 'Alles, was auf Papier kam, an einer Stelle und dabei.')
   );
 
   if (!dokumente.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         leerzustand(
           'Noch kein Dokument',
@@ -109,10 +112,11 @@ async function zeichne(rahmen) {
     return true;
   });
 
-  rahmen.append(el('div', { klasse: 'filterleiste' }, [artFeld, bezugFeld]));
+  anhaengen(rahmen, el('div', { klasse: 'filterleiste' }, [artFeld, bezugFeld]));
 
   if (!gefiltert.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         el('p', {
           klasse: 'unterzeile',
@@ -129,7 +133,8 @@ async function zeichne(rahmen) {
       .sort((a, b) => String(b.datum || '').localeCompare(String(a.datum || '')));
     if (!drin.length) continue;
 
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         el('h2', { klasse: 'mit-zeichen' }, [
           zeichen(dokumentZeichen(art), { groesse: 20 }),
@@ -172,7 +177,8 @@ async function zeichne(rahmen) {
     );
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     knopf('Dokument ablegen', () => bearbeiten({}, bezugsdaten, neu), 'knopf-haupt')
   );
 }

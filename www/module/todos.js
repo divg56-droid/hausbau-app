@@ -14,6 +14,7 @@
 import {
   el, feld, eingabe, knopf, karte, kopfzeile, hinweisKasten,
   leerzustand, melde, datumLang, heute,
+  anhaengen,
 } from '../hilfen.js';
 import { daten } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -69,7 +70,7 @@ function zeigeTodos(rahmen, todos, neu) {
     .filter((t) => t.erledigt)
     .sort((a, b) => String(b.am || '').localeCompare(String(a.am || '')));
 
-  rahmen.append(kopfzeile('To-Dos', 'Alles, was offen ist, nach Fälligkeit.'));
+  anhaengen(rahmen, kopfzeile('To-Dos', 'Alles, was offen ist, nach Fälligkeit.'));
 
   // Schnelleingabe steht oben: Eine Aufgabe schreibt man auf, waehrend man
   // noch auf der Baustelle steht, nicht in einem Formular mit acht Feldern.
@@ -86,7 +87,8 @@ function zeigeTodos(rahmen, todos, neu) {
     if (e.key === 'Enter') { e.preventDefault(); anlegen(); }
   });
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     karte([
       el('div', { klasse: 'filterleiste' }, [
         feldNeu,
@@ -100,7 +102,8 @@ function zeigeTodos(rahmen, todos, neu) {
   );
 
   if (!todos.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         leerzustand(
           'Noch nichts offen',
@@ -114,7 +117,8 @@ function zeigeTodos(rahmen, todos, neu) {
   }
 
   if (stand.ueberfaellig) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       hinweisKasten(
         stand.ueberfaellig === 1
           ? 'Eine Aufgabe ist überfällig.'
@@ -124,7 +128,8 @@ function zeigeTodos(rahmen, todos, neu) {
     );
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     karte([
       el('h2', { text: offen.length ? 'Offen (' + offen.length + ')' : 'Alles erledigt' }),
       offen.length
@@ -137,7 +142,8 @@ function zeigeTodos(rahmen, todos, neu) {
   );
 
   if (erledigt.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       el('details', { klasse: 'karte phasenblock' }, [
         el('summary', {}, [
           el('span', { klasse: 'phasen-titel', text: 'Erledigt' }),
@@ -156,12 +162,14 @@ function zeigeChecklisten(rahmen, todos, neu) {
     (a, b) => a.localeCompare(b, 'de')
   );
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     kopfzeile('Checklisten', 'Listen für einen Termin: abarbeiten, abhaken, weglegen.')
   );
 
   if (!listen.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         leerzustand(
           'Noch keine Checkliste',
@@ -179,7 +187,8 @@ function zeigeChecklisten(rahmen, todos, neu) {
     const fertig = drin.filter((t) => t.erledigt).length;
     const anteil = Math.round((fertig / drin.length) * 100);
 
-    rahmen.append(
+    anhaengen(
+      rahmen,
       el('details', {
         klasse: 'karte phasenblock',
         // Fertige Listen zugeklappt: Sie sind erledigt, sie sollen nur noch
@@ -205,7 +214,8 @@ function zeigeChecklisten(rahmen, todos, neu) {
 
   const offeneVorlagen = VORLAGEN.filter((v) => !listen.includes(v.titel));
   if (offeneVorlagen.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         el('h2', { text: 'Vorlagen' }),
         el('ul', { klasse: 'liste' }, offeneVorlagen.map((v) =>
@@ -223,7 +233,8 @@ function zeigeChecklisten(rahmen, todos, neu) {
     );
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     knopf('Eigene Liste anlegen', () => listeAnlegen(listen, neu), 'knopf-haupt')
   );
 }

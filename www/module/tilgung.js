@@ -6,6 +6,7 @@
 import {
   el, eur, zahl, feld, zahlfeld, auswahl, knopf, karte, kopfzeile,
   wertzeile, hinweisKasten, zuZahl, melde, datumLang, heute,
+  anhaengen,
 } from '../hilfen.js';
 import { einstellung } from '../daten.js';
 import { finanzierungsstand, ZINS_JE_BINDUNG } from './finanzierung.js';
@@ -231,7 +232,8 @@ export async function zeige(rahmen) {
     f.addEventListener('change', rechne);
   }
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     kopfzeile('Tilgungsverlauf', 'Restschuld, Raten und Gesamtlaufzeit deines Annuitätendarlehens.'),
     karte([
       knopf('Aus Baufinanzierung laden', async () => {

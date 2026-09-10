@@ -11,6 +11,7 @@
 import {
   el, feld, auswahl, knopf, karte, kopfzeile, hinweisKasten,
   leerzustand, melde, datumLang, heute, zahl, zuZahl,
+  anhaengen,
 } from '../hilfen.js';
 import { daten, einstellung, bildUrl, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -74,10 +75,11 @@ async function zeichne(rahmen) {
   const helfer = kontakte.filter((k) => k.art === 'helfer');
   const neu = () => zeichne(rahmen);
 
-  rahmen.append(kopfzeile('Bauhelfertagebuch', 'Täglich festhalten, wer da war und wie lange.'));
+  anhaengen(rahmen, kopfzeile('Bauhelfertagebuch', 'Täglich festhalten, wer da war und wie lange.'));
 
   if (!helfer.length && !eintraege.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         leerzustand(
           'Lege zuerst deine Helfer an',
@@ -102,7 +104,8 @@ async function zeichne(rahmen) {
   const jeHelfer = stundenJeHelfer(eintraege, kontakte);
   const gesamt = jeHelfer.reduce((s, h) => s + h.stunden, 0);
 
-  rahmen.append(
+  anhaengen(
+    rahmen,
     karte([
       el('h2', { text: 'Stand' }),
       el('p', {
@@ -119,7 +122,8 @@ async function zeichne(rahmen) {
   );
 
   if (jeHelfer.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         el('h2', { text: 'Stunden je Helfer' }),
         el('ul', { klasse: 'liste' }, jeHelfer.map((h) =>
@@ -155,7 +159,8 @@ async function zeichne(rahmen) {
   }
 
   if (sortiert.length) {
-    rahmen.append(
+    anhaengen(
+      rahmen,
       karte([
         el('h2', { text: 'Einträge' }),
         el('ul', { klasse: 'liste' }, await Promise.all(sortiert.map(async (e) => {
@@ -203,7 +208,7 @@ async function zeichne(rahmen) {
     );
   }
 
-  rahmen.append(freigabekarte());
+  anhaengen(rahmen, freigabekarte());
 }
 
 // ------------------------------------------------------- Oeffentliches Tagebuch
