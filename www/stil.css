@@ -16,8 +16,9 @@
   --warn: #b3261e;
   /* Zustandsfarbe, keine Markenfarbe: "laeuft" braucht einen Ton, der weder
      mit dem Gruen von "fertig" noch mit dem Petrol der Marke verwechselbar
-     ist. Frueher stand hier der Akzent, weil der zufaellig gelb war. */
-  --arbeit: #c98a1a;
+     ist. Kein Gold und kein Bernstein -- die Toene sollen nirgends mehr
+     vorkommen. */
+  --arbeit: #6a4fa3;
   --offen: #969eaa;
 
   /* Flaechen und Schrift der Plaketten und Kaesten. Frueher standen die
@@ -26,7 +27,7 @@
   --warn-flaeche: #fdecea;  --warn-schrift: #7f1d1a;
   --gut-flaeche: #e6f4ec;   --gut-schrift: #1e5c39;
   --info-flaeche: #e6eefc;  --info-schrift: #1e429f;
-  --arbeit-flaeche: #fff4de; --arbeit-schrift: #8a5a08;
+  --arbeit-flaeche: #efe9fa; --arbeit-schrift: #4a327d;
   --offen-flaeche: #fdecea; --offen-schrift: #9b2c22;
   /* Schrift auf einer Akzentflaeche. Im dunklen Design bleibt sie dunkel,
      weil der Akzent dort das helle Petrol ist. */
@@ -444,13 +445,13 @@ html:not([data-thema="hell"]) {
     --band: #1f2c30;
     --gut: #5fc98a;
     --warn: #ff8b80;
-    --arbeit: #e0a93c;
+    --arbeit: #b9a4e6;
     --offen: #7d8a95;
 
     --warn-flaeche: #3a1f1d;  --warn-schrift: #ffb3aa;
     --gut-flaeche: #17301f;   --gut-schrift: #86ddaa;
     --info-flaeche: #1b2740;  --info-schrift: #9dc0f5;
-    --arbeit-flaeche: #362a12; --arbeit-schrift: #f0c46a;
+    --arbeit-flaeche: #251f38; --arbeit-schrift: #cdbcf2;
     --offen-flaeche: #3a1f1d; --offen-schrift: #ffb3aa;
     --auf-akzent: #0c1416;
     --schleier: rgba(0, 0, 0, .62);
@@ -470,13 +471,13 @@ html[data-thema="dunkel"] {
   --band: #1f2c30;
   --gut: #5fc98a;
   --warn: #ff8b80;
-  --arbeit: #e0a93c;
+  --arbeit: #b9a4e6;
   --offen: #7d8a95;
 
   --warn-flaeche: #3a1f1d;  --warn-schrift: #ffb3aa;
   --gut-flaeche: #17301f;   --gut-schrift: #86ddaa;
   --info-flaeche: #1b2740;  --info-schrift: #9dc0f5;
-  --arbeit-flaeche: #362a12; --arbeit-schrift: #f0c46a;
+  --arbeit-flaeche: #251f38; --arbeit-schrift: #cdbcf2;
   --offen-flaeche: #3a1f1d; --offen-schrift: #ffb3aa;
   --auf-akzent: #0c1416;
   --schleier: rgba(0, 0, 0, .62);

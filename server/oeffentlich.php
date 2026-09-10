@@ -175,7 +175,7 @@ article p{margin:0 0 10px;white-space:pre-wrap}
  border:1px solid var(--linie);background:var(--papier)}
 footer{color:var(--leise);font-size:13px;margin-top:32px;border-top:1px solid var(--linie);
  padding-top:14px}
-footer a{color:#8a5a08}
+footer a{color:#0a5155}
 .leer{color:var(--leise)}
 </style>';
 }

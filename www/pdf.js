@@ -348,7 +348,7 @@ export class Blatt {
     this.y -= 22;
   }
 
-  /** Zwischentitel in Tintenfarbe, fuer Schreiben nach aussen. */
+  /** Zwischentitel im dunklen Petrol der Marke. */
   zwischentitel(text) {
     this.platz(28);
     this.y -= 4;
@@ -359,7 +359,7 @@ export class Blatt {
   ueberschrift(text) {
     this.platz(34);
     this.y -= 8;
-    this.schreibe(text, { groesse: 13, fett: true, farbe: [138, 90, 8] });
+    this.schreibe(text, { groesse: 13, fett: true, farbe: [10, 81, 85] });
     this.y -= 16;
   }
 
