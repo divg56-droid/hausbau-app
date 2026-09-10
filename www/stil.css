@@ -663,6 +663,38 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
 
 /* --------------------------------------------------------- Bauleitfaden */
 
+/* Die Aufgabe links, die Phasenliste rechts. Auf dem Telefon untereinander,
+   dort ist fuer zwei Spalten kein Platz. */
+.wizard { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+@media (min-width: 900px) {
+  .wizard { grid-template-columns: minmax(0, 2fr) minmax(230px, 1fr); align-items: start; }
+}
+.wizard > .karte { margin-bottom: 0; }
+.wizard-kopf { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.wizard-kopf select { flex: 1 1 220px; }
+.wizard-titel { margin: 16px 0 6px; }
+.wizard-text { white-space: pre-line; margin-bottom: 14px; }
+.wizard-fuss {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  border-top: 1px solid var(--linie); padding-top: 12px; margin-top: 4px;
+}
+.wizard-fuss .knopf, .wizard-fuss .knopf-haupt { flex: 1 1 125px; width: auto; margin: 0; }
+.wizard-fuss .knopf-haupt { flex-basis: 165px; }
+.wizard-fuss button[disabled] { opacity: .45; cursor: default; }
+
+/* Die Phasenliste: Nummer, Name, Stand. Die laufende Phase ist hervorgehoben. */
+.phasenliste .listenzeile { gap: 10px; }
+.phasenliste .listenzeile.aktiv { background: var(--band); }
+.phasen-zeichen {
+  flex: none; width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid var(--linie); display: inline-flex;
+  align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: var(--tinte-leise);
+}
+.phasen-zeichen.fertig {
+  background: var(--gut-flaeche); color: var(--gut-schrift); border-color: var(--gut-flaeche);
+}
+
 .phasenblock > summary {
   display: flex; align-items: center; gap: 12px;
   cursor: pointer; list-style: none; margin-bottom: 8px;

@@ -1292,5 +1292,32 @@ console.log('Datenbank haengt nicht stumm');
     d.includes('const VERDACHT = 3000;') && d.includes('dbZustand = DB_WARTET'));
 }
 
+console.log('Bauleitfaden als Wizard');
+{
+  const f = readFileSync('./www/module/leitfaden.js', 'utf8');
+  // Ohne gemerkte Stelle landet man nach jedem Wechsel wieder beim ersten
+  // offenen Punkt, auch wenn man gerade drei weiter gelesen hat.
+  pruef('Die Stelle im Leitfaden wird gemerkt',
+    f.includes("einstellung('leitfaden_punkt'"));
+  pruef('Und sie gehoert zum Projekt, nicht zum Geraet',
+    readFileSync('./www/daten.js', 'utf8')
+      .includes("['projektname', 'baustelle', 'leitfaden_punkt']"));
+  // Vor und zurueck laeuft ueber alle Punkte, nicht nur innerhalb der Phase:
+  // Sonst steht man am Phasenende vor einer Wand.
+  pruef('Die Punkte liegen fuer den Weg vor und zurueck flach',
+    f.includes('const flachLegen ='));
+  pruef('Abhaken rueckt eine Aufgabe weiter',
+    f.includes('await stelleMerken(flach[stelle + 1].id)'));
+  pruef('In eine Phase springt man auf ihren ersten offenen Punkt',
+    (f.match(/punkte\.find\(\(x?p?\) => !x?p?\.erledigt\)/g) || []).length >= 2 ||
+    f.includes('.punkte.find((p) => !p.erledigt)'));
+  pruef('Am Anfang und Ende geht es nicht weiter',
+    f.includes('disabled: stelle === 0') && f.includes('disabled: stelle >= flach.length - 1'));
+  // Ein Punkt, den es in der Vorlage nicht mehr gibt, darf nicht ins Leere
+  // zeigen.
+  pruef('Eine verschwundene Stelle faellt auf den naechsten offenen Punkt zurueck',
+    f.includes('if (stelle < 0)'));
+}
+
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');
 process.exit(fehler ? 1 : 0);

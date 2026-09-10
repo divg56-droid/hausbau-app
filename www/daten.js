@@ -360,7 +360,7 @@ const OHNE_PROJEKT = new Set(['einstellungen', 'projekte', 'bilder']);
 // Einstellungen, die zum Projekt gehoeren und nicht zum Geraet. Beim ersten
 // Projekt behalten sie ihren blanken Namen, damit die vorhandenen Werte
 // stehen bleiben.
-const PROJEKTSACHEN = new Set(['projektname', 'baustelle']);
+const PROJEKTSACHEN = new Set(['projektname', 'baustelle', 'leitfaden_punkt']);
 
 let aktivesProjekt = null;
 
