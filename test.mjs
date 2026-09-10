@@ -1244,5 +1244,21 @@ console.log('Excel-Ausgabe');
     (wild.match(/name="[^"]*"/) || [''])[0]);
 }
 
+console.log('Kein stummer Bildschirm');
+{
+  const app = readFileSync('./www/app.js', 'utf8');
+  // Ein Modul, das haengt oder nichts anhaengt, sieht sonst genauso aus wie
+  // eines, das nichts zu zeigen hat: Der Nutzer sieht nur die Leiste links.
+  pruef('Ein leerer Inhaltsbereich meldet sich',
+    app.includes('if (inhalt.children.length === 0)'));
+  pruef('Auch wenn das Modul gar nicht antwortet',
+    app.includes('const wache = setTimeout('));
+  pruef('Die Wache wird wieder abgeraeumt', app.includes('clearTimeout(wache)'));
+  // Der haeufigste Grund ist eine alte Offlineablage. Der Knopf raeumt sie weg.
+  pruef('Der Notausgang raeumt die Offlineablage weg',
+    app.includes('caches.delete(name)') && app.includes('r.unregister()'));
+  pruef('Und er kommt nur einmal', app.includes("inhalt.querySelector('.notausgang')"));
+}
+
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');
 process.exit(fehler ? 1 : 0);

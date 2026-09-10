@@ -199,18 +199,65 @@ async function zeichne() {
   zurueckKnopf.hidden = weg === '';
   setzeKopf({ titel: weg === '' ? APPNAME : modul.titel });
 
+  // Bleibt der Bereich leer, sagt der Bildschirm es, statt weiss zu bleiben.
+  // Ein Modul, das haengt, sieht sonst genauso aus wie eines, das nichts zu
+  // zeigen hat -- und der Nutzer sieht nur die Leiste links.
+  const wache = setTimeout(() => {
+    if (inhalt.children.length === 0) notausgang('Das dauert ungewöhnlich lange.');
+  }, 8000);
+
   try {
     const geladen = await import('./module/' + (datei || 'uebersicht') + '.js');
     await geladen.zeige(inhalt, unterweg);
+    if (inhalt.children.length === 0) {
+      notausgang('Dieser Bereich hat nichts angezeigt.');
+    }
   } catch (fehler) {
     console.error(fehler);
-    inhalt.append(
-      el('div', { klasse: 'leer' }, [
-        el('h2', { text: 'Da ging etwas schief' }),
-        el('p', { text: String(fehler && fehler.message ? fehler.message : fehler) }),
-      ])
-    );
+    notausgang(String(fehler && fehler.message ? fehler.message : fehler));
+  } finally {
+    clearTimeout(wache);
   }
+}
+
+/**
+ * Was zu sehen ist, wenn nichts zu sehen ist.
+ *
+ * Der Knopf raeumt die Offlineablage weg und laedt neu. Genau das behebt den
+ * haeufigsten Fall: eine alte zwischengespeicherte Fassung, die zu den neuen
+ * Dateien nicht mehr passt.
+ */
+function notausgang(grund) {
+  if (inhalt.querySelector('.notausgang')) return;
+  inhalt.append(
+    el('div', { klasse: 'leer notausgang' }, [
+      el('h2', { text: 'Hier ist gerade nichts' }),
+      el('p', { text: grund }),
+      el('p', {
+        klasse: 'unterzeile',
+        text: 'Meist hilft es, die zwischengespeicherte Fassung wegzuräumen und ' +
+          'neu zu laden. Deine Daten bleiben dabei unberührt.',
+      }),
+      el('button', {
+        klasse: 'knopf knopf-haupt', type: 'button', text: 'Aufräumen und neu laden',
+        onclick: async () => {
+          try {
+            if (window.caches) {
+              for (const name of await caches.keys()) await caches.delete(name);
+            }
+            if (navigator.serviceWorker) {
+              for (const r of await navigator.serviceWorker.getRegistrations()) {
+                await r.unregister();
+              }
+            }
+          } catch (fehler) {
+            console.error(fehler);
+          }
+          location.reload();
+        },
+      }),
+    ])
+  );
 }
 
 window.addEventListener('hashchange', zeichne);
