@@ -613,6 +613,49 @@ body.leiste-offen #kopf .menue-knopf span:nth-child(3) { transform: translateY(-
 
 /* --------------------------------------------------------- Projektuebersicht */
 
+/* --------------------------------------------------------- Kacheln
+
+   Eine Zahl je Kachel, nebeneinander statt untereinander. Untereinander
+   liest man sie als Liste und vergleicht sie nicht; nebeneinander sieht man
+   auf einen Blick, welche aus der Reihe faellt. */
+
+.kachelreihe {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px; margin-bottom: 14px; align-items: start;
+}
+.kachelreihe > .karte { margin-bottom: 0; }
+.kachelkopf {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.kachelname { font-weight: 700; font-size: 15px; flex: 1; min-width: 0; }
+.kachelwert { display: block; font-size: 24px; font-weight: 700; line-height: 1.15; }
+.kachelfuss {
+  display: block; margin-top: 8px; font-size: 12.5px; color: var(--tinte-leise);
+}
+
+/* Die eine Zahl, um die es geht: gross, allein und mittig. */
+.grosszahl { text-align: center; padding: 6px 0 14px; }
+.grosszahl-name { display: block; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.grosszahl-wert { display: block; font-size: 32px; line-height: 1.1; }
+.zahlenpaar {
+  display: flex; border-top: 1px solid var(--linie); padding-top: 12px; text-align: center;
+}
+.zahlenpaar > div { flex: 1; }
+.zahlenpaar > div + div { border-left: 1px solid var(--linie); }
+.paar-name { display: block; font-size: 13px; color: var(--tinte-leise); margin-bottom: 4px; }
+.paar-wert { font-size: 17px; font-weight: 700; }
+.paar-einheit { font-size: 13px; color: var(--tinte-leise); margin-left: 4px; }
+.zahlenpaar input { display: inline-block; margin: 0; }
+
+/* Ueberschrift ueber einer Kachelreihe, also ausserhalb einer Karte. */
+h2.abschnitt { font-size: 17px; margin: 18px 0 8px; }
+h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
+
+/* Ein Abschnitt, der noch keine Zahlen hat: Der Rahmen steht schon, damit
+   man sieht, was spaeter dort steht. */
+.leer-hinweis { margin: 0; }
+
 .kennzahlen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
 .kennzahl { background: var(--karte); border: 1px solid var(--linie); border-radius: 12px; padding: 12px 14px; }
 .kennzahl .wert { font-size: 21px; font-weight: 700; display: block; line-height: 1.2; }

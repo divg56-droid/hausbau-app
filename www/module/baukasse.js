@@ -164,35 +164,85 @@ function zeigeBudgetplanung(rahmen, stand, summe, belege, hausdaten, neu) {
 
   rahmen.append(kopfzeile('Budgetplanung', 'Woher das Geld kommt und wie weit es reicht.'));
 
+  // Kein frueher Ausstieg, auch wenn noch nichts erfasst ist: Der Bildschirm
+  // steht dann mit Nullen da und zeigt, was spaeter darin steht. Eine
+  // Sackgasse mit einem einzigen Knopf sagt darueber nichts.
   if (!stand.posten.length) {
     rahmen.append(
-      karte([
-        leerzustand(
-          'Erst das Budget, dann die Kosten',
-          'Die Budgetplanung zieht ihr Geld aus der Baufinanzierung. Lege dort ' +
-            'Eigenkapital, Zuschüsse und Darlehen an, danach rechnet sich alles ' +
-            'Weitere von allein.'
-        ),
-        knopf('Zur Baufinanzierung', () => { location.hash = '#/finanzierung'; }, 'knopf-haupt'),
-      ])
+      hinweisKasten(
+        'Noch kein Budget. Lege in der Baufinanzierung Eigenkapital, Zuschüsse und ' +
+          'Darlehen an, dann füllen sich die Zahlen hier von allein.',
+        'info'
+      ),
+      knopf('Zur Baufinanzierung', () => { location.hash = '#/finanzierung'; }, 'knopf-haupt')
     );
-    return;
   }
 
+  // ------------------------------------------------------------ Gesamtbudget
+  // Die eine Zahl, um die es geht, gross und allein. Darunter das, was sie
+  // vergleichbar macht: die Flaeche und der Preis je Quadratmeter.
+  const flaechenfeld = zahlfeld({
+    value: flaeche ? String(flaeche) : '',
+    stil: { width: '110px', textAlign: 'center' },
+  });
+  flaechenfeld.addEventListener('change', async () => {
+    const wert = Math.min(500, Math.max(0, Math.round(zuZahl(flaechenfeld.value))));
+    await einstellung('baukosten_eingabe', { ...hausdaten, flaeche: wert });
+    await neu();
+  });
+
+  rahmen.append(
+    karte([
+      el('div', { klasse: 'grosszahl' }, [
+        el('span', { klasse: 'grosszahl-name', text: 'Gesamtbudget' }),
+        el('strong', { klasse: 'grosszahl-wert', text: eur.format(budget) }),
+      ]),
+      el('div', { klasse: 'zahlenpaar' }, [
+        el('div', {}, [
+          el('span', { klasse: 'paar-name', text: 'Hausgröße' }),
+          flaechenfeld,
+          el('span', { klasse: 'paar-einheit', text: 'm²' }),
+        ]),
+        el('div', {}, [
+          el('span', { klasse: 'paar-name', text: 'Budget pro m²' }),
+          el('span', {
+            klasse: 'paar-wert',
+            text: flaeche > 0 ? eur.format(budget / flaeche) : '–',
+          }),
+        ]),
+      ]),
+    ])
+  );
+
+  // --------------------------------------------------------------- Kacheln
+  // Drei Zahlen nebeneinander, jede mit ihrer eigenen Aussage: Was ist
+  // geplant, was ist verbindlich, und was ist dazugekommen.
+  const jeQm = (betrag) => (flaeche > 0 ? eur.format(betrag / flaeche) + ' / m²' : '– / m²');
+  const imBudget = (betrag) =>
+    budget > 0 && betrag > budget
+      ? { text: 'über Budget', marke: 'marke-offen' }
+      : { text: 'im Budget', marke: 'marke-fertig' };
+
+  rahmen.append(
+    el('div', { klasse: 'kachelreihe' }, [
+      budgetkachel('Geplante Kosten', eur.format(summe.geplant), imBudget(summe.geplant),
+        jeQm(summe.geplant)),
+      budgetkachel('Auftragssumme', eur.format(summe.tatsaechlich), imBudget(summe.tatsaechlich),
+        jeQm(summe.tatsaechlich)),
+      budgetkachel(
+        'Mehrkosten',
+        (summe.differenz > 0 ? '+' : '') + eur.format(summe.differenz),
+        null,
+        jeQm(summe.differenz),
+        summe.differenz > 0 ? 'mehr' : 'weniger'
+      ),
+    ])
+  );
+
+  // ---------------------------------------------------------- Was noch bleibt
   const anteil = budget > 0 ? Math.min(100, (summe.tatsaechlich / budget) * 100) : 0;
   rahmen.append(
     karte([
-      el('h2', { text: 'Gesamtbudget' }),
-      wertzeile('Budget', eur.format(budget)),
-      wertzeile('Geplante Kosten', eur.format(summe.geplant)),
-      el('div', { klasse: 'wertzeile' }, [
-        el('span', { text: 'Tatsächliche Kosten' }),
-        el('strong', {}, [
-          eur.format(summe.tatsaechlich) + '  ',
-          abweichung(summe.differenz),
-        ]),
-      ]),
-      wertzeile('Davon bezahlt', eur.format(summe.gezahlt)),
       el('div', { klasse: 'fortschrittsbalken' }, [
         el('div', {
           stil: { width: anteil + '%', background: rest < 0 ? 'var(--warn)' : 'var(--akzent)' },
@@ -202,6 +252,7 @@ function zeigeBudgetplanung(rahmen, stand, summe, belege, hausdaten, neu) {
         el('span', { text: rest < 0 ? 'Über dem Budget' : 'Restbudget' }),
         el('strong', { klasse: rest < 0 ? 'mehr' : null, text: eur.format(Math.abs(rest)) }),
       ]),
+      wertzeile('Davon bereits bezahlt', eur.format(summe.gezahlt)),
       rest < 0
         ? hinweisKasten(
             `Das Budget ist um ${eur.format(-rest)} überschritten. Je früher das auffällt, ` +
@@ -212,84 +263,87 @@ function zeigeBudgetplanung(rahmen, stand, summe, belege, hausdaten, neu) {
     ])
   );
 
-  // Der Quadratmeterpreis ist die einzige Zahl, mit der sich das eigene
-  // Vorhaben mit fremden vergleichen laesst. Die Wohnflaeche steht schon im
-  // Baukostenrechner; sie wird hier geteilt und nicht zweimal gefuehrt.
-  const flaechenfeld = zahlfeld({ value: flaeche ? String(flaeche) : '' });
-  flaechenfeld.addEventListener('change', async () => {
-    const wert = Math.min(500, Math.max(0, Math.round(zuZahl(flaechenfeld.value))));
-    await einstellung('baukosten_eingabe', { ...hausdaten, flaeche: wert });
-    await neu();
-  });
-
+  // ------------------------------------------------------------- Geldmittel
   rahmen.append(
-    karte([
-      el('h2', { text: 'Je Quadratmeter' }),
-      feld('Wohnfläche in m²', flaechenfeld, 'Wird mit dem Baukostenrechner geteilt.'),
-      flaeche > 0
-        ? el('div', {}, [
-            wertzeile('Budget je m²', eur.format(budget / flaeche)),
-            wertzeile('Geplante Kosten je m²', eur.format(summe.geplant / flaeche)),
-            el('div', { klasse: 'wertzeile stark' }, [
-              el('span', { text: 'Tatsächlich je m²' }),
-              el('strong', { text: eur.format(summe.tatsaechlich / flaeche) }),
-            ]),
-          ])
-        : hinweisKasten(
-            'Ohne Wohnfläche gibt es keinen Quadratmeterpreis. Trage sie ein, dann ' +
-              'kannst du dein Vorhaben mit anderen vergleichen.',
-            'info'
-          ),
-    ])
+    el('h2', { klasse: 'abschnitt', text: 'Geldmittel' }),
+    el('p', {
+      klasse: 'unterzeile',
+      text: 'Was schon abgeflossen ist, rechnet sich aus den Rechnungen. Dafür muss ' +
+        'bei jeder Rechnung stehen, woraus sie bezahlt wurde.',
+    }),
+    stand.posten.length
+      ? null
+      : karte([
+          el('p', {
+            klasse: 'unterzeile leer-hinweis',
+            text: 'Hier steht je Geldmittel, wie viel davon schon verwendet und wie ' +
+              'viel noch offen ist.',
+          }),
+        ]),
+    el('div', { klasse: 'kachelreihe' }, stand.posten.map((p) => {
+      const verbraucht = belege
+        .filter((b) => b.quelleId === p.id)
+        .reduce((s, b) => s + (b.betrag || 0), 0);
+      const teil = p.betrag > 0 ? Math.min(100, (verbraucht / p.betrag) * 100) : 0;
+      return karte([
+        el('h2', { text: p.name }),
+        wertzeile('Gesamt', eur.format(p.betrag)),
+        el('div', { klasse: 'fortschrittsbalken' }, [
+          el('div', { stil: { width: teil + '%' } }),
+        ]),
+        el('p', { klasse: 'unterzeile', text: Math.round(teil) + ' Prozent verwendet' }),
+        wertzeile('verwendet', eur.format(verbraucht)),
+        el('div', { klasse: 'wertzeile' }, [
+          el('span', { text: 'offen' }),
+          el('strong', { klasse: 'weniger', text: eur.format(p.betrag - verbraucht) }),
+        ]),
+      ]);
+    })),
+    knopf('Geldmittel ändern', () => { location.hash = '#/finanzierung'; }, 'knopf-leise')
   );
 
-  rahmen.append(
-    karte([
-      el('h2', { text: 'Geldmittel' }),
-      el('p', {
-        klasse: 'unterzeile',
-        text: 'Was schon abgeflossen ist, rechnet sich aus den Rechnungen. ' +
-          'Dafür muss bei jeder Rechnung stehen, woraus sie bezahlt wurde.',
-      }),
-      ...stand.posten.map((p) => {
-        const verbraucht = belege
-          .filter((b) => b.quelleId === p.id)
-          .reduce((s, b) => s + (b.betrag || 0), 0);
-        return balkenzeile(
-          p.name, p.betrag, budget,
-          `verwendet ${eur.format(verbraucht)}, offen ${eur.format(p.betrag - verbraucht)}`
-        );
-      }),
-      knopf('Geldmittel ändern', () => { location.hash = '#/finanzierung'; }, 'knopf-leise'),
-    ])
-  );
-
+  // ---------------------------------------------------------- Zahlungsverlauf
   const verlauf = zahlungsverlauf(belege);
+  rahmen.append(
+    el('h2', { klasse: 'abschnitt', text: 'Zahlungsverlauf' }),
+    el('p', {
+      klasse: 'unterzeile',
+      text: verlauf.length
+        ? `${eur.format(summe.gezahlt)} in ${verlauf.length} ` +
+          (verlauf.length === 1 ? 'Monat' : 'Monaten') + ' geflossen.'
+        : 'Sobald du Rechnungen erfasst, steht hier, wann wie viel geflossen ist.',
+    })
+  );
+
   if (verlauf.length) {
     const hoechste = Math.max(...verlauf.map((m) => m.betrag));
     rahmen.append(
-      karte([
-        el('h2', { text: 'Zahlungsverlauf' }),
-        el('p', {
-          klasse: 'unterzeile',
-          text: `${eur.format(summe.gezahlt)} in ${verlauf.length} ` +
-            (verlauf.length === 1 ? 'Monat' : 'Monaten') + ' geflossen.',
-        }),
-        ...verlauf.map((m) =>
-          el('div', { klasse: 'balkenzeile' }, [
-            el('div', { klasse: 'wertzeile' }, [
-              el('span', { text: monatLang(m.monat) }),
-              el('strong', { text: eur.format(m.betrag) }),
-            ]),
-            el('div', { klasse: 'fortschrittsbalken' }, [
-              el('div', { stil: { width: (m.betrag / hoechste) * 100 + '%' } }),
-            ]),
-            el('p', { klasse: 'unterzeile', text: 'aufgelaufen ' + eur.format(m.kumuliert) }),
-          ])
-        ),
-      ])
+      karte(verlauf.map((m) =>
+        el('div', { klasse: 'balkenzeile' }, [
+          el('div', { klasse: 'wertzeile' }, [
+            el('span', { text: monatLang(m.monat) }),
+            el('strong', { text: eur.format(m.betrag) }),
+          ]),
+          el('div', { klasse: 'fortschrittsbalken' }, [
+            el('div', { stil: { width: (m.betrag / hoechste) * 100 + '%' } }),
+          ]),
+          el('p', { klasse: 'unterzeile', text: 'aufgelaufen ' + eur.format(m.kumuliert) }),
+        ])
+      ))
     );
   }
+}
+
+/** Eine Kachel der oberen Reihe: Zahl, Plakette, Preis je Quadratmeter. */
+function budgetkachel(name, wert, plakette, jeQm, wertklasse) {
+  return karte([
+    el('div', { klasse: 'kachelkopf' }, [
+      el('span', { klasse: 'kachelname', text: name }),
+      plakette ? el('span', { klasse: 'marke ' + plakette.marke, text: plakette.text }) : null,
+    ]),
+    el('strong', { klasse: 'kachelwert' + (wertklasse ? ' ' + wertklasse : ''), text: wert }),
+    el('span', { klasse: 'kachelfuss', text: jeQm }),
+  ]);
 }
 
 // -------------------------------------------------------- Kostenaufstellung
@@ -458,47 +512,52 @@ function zeigeKostenaufstellung(rahmen, gerechnet, kontakte, raeume, gewerkeReih
 
 // ---------------------------------------------------------------- Statistik
 
+// Die vier Zustaende, die eine Kostenposition durchlaeuft. Sie stehen fest
+// und werden auch dann gezeigt, wenn noch nichts erfasst ist: Der Bildschirm
+// soll von Anfang an sagen, was er spaeter sagen wird.
+const STATUSREIHE = [
+  ['geplant', 'Geplant', 'marke-geplant'],
+  ['beauftragt', 'Beauftragt', 'marke-beauftragt'],
+  ['teilgezahlt', 'Teilgezahlt', 'marke-arbeit'],
+  ['bezahlt', 'Bezahlt', 'marke-fertig'],
+];
+
 function zeigeStatistik(rahmen, gerechnet, summe, stand, belege, neu) {
   rahmen.append(kopfzeile('Statistiken', 'Wo das Geld hingeht, aus vier Blickwinkeln.'));
 
-  if (!gerechnet.length) {
-    rahmen.append(
-      karte([
-        leerzustand(
-          'Noch keine Positionen',
-          'Die Statistiken fassen deine Positionen zusammen. Dafür brauchen sie ' +
-            'erst einmal Positionen.'
-        ),
-        knopf('Zur Kostenaufstellung', () => { location.hash = '#/baukasse/kosten'; }, 'knopf-haupt'),
-      ])
-    );
-    return;
-  }
-
   const gesamt = summe.tatsaechlich;
 
-  // Nach Status: zeigt, wie viel vom Bau ueberhaupt schon verbindlich ist.
-  const zustaende = new Map();
-  for (const p of gerechnet) {
-    const k = zustaende.get(p.statusName) || { summe: 0, anzahl: 0 };
-    k.summe += p.massgeblich;
-    k.anzahl++;
-    zustaende.set(p.statusName, k);
-  }
-
+  // ------------------------------------------------------------ Nach Status
+  // Zeigt, wie viel vom Bau ueberhaupt schon verbindlich ist.
   rahmen.append(
-    karte([
-      el('h2', { text: 'Nach Status' }),
-      ...[...zustaende.entries()]
-        .sort((a, b) => b[1].summe - a[1].summe)
-        .map(([name, k]) =>
-          balkenzeile(name, k.summe, gesamt,
-            k.anzahl + (k.anzahl === 1 ? ' Position' : ' Positionen'))
-        ),
-    ])
+    el('h2', { klasse: 'abschnitt', text: 'Nach Status' }),
+    el('div', { klasse: 'kachelreihe' }, STATUSREIHE.map(([schluessel, name, marke]) => {
+      const drin = gerechnet.filter((p) => p.status === schluessel);
+      const geplant = drin.reduce((s, p) => s + p.geplant, 0);
+      const auftrag = drin.reduce((s, p) => s + p.massgeblich, 0);
+      const mehr = drin.reduce((s, p) => s + p.differenz, 0);
+
+      return karte([
+        el('div', { klasse: 'kachelkopf' }, [
+          el('span', { klasse: 'kachelname', text: 'Status' }),
+          el('span', { klasse: 'marke ' + marke, text: name }),
+        ]),
+        wertzeile('Geplante Kosten', eur.format(geplant)),
+        wertzeile('Auftragssumme', eur.format(auftrag)),
+        el('div', { klasse: 'wertzeile' }, [
+          el('span', { text: 'Mehrkosten' }),
+          mehr ? abweichung(mehr) : el('strong', { text: eur.format(0) }),
+        ]),
+        el('span', {
+          klasse: 'kachelfuss',
+          text: drin.length === 1 ? '1 Position' : drin.length + ' Positionen',
+        }),
+      ]);
+    }))
   );
 
-  // Nach Gewerk: die Ordnung, in der man ein Bauprojekt denkt und verhandelt.
+  // ------------------------------------------------------------ Nach Gewerk
+  // Die Ordnung, in der man ein Bauprojekt denkt und verhandelt.
   const gewerke = new Map();
   for (const p of gerechnet) {
     const name = p.gewerk || 'Sonstiges';
@@ -509,82 +568,101 @@ function zeigeStatistik(rahmen, gerechnet, summe, stand, belege, neu) {
   }
 
   rahmen.append(
-    karte([
-      el('h2', { text: 'Nach Gewerk' }),
-      ...[...gewerke.entries()]
-        .sort((a, b) => b[1].summe - a[1].summe)
-        .map(([name, k]) =>
-          balkenzeile(name, k.summe, gesamt, 'geplant ' + eur.format(k.geplant))
-        ),
-    ])
+    el('h2', { klasse: 'abschnitt', text: 'Nach Gewerk' }),
+    karte(
+      gewerke.size
+        ? [...gewerke.entries()]
+            .sort((a, b) => b[1].summe - a[1].summe)
+            .map(([name, k]) =>
+              balkenzeile(name, k.summe, gesamt, 'geplant ' + eur.format(k.geplant))
+            )
+        : [nochNichts('Sobald Positionen erfasst sind, steht hier, welches Gewerk ' +
+            'welchen Anteil an der Bausumme hat.')]
+    )
   );
 
-  zeigeKostengruppen(rahmen, gerechnet, summe, neu);
-
-  // Nach Geldmittel: aus welchem Topf die Rechnungen bezahlt wurden.
-  if (stand.posten.length && summe.gezahlt > 0) {
+  // ------------------------------------------------------ Nach Kostengruppe
+  rahmen.append(el('h2', { klasse: 'abschnitt', text: 'Nach Kostengruppe' }));
+  if (gerechnet.length) {
+    zeigeKostengruppen(rahmen, gerechnet, summe, neu);
+  } else {
     rahmen.append(
       karte([
-        el('h2', { text: 'Nach Geldmittel' }),
-        el('p', {
-          klasse: 'unterzeile',
-          text: 'Verteilung der bezahlten Rechnungen auf Eigenkapital, Zuschüsse und Darlehen.',
-        }),
-        ...stand.posten.map((p) => {
-          const verbraucht = belege
-            .filter((b) => b.quelleId === p.id)
-            .reduce((s, b) => s + (b.betrag || 0), 0);
-          return balkenzeile(p.name, verbraucht, summe.gezahlt, 'von ' + eur.format(p.betrag));
-        }),
+        nochNichts('Die Gliederung nach DIN 276 fasst die Positionen so zusammen, wie ' +
+          'Banken und Architekten Baukosten rechnen.'),
       ])
     );
   }
 
-  // Die groessten Abweichungen zuerst: Wer nachsteuern will, faengt oben an.
+  // -------------------------------------------------------- Nach Geldmittel
+  // Aus welchem Topf die Rechnungen bezahlt wurden.
+  rahmen.append(
+    el('h2', { klasse: 'abschnitt', text: 'Nach Geldmittel' }),
+    el('p', {
+      klasse: 'unterzeile',
+      text: 'Verteilung der bezahlten Rechnungen auf Eigenkapital, Zuschüsse und Darlehen.',
+    }),
+    karte(
+      stand.posten.length
+        ? stand.posten.map((p) => {
+            const verbraucht = belege
+              .filter((b) => b.quelleId === p.id)
+              .reduce((s, b) => s + (b.betrag || 0), 0);
+            // Ohne Zahlungen ist der Anteil am Budget die ehrlichere Zahl:
+            // Sonst stuenden vier Balken auf null und saehen aus wie ein
+            // Fehler.
+            return summe.gezahlt > 0
+              ? balkenzeile(p.name, verbraucht, summe.gezahlt, 'von ' + eur.format(p.betrag))
+              : balkenzeile(p.name, p.betrag, stand.gesamt, 'noch nichts abgeflossen');
+          })
+        : [nochNichts('Lege in der Baufinanzierung Eigenkapital, Zuschüsse und Darlehen ' +
+            'an, dann steht hier, woraus bezahlt wurde.')]
+    )
+  );
+
+  // ------------------------------------------------------- Groesste Abweichungen
   const auffaellig = gerechnet
     .filter((p) => p.differenz !== 0)
     .sort((a, b) => Math.abs(b.differenz) - Math.abs(a.differenz))
     .slice(0, 5);
 
-  if (auffaellig.length) {
-    rahmen.append(
-      karte([
-        el('h2', { text: 'Größte Abweichungen' }),
-        el('ul', { klasse: 'liste' }, auffaellig.map((p) =>
-          el('li', {}, [
-            el('div', { klasse: 'listenzeile', stil: { cursor: 'default' } }, [
-              el('span', { klasse: 'zeilen-text' }, [
-                el('span', { klasse: 'zeilen-titel', text: p.name }),
-                el('span', {
-                  klasse: 'zeilen-unter',
-                  text: `geplant ${eur.format(p.geplant)}, tatsächlich ${eur.format(p.tatsaechlich)}`,
-                }),
+  rahmen.append(
+    el('h2', { klasse: 'abschnitt', text: 'Größte Abweichungen' }),
+    karte(
+      auffaellig.length
+        ? [el('ul', { klasse: 'liste' }, auffaellig.map((p) =>
+            el('li', {}, [
+              el('div', { klasse: 'listenzeile', stil: { cursor: 'default' } }, [
+                el('span', { klasse: 'zeilen-text' }, [
+                  el('span', { klasse: 'zeilen-titel', text: p.name }),
+                  el('span', {
+                    klasse: 'zeilen-unter',
+                    text: `geplant ${eur.format(p.geplant)}, tatsächlich ${eur.format(p.tatsaechlich)}`,
+                  }),
+                ]),
+                el('span', { klasse: 'zeilen-wert' }, [abweichung(p.differenz)]),
               ]),
-              el('span', { klasse: 'zeilen-wert' }, [abweichung(p.differenz)]),
-            ]),
-          ])
-        )),
-      ])
+            ])
+          ))]
+        : [nochNichts('Hier stehen die fünf Positionen, bei denen Plan und Wirklichkeit ' +
+            'am weitesten auseinanderliegen. Solange nichts abweicht, bleibt es leer — ' +
+            'und das ist die gute Nachricht.')]
+    )
+  );
+
+  if (!gerechnet.length) {
+    rahmen.append(
+      knopf('Positionen anlegen', () => { location.hash = '#/baukasse/kosten'; }, 'knopf-haupt')
     );
   }
 }
 
+/** Der Platzhalter in einem Abschnitt, der noch keine Zahlen hat. */
+const nochNichts = (text) => el('p', { klasse: 'unterzeile leer-hinweis', text });
+
 // ------------------------------------------------------------- Kostengruppen
 
 function zeigeKostengruppen(rahmen, gerechnet, summe, neu) {
-  if (!gerechnet.length) {
-    rahmen.append(
-      karte([
-        leerzustand(
-          'Noch keine Positionen',
-          'Die Gliederung nach DIN 276 fasst deine Positionen so zusammen, wie Banken ' +
-            'und Architekten Baukosten rechnen. Dafür braucht sie erst einmal Positionen.'
-        ),
-      ])
-    );
-    return;
-  }
-
   const ohne = gerechnet.filter((p) => !p.kostengruppe);
   const gruppen = nachHauptgruppen(gerechnet, (p) => p.massgeblich);
 
