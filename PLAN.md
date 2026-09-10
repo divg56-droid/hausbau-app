@@ -25,16 +25,21 @@ was schon steht.
 - [x] Verweise aus den Punkten in die passenden Bereiche
 - [x] Fortschritt auf der Projektuebersicht
 
-## 3. Baukosten aufteilen
+## 3. Baukosten aufteilen — erledigt
 
 Heute steckt alles in der Baukasse. Der Wettbewerb trennt es in vier Sichten,
 und das ist die bessere Ordnung.
 
-- [ ] Budgetplanung: Gesamtbudget, Hausgroesse, Budget je m2, Geldmittel mit
-      verwendet und offen, Zahlungsverlauf
-- [ ] Kostenaufstellung: Tabelle mit Sortierung, Filter, Excel und PDF
-- [ ] Statistiken: je Status, je Gewerk, je Kostengruppe, Geldmittelverteilung
-- [ ] Angebotsvergleich bleibt eigen
+- [x] Budgetplanung: Gesamtbudget, Wohnflaeche, Budget je m2, Geldmittel mit
+      verwendet und offen, Zahlungsverlauf je Monat
+- [x] Kostenaufstellung: Tabelle mit Sortierung, Filter, PDF und CSV
+- [x] Statistiken: je Status, je Gewerk, je Kostengruppe, Geldmittelverteilung
+- [x] Angebotsvergleich bleibt eigen
+- [x] Nebenbei: der Router kann Unterwege, damit Ansichten einzeln in der
+      Leiste stehen
+
+Die Ausgabe fuer Excel laeuft ueber CSV. Eine echte xlsx-Datei steht in
+Schritt 10.
 
 ## 4. Angebote vertiefen
 

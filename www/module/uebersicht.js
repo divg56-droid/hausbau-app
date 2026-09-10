@@ -123,7 +123,7 @@ export async function zeige(rahmen) {
           klasse: 'unterzeile',
           text: `Davon bereits bezahlt ${eur.format(gezahlt)}.`,
         }),
-        knopf('Zur Baukasse', () => { location.hash = '#/baukasse'; }, 'knopf-leise'),
+        knopf('Zur Budgetplanung', () => { location.hash = '#/baukasse'; }, 'knopf-leise'),
       ])
     );
   }

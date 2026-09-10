@@ -386,7 +386,7 @@ async function zeichne(rahmen) {
     ),
     el('div', { klasse: 'knopf-reihe' }, [
       knopf('Tilgungsverlauf', () => { location.hash = '#/tilgung'; }),
-      knopf('Zur Baukasse', () => { location.hash = '#/baukasse'; }),
+      knopf('Zur Budgetplanung', () => { location.hash = '#/baukasse'; }),
     ]),
     vorschlagsblock(geschaetzteKosten, neu)
   );

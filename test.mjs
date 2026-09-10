@@ -681,11 +681,22 @@ console.log('Helles und dunkles Design');
 console.log('Gliederung und Seitenleiste');
 {
   // Jeder Punkt braucht ein Modul unter module/, sonst laeuft der Router in
-  // die Fehlerseite. Die Uebersicht liegt als uebersicht.js dort.
+  // die Fehlerseite. Die Uebersicht liegt als uebersicht.js dort. Ein Weg mit
+  // Schraegstrich zeigt auf eine Ansicht desselben Moduls: "baukasse/kosten"
+  // laedt baukasse.js. Deshalb zaehlt nur der erste Teil.
   const fehlend = MODULE
-    .map((m) => 'www/module/' + (m.weg || 'uebersicht') + '.js')
+    .map((m) => 'www/module/' + (m.weg.split('/')[0] || 'uebersicht') + '.js')
     .filter((d) => { try { statSync('./' + d); return false; } catch { return true; } });
   pruef('Zu jedem Punkt gibt es ein Modul', fehlend.length === 0, fehlend.join(', '));
+
+  // Ein Unterweg landet beim Modul nur, wenn der Router ihn weiterreicht.
+  const app = readFileSync('./www/app.js', 'utf8');
+  pruef('Der Router zerlegt den Weg in Datei und Unterweg',
+    app.includes('const [datei, unterweg] = weg.split(') &&
+    app.includes('geladen.zeige(inhalt, unterweg)'));
+  pruef('Die Baukasse nimmt den Unterweg entgegen',
+    readFileSync('./www/module/baukasse.js', 'utf8')
+      .includes('export async function zeige(rahmen, unterweg)'));
 
   const wege = MODULE.map((m) => m.weg);
   pruef('Kein Weg kommt doppelt vor', new Set(wege).size === wege.length);
@@ -818,6 +829,36 @@ console.log('Bauleitfaden');
     pruef(was + ' kennt den Speicher leitfaden',
       readFileSync('./' + datei, 'utf8').includes('leitfaden'));
   }
+}
+
+console.log('Baukosten in drei Sichten');
+{
+  const baukasse = readFileSync('./www/module/baukasse.js', 'utf8');
+  for (const [name, funktion] of [
+    ['Budgetplanung', 'zeigeBudgetplanung'],
+    ['Kostenaufstellung', 'zeigeKostenaufstellung'],
+    ['Statistiken', 'zeigeStatistik'],
+    ['Rechnungen', 'zeigeRechnungen'],
+  ]) {
+    pruef('Die Baukasse hat eine Sicht ' + name, baukasse.includes('function ' + funktion));
+    pruef(name + ' steht in der Seitenleiste', MODULE.some((m) => m.titel === name));
+  }
+
+  // Jede Sicht muss ihre eigene Kopfzeile setzen: Seit die Leiste zwischen
+  // ihnen umschaltet, gibt es keine gemeinsame mehr darueber.
+  pruef('Jede Sicht setzt eine Kopfzeile',
+    (baukasse.match(/kopfzeile\(/g) || []).length >= 4);
+
+  const wege = MODULE.filter((m) => m.gruppe === 'Baukosten').map((m) => m.weg);
+  pruef('Die Baukosten fuehren auf vier Sichten und die Angebote',
+    JSON.stringify(wege) === JSON.stringify(
+      ['baukasse', 'baukasse/kosten', 'baukasse/statistik', 'baukasse/rechnungen', 'angebote']),
+    wege.join(', '));
+
+  // Die Wohnflaeche darf nicht zweimal gefuehrt werden, sonst widersprechen
+  // sich Budgetplanung und Baukostenrechner.
+  pruef('Die Wohnflaeche kommt aus dem Baukostenrechner',
+    baukasse.includes("einstellung('baukosten_eingabe')"));
 }
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');

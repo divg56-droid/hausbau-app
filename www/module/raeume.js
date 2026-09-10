@@ -300,10 +300,10 @@ async function zeigeRaum(rahmen, kennung) {
           ].filter(Boolean))
         : el('p', {
             klasse: 'unterzeile',
-            text: 'Keine Kostenposition diesem Raum zugeordnet. In der Baukasse ' +
-                  'lässt sich das bei der Position einstellen.',
+            text: 'Keine Kostenposition diesem Raum zugeordnet. In der '  +
+                  'Kostenaufstellung lässt sich das bei der Position einstellen.',
           }),
-      knopf('Zur Baukasse', () => { location.hash = '#/baukasse'; }, 'knopf-leise'),
+      knopf('Zur Kostenaufstellung', () => { location.hash = '#/baukasse/kosten'; }, 'knopf-leise'),
     ])
   );
 

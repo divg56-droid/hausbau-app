@@ -89,9 +89,10 @@ async function zeichne(rahmen) {
         leerzustand(
           'Erst die Positionen, dann die Angebote',
           'Ein Angebot gehört immer zu einer Kostenposition, etwa Rohbau oder Elektro. ' +
-            'Lege die Positionen in der Baukasse an, danach hängst du hier die Angebote daran.'
+            'Lege die Positionen in der Kostenaufstellung an, danach hängst du hier die '  +
+            'Angebote daran.'
         ),
-        knopf('Zur Baukasse', () => { location.hash = '#/baukasse'; }, 'knopf-haupt'),
+        knopf('Zur Kostenaufstellung', () => { location.hash = '#/baukasse/kosten'; }, 'knopf-haupt'),
       ])
     );
     return;

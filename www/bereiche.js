@@ -28,8 +28,14 @@ export const BEREICHE = [
   {
     titel: 'Baukosten', zeichen: '\u{1F4B6}',
     punkte: [
-      { weg: 'baukasse', titel: 'Baukasse',
-        text: 'Budget, Kostenaufstellung, DIN 276 und Rechnungen.' },
+      { weg: 'baukasse', titel: 'Budgetplanung',
+        text: 'Gesamtbudget, Budget je Quadratmeter, Geldmittel und Zahlungsverlauf.' },
+      { weg: 'baukasse/kosten', titel: 'Kostenaufstellung',
+        text: 'Alle Positionen als Tabelle, sortierbar, filterbar, als PDF und CSV.' },
+      { weg: 'baukasse/statistik', titel: 'Statistiken',
+        text: 'Kosten je Status, je Gewerk, je Kostengruppe und je Geldmittel.' },
+      { weg: 'baukasse/rechnungen', titel: 'Rechnungen',
+        text: 'Was tatsächlich abgeflossen ist, mit Beleg und Zuordnung.' },
       { weg: 'angebote', titel: 'Angebote',
         text: 'Mehrere Angebote je Gewerk nebeneinander legen und vergleichen.' },
     ],

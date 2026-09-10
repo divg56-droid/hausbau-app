@@ -144,7 +144,11 @@ async function zeichne() {
   leeren(inhalt);
   window.scrollTo(0, 0);
 
-  const weg = location.hash.replace(/^#\/?/, '').split('/')[0];
+  // Ein Weg darf zwei Teile haben: "baukasse/statistik" laedt baukasse.js
+  // und gibt ihm "statistik" mit. So stehen die Ansichten eines Bereichs
+  // einzeln in der Leiste, ohne dass jede eine eigene Datei braucht.
+  const weg = location.hash.replace(/^#\/?/, '').replace(/\/$/, '');
+  const [datei, unterweg] = weg.split('/');
 
   const modul = MODULE.find((m) => m.weg === weg);
   if (!modul) {
@@ -159,8 +163,8 @@ async function zeichne() {
   setzeKopf({ titel: weg === '' ? APPNAME : modul.titel });
 
   try {
-    const geladen = await import('./module/' + (weg || 'uebersicht') + '.js');
-    await geladen.zeige(inhalt);
+    const geladen = await import('./module/' + (datei || 'uebersicht') + '.js');
+    await geladen.zeige(inhalt, unterweg);
   } catch (fehler) {
     console.error(fehler);
     inhalt.append(

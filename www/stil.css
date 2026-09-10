@@ -277,6 +277,23 @@ tr.bindung td { background: var(--band); font-weight: 700; }
 .fortschrittsbalken { height: 10px; border-radius: 5px; background: var(--band); overflow: hidden; margin: 8px 0; }
 .fortschrittsbalken div { height: 100%; background: var(--akzent); }
 
+/* Betrag, Balken, Erlaeuterung: der Baustein aller Statistiken. */
+.balkenzeile { margin-bottom: 14px; }
+.balkenzeile .fortschrittsbalken { margin: 6px 0 4px; }
+.balkenzeile .unterzeile { margin: 0; }
+
+/* Die Kostenaufstellung hat acht Spalten. Auf dem Telefon passt das nicht,
+   also rollt die Tabelle in sich statt die ganze Seite breit zu machen. */
+.tabelle-rolle { overflow-x: auto; margin: 0 -14px; padding: 0 14px; }
+.sortknopf {
+  background: none; border: 0; padding: 0; font: inherit; color: inherit;
+  text-transform: inherit; letter-spacing: inherit; cursor: pointer;
+}
+.sortknopf:hover { color: var(--akzent); }
+tbody tr:hover td { background: var(--band); }
+.filterleiste { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.filterleiste select { flex: 1 1 160px; }
+
 /* ------------------------------------------------------------------- Meldungen */
 
 .meldung {
