@@ -88,6 +88,12 @@ export const BEREICHE = [
         text: 'Eigenkapital, Zuschüsse und Darlehen erfassen oder rechnen lassen.' },
       { weg: 'tilgung', titel: 'Tilgungsverlauf',
         text: 'Restschuld, Rate und Laufzeit Jahr für Jahr, als PDF.' },
+      { weg: 'rechner/kredite', titel: 'Kreditvergleich',
+        text: 'Dieselbe Summe bei mehreren Anbietern nebeneinander.' },
+      { weg: 'rechner/nebenkosten', titel: 'Kaufnebenkosten',
+        text: 'Grunderwerbsteuer, Notar, Makler: was zum Kaufpreis dazukommt.' },
+      { weg: 'rechner/flaechen', titel: 'GRZ und GFZ',
+        text: 'Was auf das Grundstück überhaupt gebaut werden darf.' },
     ],
   },
   {

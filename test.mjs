@@ -4,7 +4,8 @@
 //
 // Laeuft ohne Browser: die geprueften Funktionen fassen kein DOM an.
 
-import { baukosten, pruefe } from './www/module/baukosten.js';
+import { baukosten, pruefe, LAENDER } from './www/module/baukosten.js';
+import { kaufnebenkosten, bebauung } from './www/module/rechner.js';
 import { annuitaet } from './www/module/finanzierung.js';
 import { simuliere } from './www/module/tilgung.js';
 import { terminePlanen, balkenPlan, tageZwischen } from './www/module/ablauf.js';
@@ -1086,6 +1087,59 @@ console.log('Unterschrift');
   pruef('Das oeffentliche Tagebuch liefert nur Tagesfotos aus',
     readFileSync('./server/oeffentlich.php', 'utf8')
       .includes("in_array($kennung, (array)($e['bildIds'] ?? []), true)"));
+}
+
+console.log('Kaufnebenkosten');
+{
+  const r = kaufnebenkosten({
+    preis: 350000, grestProzent: 5, notarProzent: 1.5, maklerProzent: 3.57, weitere: 0,
+  });
+  pruef('Grunderwerbsteuer 5 % von 350.000 = 17.500', r.posten[0][1] === 17500);
+  pruef('Notar 1,5 % = 5.250', r.posten[1][1] === 5250);
+  pruef('Makler 3,57 % = 12.495', Math.abs(r.posten[2][1] - 12495) < 0.01);
+  pruef('Zusammen 35.245', Math.abs(r.summe - 35245) < 0.01, String(r.summe));
+  pruef('Das sind gut zehn Prozent', Math.abs(r.anteil - 10.07) < 0.01, r.anteil.toFixed(2));
+  pruef('Kaufpreis plus Nebenkosten', Math.abs(r.gesamt - 385245) < 0.01);
+
+  // Ohne Makler faellt der Posten ganz weg, statt mit null dazustehen.
+  const ohneMakler = kaufnebenkosten({
+    preis: 350000, grestProzent: 5, notarProzent: 1.5, maklerProzent: 0, weitere: 0,
+  });
+  pruef('Ohne Makler bleiben drei Posten mit null Courtage',
+    ohneMakler.posten.length === 3 && ohneMakler.posten[2][1] === 0);
+  pruef('Weitere Kosten kommen als eigener Posten dazu',
+    kaufnebenkosten({ preis: 100000, grestProzent: 5, notarProzent: 1.5,
+      maklerProzent: 0, weitere: 2500 }).posten.length === 4);
+
+  const leer = kaufnebenkosten({ preis: 0, grestProzent: 5, notarProzent: 1.5, maklerProzent: 3.57 });
+  pruef('Ohne Kaufpreis ist der Anteil null und nicht unendlich', leer.anteil === 0);
+
+  // Der Satz je Land kommt aus derselben Tabelle wie im Baukostenrechner.
+  pruef('Alle sechzehn Laender haben einen Steuersatz',
+    LAENDER.length === 16 && LAENDER.every((l) => l.grest > 0));
+}
+
+console.log('GRZ und GFZ');
+{
+  const b = bebauung({ flaeche: 600, grz: 0.4, gfz: 0.8 });
+  pruef('600 m2 mal GRZ 0,4 = 240 m2', b.grundflaeche === 240);
+  pruef('Mit Nebenanlagen die Haelfte mehr: GRZ 0,6', Math.abs(b.grzMitZuschlag - 0.6) < 1e-9);
+  pruef('Also 360 m2', Math.abs(b.grundflaecheMitNebenanlagen - 360) < 1e-9);
+  pruef('GFZ 0,8 ergibt 480 m2 Geschossflaeche', b.geschossflaeche === 480);
+  pruef('Das sind zwei Vollgeschosse', Math.abs(b.geschosse - 2) < 1e-9);
+
+  // Paragraph 19 Absatz 4 BauNVO deckelt die Ueberschreitung bei 0,8.
+  const dicht = bebauung({ flaeche: 500, grz: 0.6, gfz: 1.2 });
+  pruef('Die Ueberschreitung ist bei 0,8 gedeckelt',
+    Math.abs(dicht.grzMitZuschlag - 0.8) < 1e-9, String(dicht.grzMitZuschlag));
+  pruef('Und nicht bei 0,9', dicht.grundflaecheMitNebenanlagen === 400);
+
+  // Ohne GRZ liesse sich nicht durch sie teilen.
+  pruef('Ohne GRZ bleibt die Geschosszahl null',
+    bebauung({ flaeche: 600, grz: 0, gfz: 0.8 }).geschosse === 0);
+  const nichts = bebauung({});
+  pruef('Ohne Eingaben ist alles null',
+    nichts.grundflaeche === 0 && nichts.geschossflaeche === 0);
 }
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');

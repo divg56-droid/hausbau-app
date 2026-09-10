@@ -66,6 +66,7 @@ const SCHALE = [
   './module/konto.js',
   './module/maengel.js',
   './module/raeume.js',
+  './module/rechner.js',
   './module/tagebuch.js',
   './module/baudoku.js',
   './module/dokumente.js',

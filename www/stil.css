@@ -340,6 +340,10 @@ tbody tr:hover td { background: var(--band); }
 }
 .leistungsblock .filterleiste { margin: 12px 0 0; }
 .filterleiste input, .filterleiste select { flex: 1 1 160px; }
+/* Zins und Tilgung im Kreditvergleich: schmales Feld mit Aufschrift davor. */
+.satzfeld { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.satzfeld span { font-size: 12px; color: var(--tinte-leise); white-space: nowrap; }
+.satzfeld input { width: 74px; text-align: right; }
 .filterleiste button { flex: 0 0 auto; width: auto; margin: 0; }
 
 /* ------------------------------------------------------------------- Meldungen */

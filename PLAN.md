@@ -75,11 +75,12 @@ Schritt 10.
 Der Zaehler braucht zwei neue Spalten. Dafuer muss einrichten.php einmal
 gelaufen sein; bis dahin wird nicht gezaehlt, kaputt geht nichts.
 
-## 8. Weitere Rechner
+## 8. Weitere Rechner — erledigt
 
-- [ ] Kaufnebenkosten
-- [ ] GFZ und GRZ
-- [ ] Kreditvergleich
+- [x] Kaufnebenkosten: Grunderwerbsteuer je Land, Notar, Makler, Sonstiges
+- [x] GFZ und GRZ samt Ueberschreitung nach Paragraph 19 Absatz 4 BauNVO
+- [x] Kreditvergleich: drei Angebote nebeneinander, verglichen ueber die
+      Zinskosten der Bindung
 
 ## 9. Mehrere Bauprojekte
 

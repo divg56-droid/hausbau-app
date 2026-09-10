@@ -10,7 +10,7 @@ import { einstellung } from '../daten.js';
 
 // Baukosten je m2 (schluesselfertig, Stand 08.2026) und Grunderwerbsteuer.
 // Quelle: BauZeuge.de/hausbau/kosten-pro-qm/ und /hausbau/grunderwerbsteuer/.
-const LAENDER = [
+export const LAENDER = [
   { slug: 'baden-wuerttemberg', name: 'Baden-Württemberg', min: 2900, max: 3600, grest: 5.0 },
   { slug: 'bayern', name: 'Bayern', min: 2900, max: 3700, grest: 3.5 },
   { slug: 'berlin', name: 'Berlin', min: 3100, max: 3700, grest: 6.0 },
