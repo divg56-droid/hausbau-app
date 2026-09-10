@@ -75,7 +75,6 @@ const menueKnopf = document.getElementById('menueknopf');
  */
 function leisteBauen() {
   seitenleiste.replaceChildren(
-    projektwahl(),
     ...BEREICHE.map((gruppe) => {
       // "ausLeiste" heisst: erreichbar, aber nicht in der Liste. Ein Bereich,
       // den man einmal im Leben braucht, muss nicht jeden Tag danebenstehen.
@@ -118,41 +117,6 @@ function leisteMarkieren(weg) {
   }
 }
 
-/**
- * Die Projektwahl ganz oben.
- *
- * Sie steht leer da und fuellt sich, sobald die Liste gelesen ist: Die
- * Seitenleiste wird beim Start gebaut, und darauf zu warten hiesse, die
- * ganze Leiste zu verzoegern. Bei genau einem Projekt bleibt sie unsichtbar
- * -- eine Wahl zwischen einer Sache ist keine.
- */
-function projektwahl() {
-  const feld = el('select', {
-    klasse: 'projektwahl', 'aria-label': 'Bauprojekt wählen',
-  });
-  const rahmen = el('div', { klasse: 'projektleiste', hidden: true }, [feld]);
-
-  (async () => {
-    const { projekteListe } = await import('./projekte.js');
-    const { projektAktiv, projektWechseln } = await import('./daten.js');
-    const [liste, aktiv] = await Promise.all([projekteListe(), projektAktiv()]);
-    if (liste.length < 2) return;
-
-    for (const p of liste) {
-      feld.append(el('option', { value: p.id, selected: p.id === aktiv, text: p.name }));
-    }
-    feld.addEventListener('change', async () => {
-      await projektWechseln(feld.value);
-      // Ganz neu laden: Jeder Bildschirm haelt seine Daten im Speicher, und
-      // die gehoeren jetzt zu einem anderen Projekt.
-      location.hash = '';
-      location.reload();
-    });
-    rahmen.hidden = false;
-  })();
-
-  return rahmen;
-}
 
 /**
  * Blendet aus, was bei dieser Bauweise nicht gebraucht wird.

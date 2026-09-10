@@ -1796,6 +1796,12 @@ console.log('Der Einstieg')
   pruef('Und keins aus der Verwaltung', !pr.includes("knopf('Neues Bauprojekt'"));
   pruef('Die Verwaltung bleibt fuer vorhandene erreichbar',
     u.includes('projekte.length > 1'));
+
+  // Eine Auswahl ueber der Leiste ist eine Frage, die sich nicht stellt.
+  const app = readFileSync('./www/app.js', 'utf8');
+  pruef('Keine Projektwahl ueber der Leiste', !app.includes('projektwahl'));
+  pruef('Die Leiste beginnt mit den Bereichen',
+    app.includes('seitenleiste.replaceChildren(') && app.includes('...BEREICHE.map'));
 }
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');

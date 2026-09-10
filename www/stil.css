@@ -643,8 +643,6 @@ html[data-thema="dunkel"] {
 }
 
 /* Die Projektwahl steht ueber allem anderen in der Leiste. */
-.projektleiste { padding: 0 6px 10px; border-bottom: 1px solid var(--linie); margin-bottom: 10px; }
-.projektwahl { width: 100%; font-weight: 700; }
 
 .leiste-gruppe { margin-bottom: 2px; }
 .leiste-gruppe > summary {
