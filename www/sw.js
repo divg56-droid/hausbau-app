@@ -47,6 +47,7 @@ const SCHALE = [
   './hilfen.js',
   './konto.js',
   './pdf.js',
+  './thema.js',
   './wetter.js',
   './module/ablauf.js',
   './module/angebote.js',

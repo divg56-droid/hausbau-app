@@ -617,5 +617,64 @@ console.log('Wirtsnamen bleiben kleingeschrieben');
     Boolean(gesucht) && html.includes(gesucht[1]), gesucht && gesucht[1]);
 }
 
+console.log('Helles und dunkles Design');
+{
+  const css = readFileSync('./www/stil.css', 'utf8');
+  const html = readFileSync('./www/index.html', 'utf8');
+  const js = readFileSync('./www/thema.js', 'utf8');
+
+  // Die Reihenfolge im Stylesheet ist Bedingung, nicht Geschmack. Stuende die
+  // Medienabfrage hinter der festen Wahl, koennte ein dunkel gestelltes
+  // Telefon die Handwahl "hell" ueberstimmen.
+  const medien = css.indexOf('@media (prefers-color-scheme: dark)');
+  const fest = css.indexOf('html[data-thema="dunkel"] {');
+  pruef('Es gibt eine Medienabfrage fuer dunkel', medien > -1);
+  pruef('Es gibt eine feste Wahl dunkel', fest > -1);
+  pruef('Die feste Wahl steht nach der Medienabfrage', fest > medien, medien + ' vs ' + fest);
+  pruef('Die Medienabfrage weicht der Handwahl hell',
+    /@media \(prefers-color-scheme: dark\)\s*\{\s*html:not\(\[data-thema="hell"\]\)/.test(css));
+
+  // Ohne color-scheme bleiben Formularfelder und Rollbalken hell.
+  pruef('color-scheme wird mitgesetzt', /html\[data-thema="dunkel"\]\s*\{[^}]*color-scheme: dark/.test(css));
+
+  // Die Pastelltoene der Plaketten muessen umschaltbar sein, sonst steht im
+  // dunklen Design ein hellrosa Kasten mit dunkelrotem Text.
+  for (const name of ['warn-flaeche', 'gut-flaeche', 'info-flaeche',
+                      'arbeit-flaeche', 'offen-flaeche', 'auf-akzent', 'schleier']) {
+    const hell = new RegExp('--' + name + ':').test(css);
+    const dunkel = css.slice(fest).includes('--' + name + ':');
+    pruef('--' + name + ' gibt es hell und dunkel', hell && dunkel);
+  }
+  pruef('Keine festen Pastelltoene mehr in den Plaketten',
+    !/\.marke-(offen|arbeit|fertig|beauftragt) \{ background: #/.test(css));
+  pruef('Weiss auf Akzentflaeche kommt aus einer Variablen',
+    !/\.knopf-haupt \{[^}]*color: #fff/.test(css));
+
+  // Der Schalter sieht aus wie das Vorbild auf karten.360welt.de.
+  pruef('Schalter ist eine Pille mit 46 auf 26',
+    /\.thema-schalter \{[^}]*width: 46px;[^}]*height: 26px/.test(css));
+  pruef('Die Kugel wandert bei hell nach rechts',
+    /\.thema-schalter\[data-modus="hell"\] \.kugel \{ transform: translateX\(20px\)/.test(css));
+  pruef('Spur ist im Hellen gruen',
+    /\.thema-schalter\[data-modus="hell"\] \{ background: #34c759/.test(css));
+
+  pruef('Der Schalter steht im Kopf', html.includes('class="thema-schalter" id="themaschalter"'));
+  pruef('Das Design wird vor app.js gesetzt',
+    html.indexOf('themaStarten()') < html.indexOf('src="app.js"'));
+
+  // Drei Zustaende, und "auto" darf kein Merkmal setzen: nur dann greift die
+  // Medienabfrage und die App wandert abends von selbst mit.
+  pruef('Bei auto wird das Merkmal entfernt', js.includes("wurzel.removeAttribute('data-thema')"));
+  pruef('Die Wahl liegt in localStorage', js.includes("'hausbau.thema'"));
+  pruef('Auf den Wechsel der Geraeteeinstellung wird gehorcht',
+    js.includes("addEventListener('change'") && js.includes("lies() === 'auto'"));
+  pruef('Die Farbe der Statusleiste wandert mit', js.includes('meta[name="theme-color"]'));
+  pruef('Sonne und Mond wie im Vorbild',
+    js.includes('\\u{1F319}') && js.includes('☀️'));
+
+  const sw = readFileSync('./www/sw.js', 'utf8');
+  pruef('thema.js liegt in der Offline-Schale', sw.includes("'./thema.js'"));
+}
+
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');
 process.exit(fehler ? 1 : 0);

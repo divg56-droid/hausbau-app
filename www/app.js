@@ -67,10 +67,42 @@ const zurueckKnopf = document.getElementById('zurueck');
 const kopfaktion = document.getElementById('kopfaktion');
 const inhalt = document.getElementById('inhalt');
 
+const APPNAME = 'BauZeuge';
+
+/**
+ * Die Wortmarke, wie sie auch im Kopf der Website steht: das Hauszeichen,
+ * dann "Bau" in Tinte und "Zeuge" im Akzent. Das grosse Z traegt die
+ * Trennung, deshalb steht sie farbig und nicht als ein Wort.
+ *
+ * Sie erscheint nur auf der Startseite. Wer in einem Bereich steht, braucht
+ * dort den Namen des Bereichs; die Marke waere ihm dann im Weg.
+ */
+function wortmarke() {
+  const zeichen = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  zeichen.setAttribute('viewBox', '0 0 64 64');
+  zeichen.setAttribute('aria-hidden', 'true');
+  zeichen.innerHTML =
+    '<rect width="64" height="64" rx="12" fill="#1f2a30"></rect>' +
+    '<path d="M11 31 32 13 53 31Z" fill="#5fbabd"></path>' +
+    '<rect x="16" y="31" width="32" height="20" fill="none" stroke="#f5f7f6" stroke-width="4"></rect>' +
+    '<rect x="28" y="40" width="8" height="11" fill="#f5f7f6"></rect>';
+
+  return el('span', { klasse: 'wortmarke' }, [
+    zeichen,
+    el('span', { klasse: 'wm-text' }, [
+      'Bau',
+      el('span', { klasse: 'wm-akzent', text: 'Zeuge' }),
+      el('span', { klasse: 'wm-de', text: '.de' }),
+    ]),
+  ]);
+}
+
 // Die Kopfzeile gehoert dem Gehaeuse. Module melden hier an, was rechts oben
 // stehen soll, statt sich eine eigene Leiste zu bauen.
 export function setzeKopf({ titel, aktion }) {
-  kopftitel.textContent = titel || 'BauZeuge';
+  const name = titel || APPNAME;
+  if (name === APPNAME) kopftitel.replaceChildren(wortmarke());
+  else kopftitel.textContent = name;
   kopfaktion.hidden = !aktion;
   if (aktion) {
     kopfaktion.textContent = aktion.text;
@@ -88,7 +120,7 @@ zurueckKnopf.addEventListener('click', () => {
 });
 
 function startseite() {
-  setzeKopf({ titel: 'BauZeuge' });
+  setzeKopf({ titel: APPNAME });
   zurueckKnopf.hidden = true;
 
   inhalt.append(

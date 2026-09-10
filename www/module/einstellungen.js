@@ -57,6 +57,16 @@ async function zeichne(rahmen) {
     ]),
 
     karte([
+      el('h2', { text: 'Darstellung' }),
+      el('p', {
+        klasse: 'unterzeile',
+        text: 'Der Schalter oben rechts wechselt zwischen hell und dunkel. ' +
+          'Hier kommst du zurück auf die Einstellung des Geräts.',
+      }),
+      themawahl(),
+    ]),
+
+    karte([
       el('h2', { text: 'Baustelle' }),
       el('p', {
         klasse: 'unterzeile',
@@ -190,6 +200,34 @@ async function zeichne(rahmen) {
       }),
     ])
   );
+}
+
+// ------------------------------------------------------------------ Darstellung
+
+/**
+ * Die drei Zustaende nebeneinander. Der Schalter im Kopf kennt nur hell und
+ * dunkel, weil er zeigt, was zu sehen ist; "automatisch" gibt es nur hier.
+ */
+function themawahl() {
+  const knoepfe = el('div', { klasse: 'geschossleiste' });
+
+  const zeichnen = async () => {
+    const { themaLesen, themaSetzen } = await import('../thema.js');
+    const jetzt = themaLesen();
+    knoepfe.replaceChildren(...[
+      ['auto', 'Automatisch'],
+      ['hell', 'Hell'],
+      ['dunkel', 'Dunkel'],
+    ].map(([wert, name]) =>
+      el('button', {
+        type: 'button', text: name,
+        klasse: jetzt === wert ? 'aktiv' : null,
+        onclick: () => { themaSetzen(wert); zeichnen(); },
+      })
+    ));
+  };
+  zeichnen();
+  return knoepfe;
 }
 
 // ------------------------------------------------------------------------ CSV

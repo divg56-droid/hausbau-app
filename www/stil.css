@@ -18,6 +18,20 @@
      mit dem Gruen von "fertig" noch mit dem Petrol der Marke verwechselbar
      ist. Frueher stand hier der Akzent, weil der zufaellig gelb war. */
   --arbeit: #c98a1a;
+  --offen: #969eaa;
+
+  /* Flaechen und Schrift der Plaketten und Kaesten. Frueher standen die
+     Pastelltoene fest im Regelwerk; im dunklen Design waere daraus ein
+     hellrosa Kasten mit dunkelrotem Text geworden. */
+  --warn-flaeche: #fdecea;  --warn-schrift: #7f1d1a;
+  --gut-flaeche: #e6f4ec;   --gut-schrift: #1e5c39;
+  --info-flaeche: #e6eefc;  --info-schrift: #1e429f;
+  --arbeit-flaeche: #fff4de; --arbeit-schrift: #8a5a08;
+  --offen-flaeche: #fdecea; --offen-schrift: #9b2c22;
+  /* Schrift auf einer Akzentflaeche. Im dunklen Design bleibt sie dunkel,
+     weil der Akzent dort das helle Petrol ist. */
+  --auf-akzent: #ffffff;
+  --schleier: rgba(20, 22, 26, .55);
   --kopf-hoehe: 56px;
   --schrift: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
@@ -127,7 +141,7 @@ input[type="checkbox"] { width: 22px; height: 22px; min-height: 0; accent-color:
   border-radius: 8px; border: 1px solid var(--linie);
   background: var(--karte); color: var(--tinte); cursor: pointer;
 }
-.knopf-haupt { background: var(--akzent); border-color: var(--akzent); color: #fff; }
+.knopf-haupt { background: var(--akzent); border-color: var(--akzent); color: var(--auf-akzent); }
 .knopf-haupt:active { background: var(--akzent-dunkel); border-color: var(--akzent-dunkel); }
 .knopf-leise { background: none; border-color: transparent; color: var(--akzent-dunkel); font-weight: 600; }
 .knopf-warn { color: var(--warn); border-color: var(--linie); }
@@ -174,8 +188,8 @@ input[type="checkbox"] { width: 22px; height: 22px; min-height: 0; accent-color:
 
 .kasten { border-radius: 8px; padding: 12px 14px; font-size: 14px; margin: 0 0 14px; }
 .kasten-info { background: var(--band); }
-.kasten-warn { background: #fdecea; color: #7f1d1a; }
-.kasten-gut { background: #e6f4ec; color: #1e5c39; }
+.kasten-warn { background: var(--warn-flaeche); color: var(--warn-schrift); }
+.kasten-gut { background: var(--gut-flaeche); color: var(--gut-schrift); }
 
 .leer { text-align: center; padding: 28px 12px; color: var(--tinte-leise); }
 .leer h2 { color: var(--tinte); }
@@ -184,17 +198,17 @@ input[type="checkbox"] { width: 22px; height: 22px; min-height: 0; accent-color:
   display: inline-block; padding: 3px 9px; border-radius: 999px;
   font-size: 12px; font-weight: 700; background: var(--band); color: var(--tinte-leise);
 }
-.marke-offen { background: #fdecea; color: #9b2c22; }
+.marke-offen { background: var(--offen-flaeche); color: var(--offen-schrift); }
 .marke-geplant { background: var(--band); color: var(--tinte-leise); }
-.marke-beauftragt { background: #e6eefc; color: #1e429f; }
+.marke-beauftragt { background: var(--info-flaeche); color: var(--info-schrift); }
 
 /* Abweichungen: ueber dem Geplanten rot, darunter gruen. Das ist die
    Information, um die es in einer Kostenaufstellung ueberhaupt geht. */
 .leise { color: var(--tinte-leise); }
 .mehr { color: var(--warn); font-weight: 700; }
 .weniger { color: var(--gut); font-weight: 700; }
-.marke-arbeit { background: #fff4de; color: #8a5a08; }
-.marke-fertig { background: #e6f4ec; color: #1e5c39; }
+.marke-arbeit { background: var(--arbeit-flaeche); color: var(--arbeit-schrift); }
+.marke-fertig { background: var(--gut-flaeche); color: var(--gut-schrift); }
 
 /* -------------------------------------------------------------------- Tabelle */
 
@@ -216,7 +230,7 @@ tr.bindung td { background: var(--band); font-weight: 700; }
 .pin {
   position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px;
   border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
-  border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4);
+  border: 2px solid var(--karte); box-shadow: 0 1px 4px rgba(0,0,0,.4);
   display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
 }
 .pin span { transform: rotate(45deg); font-size: 14px; line-height: 1; }
@@ -229,7 +243,7 @@ tr.bindung td { background: var(--band); font-weight: 700; }
   border: 1px solid var(--linie); border-radius: 999px;
   background: var(--karte); color: var(--tinte); cursor: pointer;
 }
-.geschossleiste button.aktiv { background: var(--akzent); border-color: var(--akzent); color: #fff; }
+.geschossleiste button.aktiv { background: var(--akzent); border-color: var(--akzent); color: var(--auf-akzent); }
 
 /* ---------------------------------------------------------------------- Fotos */
 
@@ -262,7 +276,7 @@ tr.bindung td { background: var(--band); font-weight: 700; }
 
 .meldung {
   position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
-  background: var(--tinte); color: #fff; padding: 11px 18px; border-radius: 999px;
+  background: var(--tinte); color: var(--karte); padding: 11px 18px; border-radius: 999px;
   font-size: 14px; z-index: 60; max-width: 90vw; text-align: center;
   transition: opacity 350ms ease;
 }
@@ -271,7 +285,7 @@ tr.bindung td { background: var(--band); font-weight: 700; }
 /* --------------------------------------------------------------------- Dialog */
 
 .ueberlagerung {
-  position: fixed; inset: 0; z-index: 50; background: rgba(20,22,26,.55);
+  position: fixed; inset: 0; z-index: 50; background: var(--schleier);
   display: flex; align-items: flex-end; justify-content: center;
 }
 .blatt {
@@ -321,10 +335,119 @@ tr.bindung td { background: var(--band); font-weight: 700; }
 
 .balken-bahn { position: relative; flex: none; height: 20px; }
 .balken { position: absolute; top: 4px; height: 12px; border-radius: 3px; }
-.balken-offen  { background: #969eaa; }
+.balken-offen  { background: var(--offen); }
 .balken-laeuft { background: var(--arbeit); }
 .balken-fertig { background: var(--gut); }
 
-.legende i.balken-offen  { background: #969eaa; }
+.legende i.balken-offen  { background: var(--offen); }
 .legende i.balken-laeuft { background: var(--arbeit); }
 .legende i.balken-fertig { background: var(--gut); }
+
+/* ------------------------------------------------------------ Dunkles Design
+
+   Drei Zustaende. Von Haus aus folgt die App der Geraeteeinstellung; wer
+   umschaltet, setzt data-thema auf dem <html>-Element, und das gilt dann.
+
+   Die Reihenfolge ist Bedingung: Die Medienabfrage darf nicht greifen, wenn
+   jemand von Hand auf hell gestellt hat, deshalb das :not(). Die feste Wahl
+   "dunkel" steht danach und schlaegt beides.
+
+   Der Akzent wird im Dunkeln das helle Petrol. Das dunkle Petrol der Marke
+   waere auf schwarzem Grund kaum vom Hintergrund zu unterscheiden. Aus
+   demselben Grund steht auf einer Akzentflaeche dort dunkle Schrift. */
+
+html[data-thema="dunkel"],
+html:not([data-thema="hell"]) {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-thema="hell"]) {
+    color-scheme: dark;
+    --papier: #10171a;
+    --karte: #182226;
+    --tinte: #e6ecec;
+    --tinte-leise: #9bacae;
+    --akzent: #5fbabd;
+    --akzent-dunkel: #8ed6d8;
+    --akzent-hell: #5fbabd;
+    --linie: #2a383c;
+    --band: #1f2c30;
+    --gut: #5fc98a;
+    --warn: #ff8b80;
+    --arbeit: #e0a93c;
+    --offen: #7d8a95;
+
+    --warn-flaeche: #3a1f1d;  --warn-schrift: #ffb3aa;
+    --gut-flaeche: #17301f;   --gut-schrift: #86ddaa;
+    --info-flaeche: #1b2740;  --info-schrift: #9dc0f5;
+    --arbeit-flaeche: #362a12; --arbeit-schrift: #f0c46a;
+    --offen-flaeche: #3a1f1d; --offen-schrift: #ffb3aa;
+    --auf-akzent: #0c1416;
+    --schleier: rgba(0, 0, 0, .62);
+  }
+}
+
+html[data-thema="dunkel"] {
+  color-scheme: dark;
+  --papier: #10171a;
+  --karte: #182226;
+  --tinte: #e6ecec;
+  --tinte-leise: #9bacae;
+  --akzent: #5fbabd;
+  --akzent-dunkel: #8ed6d8;
+  --akzent-hell: #5fbabd;
+  --linie: #2a383c;
+  --band: #1f2c30;
+  --gut: #5fc98a;
+  --warn: #ff8b80;
+  --arbeit: #e0a93c;
+  --offen: #7d8a95;
+
+  --warn-flaeche: #3a1f1d;  --warn-schrift: #ffb3aa;
+  --gut-flaeche: #17301f;   --gut-schrift: #86ddaa;
+  --info-flaeche: #1b2740;  --info-schrift: #9dc0f5;
+  --arbeit-flaeche: #362a12; --arbeit-schrift: #f0c46a;
+  --offen-flaeche: #3a1f1d; --offen-schrift: #ffb3aa;
+  --auf-akzent: #0c1416;
+  --schleier: rgba(0, 0, 0, .62);
+}
+
+/* ----------------------------------------------------------- Themenschalter
+
+   Aufbau und Masse wie der Schalter auf karten.360welt.de: eine Pille mit
+   einer weissen Kugel, die von links nach rechts wandert und Sonne oder Mond
+   traegt. Die Spur ist im Dunkeln anthrazit, im Hellen gruen. */
+
+.thema-schalter {
+  flex: none; width: 46px; height: 26px; padding: 3px; margin: 0 2px;
+  display: inline-flex; align-items: center;
+  border: none; border-radius: 999px; cursor: pointer;
+  background: #1c1f26;
+  transition: background 0.2s;
+}
+.thema-schalter[data-modus="hell"] { background: #34c759; }
+.thema-schalter .kugel {
+  width: 20px; height: 20px; border-radius: 50%; background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; line-height: 1;
+  transform: translateX(0); transition: transform 0.2s;
+}
+.thema-schalter[data-modus="hell"] .kugel { transform: translateX(20px); }
+@media (prefers-reduced-motion: reduce) {
+  .thema-schalter, .thema-schalter .kugel { transition: none; }
+}
+
+/* ------------------------------------------------------------- Wortmarke
+
+   Wie im Kopf der Website: Hauszeichen, "Bau" in Tinte, "Zeuge" im Akzent.
+   Sie steht nur auf der Startseite; in einem Bereich zeigt der Kopf dessen
+   Namen. */
+.wortmarke { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.wortmarke svg { width: 28px; height: 28px; flex: none; border-radius: 6px; }
+.wm-text {
+  font-weight: 900; font-size: 20px; letter-spacing: -0.2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wm-akzent { font-weight: 500; color: var(--akzent-dunkel); }
+.wm-de { font-size: 11px; font-weight: 500; color: var(--tinte-leise); }
