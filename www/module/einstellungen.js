@@ -28,7 +28,7 @@ async function zeichne(rahmen) {
 
   const projektname = eingabe({
     value: (await einstellung('projektname')) || '',
-    placeholder: 'z. B. Neubau Musterweg 3',
+    placeholder: 'z. B. Neubau Ahornweg 12',
   });
   // Monat statt Datum: Ein Baubeginn im naechsten Jahr ist nie taggenau,
   // und ein erfundener Tag im Formular sieht aus wie ein Termin.

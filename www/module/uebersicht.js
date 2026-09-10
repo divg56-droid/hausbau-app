@@ -433,7 +433,7 @@ function willkommen() {
  * das ohnehin schon. Aendern laesst es sich jederzeit in den Einstellungen.
  */
 function projektBlatt(vorwahl) {
-  const name = eingabe({ placeholder: 'z. B. Neubau Musterweg 3' });
+  const name = eingabe({ placeholder: 'z. B. Neubau Ahornweg 12' });
   let gewaehlt = BAUWEISEN.some((b) => b.id === vorwahl) ? vorwahl : SCHLUESSELFERTIG;
 
   const knoepfe = BAUWEISEN.map((b) =>
