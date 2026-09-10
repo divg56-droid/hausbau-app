@@ -135,7 +135,7 @@ function zeigeTodos(rahmen, todos, raeume, neu) {
     karte([
       el('h2', { text: offen.length ? 'Offen (' + offen.length + ')' : 'Alles erledigt' }),
       offen.length
-        ? el('ul', { klasse: 'liste' }, offen.map((t) => zeile(t, raeume, neu, true)))
+        ? el('ul', { klasse: 'liste liste-punkte' }, offen.map((t) => zeile(t, raeume, neu, true)))
         : el('p', {
             klasse: 'unterzeile',
             text: 'Kein offener Punkt. Das kommt am Bau selten vor, genieß es.',
@@ -151,7 +151,7 @@ function zeigeTodos(rahmen, todos, raeume, neu) {
           el('span', { klasse: 'phasen-titel', text: 'Erledigt' }),
           el('span', { klasse: 'phasen-zahl', text: String(erledigt.length) }),
         ]),
-        el('ul', { klasse: 'liste' }, erledigt.slice(0, 50).map((t) => zeile(t, raeume, neu, true))),
+        el('ul', { klasse: 'liste liste-punkte' }, erledigt.slice(0, 50).map((t) => zeile(t, raeume, neu, true))),
       ])
     );
   }
@@ -265,7 +265,7 @@ function zeigeChecklisten(rahmen, todos, raeume, neu) {
         el('div', { klasse: 'fortschrittsbalken' }, [
           el('div', { stil: { width: anteil + '%' } }),
         ]),
-        el('ul', { klasse: 'liste' }, todosSortieren(drin).map((t) => zeile(t, raeume, neu, false))),
+        el('ul', { klasse: 'liste liste-punkte' }, todosSortieren(drin).map((t) => zeile(t, raeume, neu, false))),
         el('div', { klasse: 'filterleiste' }, [
           knopf('Punkt ergänzen', () =>
             bearbeiten({ liste: name }, raeume, neu), 'knopf-leise'),
@@ -360,8 +360,7 @@ function zeile(todo, raeume, neu, mitListe) {
 
   return el('li', {}, [
     el('div', {
-      klasse: 'leitfaden-zeile' + (todo.erledigt ? ' erledigt' : '') +
-        (mitListe ? '' : ' punktzeile'),
+      klasse: 'leitfaden-zeile punktzeile' + (todo.erledigt ? ' erledigt' : ''),
     }, [
       el('input', {
         type: 'checkbox',
@@ -396,26 +395,24 @@ function zeile(todo, raeume, neu, mitListe) {
           ].filter(Boolean).join(' · ') || 'ohne Frist',
         }),
       ]),
-      // In der Checkliste stehen die beiden Knoepfe sichtbar daneben. Eine
-      // Vorlage bringt Punkte mit, die auf das eigene Vorhaben nicht passen
-      // -- die will man streichen und umschreiben, nicht abhaken, und dass
-      // die Zeile sich antippen laesst, sieht man ihr nicht an.
-      mitListe
-        ? null
-        : el('span', { klasse: 'zeilen-aktionen punktknoepfe' }, [
-            el('button', {
-              klasse: 'punktknopf', type: 'button', text: 'Umbenennen',
-              onclick: () => bearbeiten(todo, raeume, neu),
-            }),
-            el('button', {
-              klasse: 'punktknopf', type: 'button', text: 'Löschen',
-              onclick: async () => {
-                if (!window.confirm(`Punkt „${todo.titel}“ löschen?`)) return;
-                await daten.loeschen('todos', todo.id);
-                await neu();
-              },
-            }),
-          ]),
+      // Die beiden Knoepfe stehen sichtbar daneben. Dass sich die Zeile
+      // antippen laesst, sieht man ihr nicht an -- und eine Vorlage bringt
+      // Punkte mit, die auf das eigene Vorhaben nicht passen: Die will man
+      // streichen und umschreiben, nicht abhaken.
+      el('span', { klasse: 'zeilen-aktionen punktknoepfe' }, [
+        el('button', {
+          klasse: 'punktknopf', type: 'button', text: 'Umbenennen',
+          onclick: () => bearbeiten(todo, raeume, neu),
+        }),
+        el('button', {
+          klasse: 'punktknopf', type: 'button', text: 'Löschen',
+          onclick: async () => {
+            if (!window.confirm(`„${todo.titel}“ löschen?`)) return;
+            await daten.loeschen('todos', todo.id);
+            await neu();
+          },
+        }),
+      ]),
     ]),
   ]);
 }

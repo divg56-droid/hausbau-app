@@ -951,6 +951,11 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
     column-gap: 20px; align-items: start;
   }
 
+  /* Aufgaben und Checklistenpunkte nicht: Sie tragen Haken, Begruendung,
+     naechsten Schritt und zwei Knoepfe, und drei Spalten davon sind eine
+     Wand statt einer Liste. */
+  .liste-punkte { grid-template-columns: 1fr; }
+
   /* Gleichrangige Karten nebeneinander statt untereinander: Phasen des
      Leitfadens, Raeume je Geschoss, Maengel je Raum, Angebote je Position,
      Dokumente je Art, Checklisten. */

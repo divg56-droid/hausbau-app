@@ -1741,9 +1741,14 @@ console.log('Auswertungen und Verknuepfungen');
     t2.includes("text: 'Umbenennen'") && t2.includes("text: 'Löschen'"));
   // Zwei ausgewachsene Knoepfe je Zeile machen aus neun Punkten eine
   // Bildschirmhoehe. Der Punkt ist das Abhaken, nicht das Umbenennen.
-  pruef('Aber klein und ruhig', t2.includes("klasse: 'punktknopf'") &&
+  pruef('Klein und ruhig', t2.includes("klasse: 'punktknopf'") &&
     readFileSync('./www/stil.css', 'utf8').includes('.punktknopf {'));
-  pruef('Aber nicht in der To-Do-Liste', /mitListe\s*\?\s*null/.test(t2));
+  // Zeilen mit Haken, Begruendung und zwei Knoepfen vertragen keine drei
+  // Spalten -- das ist dann eine Wand, keine Liste.
+  pruef('Und untereinander, nicht nebeneinander',
+    t2.includes("klasse: 'liste liste-punkte'") &&
+    readFileSync('./www/stil.css', 'utf8').includes('.liste-punkte { grid-template-columns: 1fr; }'));
+  pruef('Auch in der To-Do-Liste', !/mitListe\s*\?\s*null/.test(t2));
 }
 
 console.log('Raeume auf dem Grundriss');
