@@ -1,14 +1,18 @@
 // Anschlussplan: Grundriss als Karte, darauf Pins fuer alles, was spaeter
-// hinter dem Putz verschwindet.
+// hinter dem Putz verschwindet -- und die Raeume, damit man weiss, wovon
+// man redet.
 //
-// Die Pin-Position wird relativ gespeichert (0 bis 1 der Bildbreite und
+// Die Position wird relativ gespeichert (0 bis 1 der Bildbreite und
 // -hoehe). Dadurch sitzt sie auf jedem Bildschirm richtig, egal wie breit
-// der Grundriss gerade dargestellt wird.
+// der Grundriss gerade dargestellt wird. Fuer Raeume gilt dasselbe: Sie
+// bekommen x und y an ihrem eigenen Satz, nicht einen zweiten Datensatz --
+// ein Raum ist ein Raum, ob er auf dem Plan steht oder nicht.
 
 import {
   el, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile,
   hinweisKasten, leerzustand, zuZahl, melde, datumLang, heute,
   anhaengen,
+  geheZu,
 } from '../hilfen.js';
 import { daten, einstellung, bildUrl, bildAblegen, bildLoeschen } from '../daten.js';
 import { Blatt, pdfTeilen, bildLaden } from '../pdf.js';
@@ -38,7 +42,8 @@ async function zeichne(rahmen, gewaehltesGeschoss = null) {
     (a, b) => (a.reihenfolge ?? 0) - (b.reihenfolge ?? 0)
   );
 
-  anhaengen(rahmen, kopfzeile('Anschlussplan', 'Grundriss hochladen, Anschlüsse markieren.'));
+  anhaengen(rahmen, kopfzeile('Anschlussplan',
+    'Grundriss hochladen, Räume und Anschlüsse markieren.'));
 
   if (!geschosse.length) {
     anhaengen(
@@ -66,6 +71,11 @@ async function zeichne(rahmen, gewaehltesGeschoss = null) {
 
   const aktuell = geschosse.find((g) => g.id === gewaehltesGeschoss) || geschosse[0];
   const pins = await daten.nach('pins', 'geschossId', aktuell.id);
+  const raeume = await daten.alle('raeume');
+  // Auf dem Plan steht ein Raum nur, wenn jemand ihn dorthin gesetzt hat.
+  const markiert = raeume.filter(
+    (r) => r.geschossId === aktuell.id && typeof r.x === 'number' && typeof r.y === 'number'
+  );
   const neu = (id) => zeichne(rahmen, id ?? aktuell.id);
 
   // Geschossleiste
@@ -87,23 +97,42 @@ async function zeichne(rahmen, gewaehltesGeschoss = null) {
   // Plan
   const url = await bildUrl(aktuell.bildId);
   const flaeche = el('div', { klasse: 'planflaeche' });
-  let setzenAktiv = false;
+  let modus = '';
 
   if (url) {
     const bild = el('img', { src: url, alt: 'Grundriss ' + aktuell.name });
     flaeche.append(bild);
 
     flaeche.addEventListener('click', (ereignis) => {
-      if (!setzenAktiv) return;
+      if (!modus) return;
       const masse = bild.getBoundingClientRect();
       const x = (ereignis.clientX - masse.left) / masse.width;
       const y = (ereignis.clientY - masse.top) / masse.height;
       if (x < 0 || x > 1 || y < 0 || y > 1) return;
-      setzenAktiv = false;
-      setzenKnopf.textContent = '\u{1F4CD} Anschluss markieren';
-      setzenKnopf.className = 'knopf';
-      pinBearbeiten({ geschossId: aktuell.id, x, y }, neu);
+      const war = modus;
+      modusSetzen('');
+      if (war === 'pin') pinBearbeiten({ geschossId: aktuell.id, x, y }, neu);
+      else raumMarkieren(aktuell, x, y, raeume, neu);
     });
+
+    // Raeume zuerst anhaengen: Sie sind flaechig und gehoeren unter die
+    // Pins, sonst verdeckt ein Raumname die Steckdose daneben.
+    for (const r of markiert) {
+      flaeche.append(
+        el('button', {
+          type: 'button', klasse: 'raummarke',
+          title: r.name + (r.flaeche ? ' · ' + r.flaeche + ' m²' : ''),
+          stil: {
+            left: (r.x * 100).toFixed(2) + '%',
+            top: (r.y * 100).toFixed(2) + '%',
+          },
+          onclick: (ereignis) => {
+            ereignis.stopPropagation();
+            geheZu('#/raeume/' + r.id);
+          },
+        }, [el('span', { text: r.name })])
+      );
+    }
 
     for (const pin of pins) {
       const art = PIN_ARTEN[pin.art] || PIN_ARTEN.sonstiges;
@@ -131,20 +160,70 @@ async function zeichne(rahmen, gewaehltesGeschoss = null) {
     }
   }
 
-  const setzenKnopf = knopf('\u{1F4CD} Anschluss markieren', () => {
-    setzenAktiv = !setzenAktiv;
-    setzenKnopf.textContent = setzenAktiv ? 'Tippe auf die Stelle im Plan' : '\u{1F4CD} Anschluss markieren';
-    setzenKnopf.className = setzenAktiv ? 'knopf-haupt' : 'knopf';
-  });
+  const pinKnopf = knopf('\u{1F4CD} Anschluss markieren', () => modusSetzen(modus === 'pin' ? '' : 'pin'));
+  const raumKnopf = knopf('\u{1F3F7} Raum markieren', () => modusSetzen(modus === 'raum' ? '' : 'raum'));
+
+  // Ein Modus, zwei Knoepfe: Wer beides gleichzeitig anschaltet, tippt
+  // auf den Plan und weiss nicht, was passiert.
+  function modusSetzen(neuerModus) {
+    modus = neuerModus;
+    pinKnopf.textContent = modus === 'pin'
+      ? 'Tippe auf die Stelle im Plan' : '\u{1F4CD} Anschluss markieren';
+    pinKnopf.className = modus === 'pin' ? 'knopf-haupt' : 'knopf';
+    raumKnopf.textContent = modus === 'raum'
+      ? 'Tippe in die Mitte des Raums' : '\u{1F3F7} Raum markieren';
+    raumKnopf.className = modus === 'raum' ? 'knopf-haupt' : 'knopf';
+    flaeche.classList.toggle('setzt', Boolean(modus));
+  }
 
   anhaengen(
     rahmen,
     karte([
       flaeche,
-      el('p', { klasse: 'unterzeile', stil: { margin: '10px 0 0' }, text: `${pins.length} Markierungen in ${aktuell.name}` }),
+      el('p', {
+        klasse: 'unterzeile', stil: { margin: '10px 0 0' },
+        text: `${markiert.length} Räume und ${pins.length} Anschlüsse in ${aktuell.name}`,
+      }),
     ]),
-    setzenKnopf
+    el('div', { klasse: 'knopf-reihe' }, [raumKnopf, pinKnopf])
   );
+
+  if (markiert.length) {
+    anhaengen(
+      rahmen,
+      karte([
+        el('h2', { text: 'Räume in ' + aktuell.name }),
+        el('ul', { klasse: 'liste' }, markiert
+          .sort((a, b) => String(a.name).localeCompare(String(b.name), 'de'))
+          .map((r) => el('li', {}, [
+            el('div', { klasse: 'listenzeile', stil: { cursor: 'default' } }, [
+              el('span', { klasse: 'zeilen-text' }, [
+                el('span', { klasse: 'zeilen-titel', text: r.name }),
+                el('span', {
+                  klasse: 'zeilen-unter',
+                  text: r.flaeche ? r.flaeche + ' m²' : 'ohne Flächenangabe',
+                }),
+              ]),
+              el('span', { klasse: 'zeilen-aktionen' }, [
+                el('button', {
+                  klasse: 'knopf knopf-schmal', type: 'button', text: 'Öffnen',
+                  onclick: () => { geheZu('#/raeume/' + r.id); },
+                }),
+                el('button', {
+                  klasse: 'knopf knopf-schmal', type: 'button', text: 'Markierung lösen',
+                  onclick: async () => {
+                    // Nur die Position faellt weg. Der Raum bleibt, mit
+                    // Fotos, Kosten und allem, was daran haengt.
+                    await daten.sichern('raeume', { ...r, x: null, y: null });
+                    await neu();
+                  },
+                }),
+              ]),
+            ]),
+          ]))),
+      ])
+    );
+  }
 
   // Liste der Pins, damit man sie auch ohne Zielen findet
   if (pins.length) {
@@ -192,6 +271,11 @@ async function zeichne(rahmen, gewaehltesGeschoss = null) {
           for (const p of zuWeg) {
             if (p.bildId) await bildLoeschen(p.bildId);
             await daten.loeschen('pins', p.id);
+          }
+          // Raeume bleiben stehen und verlieren nur ihren Platz auf dem
+          // Plan: Das Zimmer gibt es weiter, auch ohne Grundriss.
+          for (const r of raeume.filter((x) => x.geschossId === aktuell.id)) {
+            await daten.sichern('raeume', { ...r, geschossId: null, x: null, y: null });
           }
           if (aktuell.bildId) await bildLoeschen(aktuell.bildId);
           await daten.loeschen('geschosse', aktuell.id);
@@ -304,6 +388,9 @@ async function pdfErzeugen(geschosse) {
 
   for (const [i, geschoss] of geschosse.entries()) {
     const pins = await daten.nach('pins', 'geschossId', geschoss.id);
+    const raeume = (await daten.alle('raeume')).filter(
+      (r) => r.geschossId === geschoss.id && typeof r.x === 'number' && typeof r.y === 'number'
+    );
     if (i > 0) blatt.neueSeite();
     blatt.ueberschrift(geschoss.name);
 
@@ -312,6 +399,11 @@ async function pdfErzeugen(geschosse) {
 
     if (plan) {
       const rahmen = blatt.bildGross(plan);
+      // Raeume mit Buchstaben, Anschluesse mit Zahlen: So laesst sich der
+      // Plan lesen, ohne zwei Legenden nebeneinanderzuhalten.
+      raeume.forEach((r, n) => {
+        blatt.marke(rahmen, r.x, r.y, raumzeichen(n), [14, 110, 114]);
+      });
       pins.forEach((pin, n) => {
         const art = PIN_ARTEN[pin.art] || PIN_ARTEN.sonstiges;
         blatt.marke(rahmen, pin.x, pin.y, n + 1, farbeZuRgb(art.farbe));
@@ -320,6 +412,17 @@ async function pdfErzeugen(geschosse) {
       // Als PDF hochgeladene Grundrisse lassen sich nicht einbetten.
       ohneBild++;
       blatt.absatz('Der Grundriss dieses Geschosses liegt als PDF vor und kann hier nicht abgebildet werden. Die Markierungen stehen trotzdem in der Tabelle.', 9);
+    }
+
+    if (raeume.length) {
+      blatt.tabelle(
+        ['Zeichen', 'Raum', 'Fläche', 'Notiz'],
+        raeume.map((r, n) => [
+          raumzeichen(n), r.name, r.flaeche ? r.flaeche + ' m²' : '', r.notiz || '',
+        ]),
+        [0.7, 2, 0.9, 3],
+        [2]
+      );
     }
 
     if (pins.length) {
@@ -353,6 +456,60 @@ async function pdfErzeugen(geschosse) {
     melde('PDF konnte nicht geteilt werden.');
     console.error(fehler);
   }
+}
+
+/** A, B, C ... Z, dann AA. Reicht fuer jeden Grundriss. */
+function raumzeichen(n) {
+  let rest = n;
+  let text = '';
+  do {
+    text = String.fromCharCode(65 + (rest % 26)) + text;
+    rest = Math.floor(rest / 26) - 1;
+  } while (rest >= 0);
+  return text;
+}
+
+/**
+ * Setzt einen Raum an die getippte Stelle.
+ *
+ * Wer den Raum noch nicht angelegt hat, legt ihn hier an: Auf dem Plan
+ * faellt einem ein, dass der Hauswirtschaftsraum fehlt, nicht in der
+ * Raumliste.
+ */
+function raumMarkieren(geschoss, x, y, raeume, nachher) {
+  const frei = raeume
+    .filter((r) => r.geschossId !== geschoss.id || typeof r.x !== 'number')
+    .sort((a, b) => String(a.name).localeCompare(String(b.name), 'de'));
+  const wahl = auswahl(
+    [['', '– neuer Raum –'], ...frei.map((r) => [r.id, r.name])], frei.length ? frei[0].id : ''
+  );
+  const name = eingabe({ placeholder: 'z. B. Hauswirtschaftsraum' });
+  const namensfeld = feld('Name des neuen Raums', name);
+  namensfeld.hidden = frei.length > 0;
+  wahl.addEventListener('change', () => { namensfeld.hidden = Boolean(wahl.value); });
+
+  blattOeffnen(
+    'Raum auf dem Grundriss',
+    [
+      feld('Welcher Raum?', wahl,
+        'Räume, die schon auf diesem Geschoss liegen, stehen nicht in der Liste.'),
+      namensfeld,
+    ],
+    async () => {
+      if (wahl.value) {
+        const raum = raeume.find((r) => r.id === wahl.value);
+        await daten.sichern('raeume', { ...raum, geschossId: geschoss.id, x, y });
+      } else {
+        const wert = name.value.trim();
+        if (!wert) throw new Error('Bitte einen Namen eintragen.');
+        await daten.sichern('raeume', {
+          name: wert, geschossId: geschoss.id, x, y,
+          flaeche: 0, notiz: '', bildIds: [],
+        });
+      }
+      await nachher();
+    }
+  );
 }
 
 /** "#e8a020" zu [232, 160, 32] */

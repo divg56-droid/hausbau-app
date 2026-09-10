@@ -258,12 +258,22 @@ async function zeigeRaum(rahmen, kennung) {
     .map((p) => ({ ...p, ...postenRechnen(p, belege) }));
   const eigeneTodos = todos.filter((t) => t.raumId === raum.id);
 
+  const aufDemPlan = geschoss && typeof raum.x === 'number' && typeof raum.y === 'number';
+
   anhaengen(
     rahmen,
     kopfzeile(raum.name, [
       geschoss ? geschoss.name : null,
       raum.flaeche ? zahl(raum.flaeche, 1) + ' m²' : null,
-    ].filter(Boolean).join(' · ') || 'ohne weitere Angaben')
+      aufDemPlan ? 'auf dem Grundriss' : null,
+    ].filter(Boolean).join(' · ') || 'ohne weitere Angaben'),
+    el('div', { klasse: 'knopf-reihe kopfaktionen' }, [
+      knopf(
+        aufDemPlan ? 'Im Grundriss zeigen' : 'Im Grundriss markieren',
+        () => { geheZu('#/anschlussplan'); },
+        'knopf-leise'
+      ),
+    ])
   );
 
   // Fotos: der eigentliche Grund fuer diese Ansicht.
@@ -407,12 +417,18 @@ function raumBearbeiten(raum, geschosse, nachher) {
       feld('Notiz', notiz, 'Was man später wissen will: Wandaufbau, Besonderheiten, Wünsche.'),
     ],
     async () => {
+      // Der Platz auf dem Grundriss haengt am Geschoss. Wer den Raum in ein
+      // anderes Geschoss schiebt, dessen Markierung saesse sonst auf dem
+      // falschen Plan -- also faellt sie weg und wird neu gesetzt.
+      const gleichesGeschoss = (geschoss.value || null) === (raum.geschossId ?? null);
       const wert = {
         name: name.value.trim(),
         geschossId: geschoss.value || null,
         flaeche: Math.max(0, zuZahl(flaeche.value)),
         notiz: notiz.value.trim(),
         bildIds: raum.bildIds || [],
+        x: gleichesGeschoss ? (raum.x ?? null) : null,
+        y: gleichesGeschoss ? (raum.y ?? null) : null,
       };
       if (!wert.name) throw new Error('Bitte einen Namen eintragen.');
       if (raum.id) wert.id = raum.id;

@@ -1728,5 +1728,34 @@ console.log('Auswertungen und Verknuepfungen');
     k.includes("ansicht !== 'firmen' && ansicht !== 'personen'"));
 }
 
+console.log('Raeume auf dem Grundriss');
+{
+  const a = readFileSync('./www/module/anschlussplan.js', 'utf8');
+  const r = readFileSync('./www/module/raeume.js', 'utf8');
+
+  pruef('Der Plan kennt zwei Modi', a.includes('function modusSetzen') &&
+    a.includes('Raum markieren') && a.includes('Anschluss markieren'));
+  pruef('Ein Raum laesst sich setzen', a.includes('function raumMarkieren'));
+  pruef('Und dabei auch neu anlegen', a.includes("'– neuer Raum –'"));
+  pruef('Marken sitzen relativ', a.includes("(r.x * 100).toFixed(2)"));
+  // Nur wer x und y hat, steht auf dem Plan. Ein Raum ohne Position ist
+  // trotzdem ein Raum.
+  pruef('Ohne Position keine Marke', a.includes("typeof r.x === 'number'"));
+  pruef('Im PDF stehen Raeume als Buchstaben', a.includes('function raumzeichen') &&
+    a.includes('raumzeichen(n)'));
+
+  // Der haeufigste stille Datenverlust: Ein Formular baut den Satz neu und
+  // laesst Felder weg, die es nicht kennt.
+  pruef('Bearbeiten behaelt die Position', r.includes('x: gleichesGeschoss ? (raum.x ?? null) : null'));
+  // Ein Wechsel des Geschosses macht die Position falsch, nicht nur alt.
+  pruef('Ein anderes Geschoss loest die Marke', r.includes('const gleichesGeschoss ='));
+  pruef('Ein geloeschtes Geschoss loescht keinen Raum',
+    a.includes("await daten.sichern('raeume', { ...r, geschossId: null, x: null, y: null })"));
+
+  const css = readFileSync('./www/stil.css', 'utf8');
+  pruef('Die Marke verdeckt den Plan nicht ganz', css.includes('.raummarke') &&
+    css.includes('color-mix(in srgb, var(--karte) 88%, transparent)'));
+}
+
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');
 process.exit(fehler ? 1 : 0);
