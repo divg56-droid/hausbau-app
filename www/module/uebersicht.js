@@ -376,7 +376,7 @@ function willkommen(projekt) {
   ];
 
   return karte([
-    el('p', { klasse: 'willkommen-marke', text: 'Willkommen bei BauZeuge' }),
+    el('p', { klasse: 'willkommen-marke', text: 'Willkommen bei BauZeuge.de' }),
     el('h2', {
       klasse: 'willkommen-titel',
       text: projekt ? 'Leg los mit ' + projekt : 'Dein Bauvorhaben an einer Stelle',

@@ -716,10 +716,9 @@ console.log('Gliederung und Seitenleiste');
   pruef('Jeder Punkt hat eine Beschreibung', MODULE.every((m) => m.text && m.text.length > 10));
   pruef('Jede Gruppe hat ein Zeichen', BEREICHE.every((g) => g.zeichen && g.titel));
 
-  // Acht Gruppen, und dabei bleibt es. Die Leiste klappt sie zu, sonst waere
-  // schon das zu viel. Waechst die Liste weiter, gehoert sie neu geschnitten
-  // und nicht verlaengert.
-  pruef('Hoechstens acht Gruppen', BEREICHE.length <= 8, String(BEREICHE.length));
+  // Sieben Gruppen sind das Maximum, das man ohne Scrollen erfasst. Waechst
+  // die Liste weiter, gehoert sie neu geschnitten und nicht verlaengert.
+  pruef('Hoechstens sieben Gruppen', BEREICHE.length <= 7, String(BEREICHE.length));
 
   const html = readFileSync('./www/index.html', 'utf8');
   pruef('Die Seitenleiste steht im HTML', html.includes('id="seitenleiste"'));
@@ -861,11 +860,11 @@ console.log('Baukosten in drei Sichten');
   pruef('Jede Sicht setzt eine Kopfzeile',
     (baukasse.match(/kopfzeile\(/g) || []).length >= 4);
 
-  const wege = MODULE.filter((m) => m.gruppe === 'Baukosten').map((m) => m.weg);
-  pruef('Die Baukosten fuehren auf ihre Sichten, den Rechner und die Angebote',
+  const wege = MODULE.filter((m) => m.gruppe === 'Kosten & Finanzierung').map((m) => m.weg);
+  pruef('Kosten und Geld stehen in einer Gruppe',
     JSON.stringify(wege) === JSON.stringify(
-      ['baukasse', 'baukasse/kosten', 'baunebenkosten', 'baukasse/statistik',
-       'baukasse/rechnungen', 'angebote']),
+      ['baukasse', 'baukasse/kosten', 'baunebenkosten', 'angebote',
+       'baukasse/rechnungen', 'baukasse/statistik', 'finanzierung', 'tilgung']),
     wege.join(', '));
 
   // Die Wohnflaeche darf nicht zweimal gefuehrt werden, sonst widersprechen
