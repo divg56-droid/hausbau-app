@@ -29,7 +29,7 @@ import { terminePlanen } from './ablauf.js';
 import { STATUS } from './maengel.js';
 import { leitfadenStand } from '../leitfaden-daten.js';
 import {
-  bauweise, bauweiseSetzen, bauphaseSetzen, BAUPHASEN, SANIERUNG,
+  bauweise, bauweiseSetzen, BAUWEISEN, BAUPHASEN, SANIERUNG, SCHLUESSELFERTIG,
 } from '../bauweise.js';
 import { zeichen, wetterZeichen } from '../zeichen.js';
 import { todoStand, todosSortieren } from './todos.js';
@@ -61,14 +61,47 @@ export async function zeige(rahmen) {
   const mehr = gerechnet.reduce((s, p) => s + p.differenz, 0);
   const rest = stand.gesamt - auftrag;
 
-  // Ganz am Anfang: nichts erfasst, nichts abgehakt, kein Name vergeben.
+  // Zwei verschiedene Anfaenge, die man leicht verwechselt.
+  //
+  // Solange kein Projekt eingerichtet ist, gibt es genau eine Handlung: es
+  // anzulegen. Danach ist die Entscheidung gefallen, und die Willkommenskarte
+  // waere die Aufforderung, sie noch einmal zu treffen -- geaendert wird die
+  // Bauweise ab dann in den Einstellungen.
+  //
+  // Danach kann trotzdem noch nichts erfasst sein. Dann hilft keine Kennzahl,
+  // sondern ein Weg hinein.
+  if (!projekt) {
+    anhaengen(
+      rahmen,
+      willkommen(),
+      hinweisKasten(
+        'Links in der Leiste stehen alle Bereiche. Auf dem Telefon öffnest du sie ' +
+          'oben links über das Menü.',
+        'info'
+      )
+    );
+    return;
+  }
+
   const nochNichts = !stand.posten.length && !posten.length && !aufgaben.length &&
     !maengel.length && !todos.length && !leitfaden.erledigt;
 
   if (nochNichts) {
     anhaengen(
       rahmen,
-      willkommen(),
+      kopfzeile(projekt, null),
+      projektkopf(art, leitfaden, todos, ort || {}, baubeginn),
+      karte([
+        el('h2', { text: 'Fang mit dem Geld an' }),
+        el('p', {
+          klasse: 'unterzeile',
+          text: 'Aus Eigenkapital und Darlehen entsteht dein Budget. Alles Weitere, ' +
+            'von der Kostenaufstellung bis zum Restbudget, rechnet sich daraus.',
+        }),
+        knopf('Budget anlegen', () => { geheZu('#/finanzierung'); }, 'knopf-haupt'),
+        knopf('Erst einmal Baukosten schätzen', () => { geheZu('#/baukosten'); }),
+        knopf('Oder dem Bauleitfaden folgen', () => { geheZu('#/leitfaden'); }, 'knopf-leise'),
+      ]),
       hinweisKasten(
         'Links in der Leiste stehen alle Bereiche. Auf dem Telefon öffnest du sie ' +
           'oben links über das Menü.',
@@ -83,7 +116,13 @@ export async function zeige(rahmen) {
     rahmen,
     kopfzeile(projekt || 'Dein Bauprojekt', null),
     projektkopf(art, leitfaden, todos, ort || {}, baubeginn),
-    projektaktionen(projekte.length)
+    // Mehrere Projekte gibt es nur noch fuer den, der sie schon hat: Ein
+    // Bauherr baut ein Haus, und ein Knopf fuer das zweite stand nur im Weg.
+    projekte.length > 1
+      ? el('div', { klasse: 'knopf-reihe kopfaktionen' }, [
+          knopf('Bauprojekte verwalten', () => { geheZu('#/projekte'); }, 'knopf-leise'),
+        ])
+      : null
   );
 
   // ------------------------------------------------------------- Kennzahlen
@@ -352,29 +391,14 @@ export async function zeige(rahmen) {
 /**
  * Der erste Bildschirm, wenn noch nichts da ist.
  *
- * Genau eine Handlung, gross und farbig, und drei Wege hinein statt einer
- * Kachelwand. Wer hier laenger als drei Sekunden ueberlegen muss, was er
- * tun soll, kommt nicht wieder.
+ * Genau eine Handlung, gross und farbig, und darunter die eine Frage, die
+ * alles Weitere praegt: wie gebaut wird. Wer hier laenger als drei Sekunden
+ * ueberlegen muss, was er tun soll, kommt nicht wieder.
+ *
+ * Die drei Kacheln sind keine zweite Handlung, sondern eine Abkuerzung: Sie
+ * oeffnen dasselbe Blatt, nur mit ihrer Bauweise schon angehakt.
  */
 function willkommen() {
-  const einstiege = [
-    {
-      titel: 'Hausbau planen',
-      text: 'Noch nichts gebaut: Budget, Grundstück, Angebote und Verträge stehen an.',
-      phase: 'planung', sanierung: false,
-    },
-    {
-      titel: 'Bau läuft bereits',
-      text: 'Die Baustelle ist offen: Rechnungen, Mängel, Bautagebuch und Termine.',
-      phase: 'bau', sanierung: false,
-    },
-    {
-      titel: 'Modernisierung oder Sanierung',
-      text: 'Am Haus, das schon steht: Bestand, Förderung und die richtige Reihenfolge.',
-      phase: 'planung', sanierung: true,
-    },
-  ];
-
   return karte([
     el('p', { klasse: 'willkommen-marke', text: 'Willkommen bei BauZeuge.de' }),
     el('h2', { klasse: 'willkommen-titel', text: 'Dein Bauvorhaben an einer Stelle' }),
@@ -384,11 +408,11 @@ function willkommen() {
         'an einem Ort im Blick – von der ersten Schätzung bis zur Abnahme.',
     }),
     knopf('+ Bauprojekt anlegen', () => projektBlatt(), 'knopf-haupt knopf-gross'),
-    el('p', { klasse: 'unterzeile', text: 'Oder wähle, wo du gerade stehst:' }),
-    el('div', { klasse: 'einstiege' }, einstiege.map((e) =>
-      el('button', { klasse: 'einstieg', type: 'button', onclick: () => projektBlatt(e) }, [
-        el('span', { klasse: 'einstieg-titel', text: e.titel }),
-        el('span', { klasse: 'einstieg-text', text: e.text }),
+    el('p', { klasse: 'unterzeile', text: 'Oder wähle gleich, wie gebaut wird:' }),
+    el('div', { klasse: 'einstiege' }, BAUWEISEN.map((b) =>
+      el('button', { klasse: 'einstieg', type: 'button', onclick: () => projektBlatt(b.id) }, [
+        el('span', { klasse: 'einstieg-titel', text: b.name }),
+        el('span', { klasse: 'einstieg-text', text: b.klammer }),
       ])
     )),
     el('p', {
@@ -400,26 +424,45 @@ function willkommen() {
   ], 'willkommenskarte');
 }
 
-/** Legt ein Projekt an, auf Wunsch schon mit Bauweise und Phase. */
-function projektBlatt(einstieg) {
-  const name = eingabe({ placeholder: 'z. B. Haus Musterweg 3' });
+/**
+ * Das eine Blatt, das ein Bauprojekt anlegt.
+ *
+ * Name und Bauweise stehen zusammen, weil beides zusammen entschieden wird
+ * und die Bauweise die halbe App umstellt. Vorausgewaehlt ist
+ * schluesselfertig: So bauen die meisten, und wer es anders macht, weiss
+ * das ohnehin schon. Aendern laesst es sich jederzeit in den Einstellungen.
+ */
+function projektBlatt(vorwahl) {
+  const name = eingabe({ placeholder: 'z. B. Neubau Musterweg 3' });
+  let gewaehlt = BAUWEISEN.some((b) => b.id === vorwahl) ? vorwahl : SCHLUESSELFERTIG;
+
+  const knoepfe = BAUWEISEN.map((b) =>
+    el('button', {
+      type: 'button',
+      klasse: 'bauweise' + (b.id === gewaehlt ? ' aktiv' : ''),
+      onclick: () => {
+        gewaehlt = b.id;
+        for (const k of knoepfe) k.classList.toggle('aktiv', k.dataset.weise === gewaehlt);
+      },
+      'data-weise': b.id,
+    }, [
+      el('span', { klasse: 'bauweise-name', text: b.name }),
+      el('span', { klasse: 'bauweise-klammer', text: b.klammer }),
+    ])
+  );
+
   blattOeffnen(
-    einstieg ? einstieg.titel : 'Neues Bauprojekt',
+    'Bauprojekt anlegen',
     [
-      feld('Name des Projekts', name,
-        'Jedes Projekt hat eigene Kosten, Mängel und Dokumente. Nichts vermischt sich.'),
-      einstieg
-        ? el('p', { klasse: 'unterzeile', text: einstieg.text })
-        : null,
-    ].filter(Boolean),
+      feld('Name des Projekts', name, 'Erscheint in der Kopfzeile jedes PDF.'),
+      feld('Wie wird gebaut?', el('div', { klasse: 'bauweisewahl' }, knoepfe),
+        'Danach richtet sich, was die App zeigt. Änderbar in den Einstellungen.'),
+    ],
     async () => {
       const wert = name.value.trim();
       if (!wert) throw new Error('Bitte einen Namen eintragen.');
       await projektAnlegen(wert);
-      if (einstieg) {
-        if (einstieg.sanierung) await bauweiseSetzen(SANIERUNG);
-        await bauphaseSetzen(einstieg.phase);
-      }
+      await bauweiseSetzen(gewaehlt);
       // Ganz neu laden: Jeder Bildschirm haelt seine Daten im Speicher, und
       // die gehoeren jetzt zu einem anderen Projekt.
       location.reload();
@@ -795,21 +838,5 @@ function kennzahlLeer(name, text, aktion, ziel) {
     el('span', { klasse: 'wert-leer', text }),
     el('span', { klasse: 'name', text: name }),
     el('span', { klasse: 'kennzahl-aktion', text: aktion + ' →' }),
-  ]);
-}
-
-/**
- * Ein zweites Bauvorhaben anlegen, und der Weg zur Verwaltung.
- *
- * Steht hier oben statt in der Seitenleiste: Die meisten bauen einmal. Wer
- * ein zweites Projekt braucht, sucht es genau dann, wenn er auf die
- * Uebersicht schaut -- und nicht jeden Tag daneben.
- */
-function projektaktionen(anzahl) {
-  return el('div', { klasse: 'knopf-reihe kopfaktionen' }, [
-    knopf('Neues Projekt anlegen', () => projektBlatt(), 'knopf-leise'),
-    anzahl > 1
-      ? knopf('Bauprojekte verwalten', () => { geheZu('#/projekte'); }, 'knopf-leise')
-      : null,
   ]);
 }

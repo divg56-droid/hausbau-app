@@ -1768,5 +1768,35 @@ console.log('Die Marke im PDF')
   pruef('Nirgends steht sie in Versalien', !p.includes('BAUZEUGE'));
 }
 
+console.log('Der Einstieg')
+{
+  const u = readFileSync('./www/module/uebersicht.js', 'utf8');
+  const pr = readFileSync('./www/module/projekte.js', 'utf8');
+
+  // Die Willkommenskarte haengt am Projekt, nicht an den Daten: Wer sich
+  // schon entschieden hat, soll nicht wieder gefragt werden.
+  pruef('Ohne Projekt die Willkommenskarte', u.includes('if (!projekt) {'));
+  pruef('Mit Projekt der Weg hinein', u.includes("text: 'Fang mit dem Geld an'"));
+
+  // Die drei Kacheln sind die drei Bauweisen, nicht eine eigene Einteilung.
+  pruef('Die Kacheln kommen aus den Bauweisen', u.includes('BAUWEISEN.map((b) =>') &&
+    u.includes("klasse: 'einstieg'"));
+  pruef('Sie oeffnen dasselbe Blatt', u.includes('onclick: () => projektBlatt(b.id)'));
+  pruef('Vorgewaehlt ist schluesselfertig',
+    u.includes('BAUWEISEN.some((b) => b.id === vorwahl) ? vorwahl : SCHLUESSELFERTIG'));
+  pruef('Das Blatt fragt Name und Bauweise',
+    u.includes("feld('Name des Projekts'") && u.includes("feld('Wie wird gebaut?'"));
+  pruef('Und schreibt beides weg',
+    u.includes('await projektAnlegen(wert);') && u.includes('await bauweiseSetzen(gewaehlt);'));
+
+  // Ein Bauherr baut ein Haus. Zweite Projekte gibt es nur noch fuer den,
+  // der sie schon hat.
+  pruef('Kein zweites Projekt von der Uebersicht aus',
+    !u.includes("'Neues Projekt anlegen'"));
+  pruef('Und keins aus der Verwaltung', !pr.includes("knopf('Neues Bauprojekt'"));
+  pruef('Die Verwaltung bleibt fuer vorhandene erreichbar',
+    u.includes('projekte.length > 1'));
+}
+
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');
 process.exit(fehler ? 1 : 0);

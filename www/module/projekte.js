@@ -12,7 +12,7 @@ import {
 import { projektAktiv, projektWechseln } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
 import {
-  projekteListe, projektAnlegen, projektUmbenennen, projektLoeschen, projektBestand,
+  projekteListe, projektUmbenennen, projektLoeschen, projektBestand,
 } from '../projekte.js';
 
 export async function zeige(rahmen) {
@@ -69,7 +69,9 @@ async function zeichne(rahmen) {
         ])
       )),
     ]),
-    knopf('Neues Bauprojekt', () => anlegen(neu), 'knopf-haupt'),
+    // Angelegt wird hier nichts mehr. Die App fuehrt ein Bauvorhaben; wer
+    // zwei hat, weil er sie frueher angelegt hat, wechselt und benennt sie
+    // hier weiter. Ein Knopf fuer das dritte hilft niemandem.
     hinweisKasten(
       'Jedes Projekt hat seine eigenen Kosten, Mängel, Kontakte und Dokumente. ' +
         'Gemeinsam bleiben nur die Rechner und die Darstellung. Beim Abgleich ' +
@@ -88,27 +90,6 @@ async function wechseln(projekt) {
   location.reload();
 }
 
-function anlegen(nachher) {
-  const name = eingabe({ placeholder: 'z. B. Doppelhaus Musterweg' });
-  blattOeffnen(
-    'Neues Bauprojekt',
-    [
-      feld('Name', name, 'Erscheint in der Kopfzeile jedes PDF.'),
-      el('p', {
-        klasse: 'unterzeile',
-        text: 'Das neue Projekt startet leer und wird sofort geöffnet. Das bisherige ' +
-          'bleibt vollständig erhalten.',
-      }),
-    ],
-    async () => {
-      const wert = name.value.trim();
-      if (!wert) throw new Error('Bitte einen Namen eintragen.');
-      await projektAnlegen(wert);
-      geheZu('');
-      location.reload();
-    }
-  );
-}
 
 function umbenennen(projekt, nachher) {
   const name = eingabe({ value: projekt.name });
