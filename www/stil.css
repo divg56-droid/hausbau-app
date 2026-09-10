@@ -616,6 +616,48 @@ html[data-thema="dunkel"] {
   .thema-taste { transition: none; }
 }
 
+/* ------------------------------------------------------------ Anmeldung
+
+   Eine Sache auf dem Bildschirm, in der Mitte, mit Luft ringsum. Wer sich
+   anmeldet, will nichts anderes -- alles Erklaerende steht darunter und
+   nicht daneben. */
+.anmeldung { display: flex; justify-content: center; }
+.anmeldekarte { width: 100%; max-width: 430px; padding: 26px 24px 22px; }
+.anmeldung-titel { margin: 0 0 6px; font-size: 30px; line-height: 1.15; }
+.anmeldung-unter {
+  margin: 0 0 20px; font-size: 15px; line-height: 1.5; color: var(--tinte-leise);
+}
+.anmeldekarte .knopf-gross { margin-top: 6px; }
+.anmeldung-meldung {
+  margin: 8px 0 0; font-size: 14px; line-height: 1.45; color: var(--warn);
+  min-height: 1.2em;
+}
+.anmeldung-fuss {
+  margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--linie);
+  font-size: 14px; text-align: center; color: var(--tinte-leise);
+}
+
+/* Das Auge sitzt im Feld, nicht daneben: Sonst waere das Passwortfeld
+   schmaler als das darueber, und genau das faellt auf. */
+.passwortfeld { display: block; position: relative; }
+.passwortfeld > input { width: 100%; padding-right: 46px; }
+.augenknopf {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; padding: 0; margin: 0;
+  border: none; border-radius: 8px; background: none;
+  color: var(--tinte-leise); cursor: pointer;
+}
+.augenknopf:hover { color: var(--tinte); background: var(--band); }
+
+/* Ein Verweis, der wie ein Verweis aussieht und trotzdem ein Knopf ist. */
+.textknopf {
+  border: none; background: none; padding: 0; margin: 0;
+  font: inherit; font-weight: 700; color: var(--akzent-dunkel);
+  cursor: pointer; text-decoration: underline;
+}
+.textknopf:hover { color: var(--akzent); }
+
 /* ------------------------------------------------------------- Wortmarke
 
    Wie im Kopf der Website: Hauszeichen, "Bau" in Tinte, "Zeuge" im Akzent.

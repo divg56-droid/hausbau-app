@@ -1562,6 +1562,8 @@ console.log('Zeichen');
     'haus', 'werkzeug', 'blatt', 'firma', 'person',
     // Die drei Stellungen des Designschalters, siehe thema.js.
     'bildschirm', 'mond',
+    // Das Auge im Passwortfeld der Anmeldung.
+    'auge', 'augezu',
   ]);
   const unbenutzt = ZEICHENNAMEN.filter((z) => !benutzt.has(z));
   pruef('Kein Zeichen liegt ungenutzt herum', unbenutzt.length === 0, unbenutzt.join(', '));
@@ -1827,6 +1829,29 @@ console.log('Der Einstieg')
   pruef('Keine Projektwahl ueber der Leiste', !app.includes('projektwahl'));
   pruef('Die Leiste beginnt mit den Bereichen',
     app.includes('seitenleiste.replaceChildren(') && app.includes('...BEREICHE.map'));
+}
+
+console.log('Die Anmeldung')
+{
+  const k = readFileSync('./www/module/konto.js', 'utf8');
+  const css = readFileSync('./www/stil.css', 'utf8');
+
+  // Eine Sache auf dem Bildschirm, in der Mitte. Wer sich anmeldet, will
+  // nichts anderes.
+  pruef('Die Anmeldung steht als eigene Karte', k.includes("], 'anmeldekarte')") &&
+    css.includes('.anmeldekarte {'));
+  pruef('Mit Ueberschrift statt Reiterleiste',
+    k.includes("'Willkommen zurück'") && !k.includes("text: 'Neues Konto'"));
+  pruef('Gewechselt wird unten im Text', k.includes("klasse: 'textknopf'"));
+
+  // Auf der Baustelle tippt man ein Passwort mit Handschuh und schiefem
+  // Daumen. Einmal hinsehen zu duerfen spart den dritten Versuch.
+  pruef('Das Passwort laesst sich anzeigen', k.includes("klasse: 'augenknopf'") &&
+    k.includes("passwort.type = zeigen ? 'text' : 'password'"));
+  pruef('Das Auge sitzt im Feld', css.includes('.passwortfeld > input') &&
+    css.includes('padding-right: 46px'));
+  // Deutsch, nicht Denglisch: Die Vorlage kam auf Englisch.
+  pruef('Alles auf Deutsch', !/Sign In|Welcome|Password|Email Address/.test(k));
 }
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');

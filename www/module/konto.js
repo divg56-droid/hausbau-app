@@ -9,6 +9,7 @@ import {
   hinweisKasten, melde, datumLang,
   anhaengen,
 } from '../hilfen.js';
+import { zeichen } from '../zeichen.js';
 import { daten } from '../daten.js';
 import {
   angemeldet, epost, anmelden, registrieren, abmelden, wer,
@@ -153,12 +154,30 @@ async function zeichne(rahmen, art = 'anmelden') {
 function zeigeAnmeldung(rahmen, art, nachher) {
   const neuesKonto = art === 'neu';
 
-  const adresse = el('input', { type: 'email', autocomplete: 'email', placeholder: 'name@beispiel.de' });
+  const adresse = el('input', {
+    type: 'email', autocomplete: 'email', placeholder: 'name@beispiel.de',
+  });
   const passwort = el('input', {
     type: 'password',
     autocomplete: neuesKonto ? 'new-password' : 'current-password',
+    placeholder: neuesKonto ? 'Mindestens 10 Zeichen' : 'Dein Passwort',
   });
-  const meldung = el('p', { klasse: 'unterzeile' });
+
+  // Das Auge: Auf der Baustelle tippt man ein Passwort mit Handschuh und
+  // schiefem Daumen. Einmal hinsehen zu duerfen spart den dritten Versuch.
+  const auge = el('button', {
+    klasse: 'augenknopf', type: 'button',
+    title: 'Passwort anzeigen', 'aria-label': 'Passwort anzeigen',
+    onclick: () => {
+      const zeigen = passwort.type === 'password';
+      passwort.type = zeigen ? 'text' : 'password';
+      auge.title = zeigen ? 'Passwort verbergen' : 'Passwort anzeigen';
+      auge.setAttribute('aria-label', auge.title);
+      auge.replaceChildren(zeichen(zeigen ? 'augezu' : 'auge', { groesse: 18 }));
+    },
+  }, [zeichen('auge', { groesse: 18 })]);
+
+  const meldung = el('p', { klasse: 'anmeldung-meldung' });
 
   const senden = knopf(neuesKonto ? 'Konto anlegen' : 'Anmelden', async () => {
     senden.disabled = true;
@@ -172,7 +191,7 @@ function zeigeAnmeldung(rahmen, art, nachher) {
       meldung.textContent = fehler.message;
       senden.disabled = false;
     }
-  }, 'knopf-haupt');
+  }, 'knopf-haupt knopf-gross');
 
   // Enter im Formular soll absenden, das erwartet man so.
   for (const f of [adresse, passwort]) {
@@ -183,26 +202,32 @@ function zeigeAnmeldung(rahmen, art, nachher) {
 
   anhaengen(
     rahmen,
-    kopfzeile('Konto', 'Damit App und Internetseite dieselben Daten zeigen.'),
-
-    el('div', { klasse: 'geschossleiste' }, [
-      el('button', {
-        type: 'button', text: 'Anmelden',
-        klasse: neuesKonto ? null : 'aktiv',
-        onclick: () => zeichne(rahmen, 'anmelden'),
-      }),
-      el('button', {
-        type: 'button', text: 'Neues Konto',
-        klasse: neuesKonto ? 'aktiv' : null,
-        onclick: () => zeichne(rahmen, 'neu'),
-      }),
-    ]),
-
-    karte([
-      feld('E-Mail-Adresse', adresse),
-      feld('Passwort', passwort, neuesKonto ? 'Mindestens 10 Zeichen.' : null),
-      senden,
-      meldung,
+    el('div', { klasse: 'anmeldung' }, [
+      karte([
+        el('h1', {
+          klasse: 'anmeldung-titel',
+          text: neuesKonto ? 'Konto anlegen' : 'Willkommen zurück',
+        }),
+        el('p', {
+          klasse: 'anmeldung-unter',
+          text: neuesKonto
+            ? 'Ein Konto, damit dein Bauvorhaben in der App und auf BauZeuge.de dasselbe zeigt.'
+            : 'Melde dich an und mach dort weiter, wo du aufgehört hast.',
+        }),
+        feld('E-Mail-Adresse', adresse),
+        feld('Passwort', el('span', { klasse: 'passwortfeld' }, [passwort, auge]),
+          neuesKonto ? 'Mindestens 10 Zeichen.' : null),
+        senden,
+        meldung,
+        el('p', { klasse: 'anmeldung-fuss' }, [
+          neuesKonto ? 'Schon ein Konto? ' : 'Noch kein Konto? ',
+          el('button', {
+            klasse: 'textknopf', type: 'button',
+            text: neuesKonto ? 'Hier anmelden' : 'Konto anlegen',
+            onclick: () => zeichne(rahmen, neuesKonto ? 'anmelden' : 'neu'),
+          }),
+        ]),
+      ], 'anmeldekarte'),
     ]),
 
     karte([
