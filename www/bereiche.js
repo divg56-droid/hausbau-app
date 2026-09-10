@@ -21,7 +21,11 @@ export const BEREICHE = [
     punkte: [
       { weg: '', titel: 'Projektübersicht',
         text: 'Budget, Termine, offene Mängel und was als Nächstes ansteht.' },
-      { weg: 'projekte', titel: 'Bauprojekte',
+      // Nicht in der Leiste: Angelegt wird oben auf der Projektübersicht,
+      // gewechselt wird über die Auswahl darüber. Ein eigener Punkt für
+      // etwas, das die meisten einmal im Leben tun, stand nur im Weg. Der
+      // Weg bleibt erreichbar -- die Übersicht verweist darauf.
+      { weg: 'projekte', titel: 'Bauprojekte', ausLeiste: true,
         text: 'Mehrere Bauvorhaben getrennt führen und dazwischen wechseln.' },
       { weg: 'leitfaden', titel: 'Bauleitfaden',
         text: 'Was in welcher Reihenfolge zu tun ist, von der Finanzierung bis zur Abnahme.' },
@@ -84,10 +88,12 @@ export const BEREICHE = [
     ],
   },
   {
-    titel: 'Rechner', zeichen: '\u{1F9EE}',
+    // Getrennt von den Rechnern, weil hier echte Daten stehen: Was unter
+    // Baufinanzierung eingetragen ist, sind die eigenen Darlehen und
+    // Eigenmittel, nicht ein Ueberschlag. Der Tilgungsverlauf gehoert dazu,
+    // er rechnet genau damit.
+    titel: 'Baufinanzierung', zeichen: '\u{1F3E6}',
     punkte: [
-      { weg: 'baukosten', titel: 'Baukostenrechner',
-        text: 'Was das Haus samt Grundstück und Nebenkosten wirklich kostet.' },
       { weg: 'finanzierung', titel: 'Baufinanzierung',
         text: 'Eigenkapital, Zuschüsse und Darlehen erfassen oder rechnen lassen.' },
       { weg: 'tilgung', titel: 'Tilgungsverlauf',
@@ -96,6 +102,16 @@ export const BEREICHE = [
         text: 'Dieselbe Summe bei mehreren Anbietern nebeneinander.' },
       { weg: 'rechner/nebenkosten', titel: 'Kaufnebenkosten',
         text: 'Grunderwerbsteuer, Notar, Makler: was zum Kaufpreis dazukommt.' },
+    ],
+  },
+  {
+    // Was uebrig bleibt: zwei Rechnungen, die vor allem anderen kommen.
+    // Der Baukostenrechner steht hier, solange er das Budget setzt; sobald
+    // Positionen erfasst sind, rechnet die Budgetplanung genauer.
+    titel: 'Rechner', zeichen: '\u{1F9EE}',
+    punkte: [
+      { weg: 'baukosten', titel: 'Baukostenrechner',
+        text: 'Was das Haus samt Grundstück und Nebenkosten wirklich kostet.' },
       { weg: 'rechner/flaechen', titel: 'GRZ und GFZ',
         text: 'Was auf das Grundstück überhaupt gebaut werden darf.' },
     ],

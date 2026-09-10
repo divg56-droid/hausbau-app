@@ -8,38 +8,39 @@
 // Bausumme -- und sie fallen frueh an, bevor die Bank die erste Rate des
 // Bauvertrags auszahlt.
 //
-// Deshalb ist das hier kein Ueberschlag, sondern eine Liste: jede Zeile
-// einzeln an- und abwaehlbar, jeder Betrag von Hand ueberschreibbar. Am
-// Ende wandert alles als Position in die Kostenaufstellung, mit
-// Kostengruppe nach DIN 276.
+// Deshalb ist das hier kein Ueberschlag, sondern eine Liste, die dem
+// Bauherrn gehoert: Jede Zeile laesst sich umbenennen, entfernen und im
+// Betrag ueberschreiben, eigene kommen dazu. Am Ende wandert alles als
+// Position in die Kostenaufstellung, mit Kostengruppe nach DIN 276.
 
 import {
-  el, eur, zahl, feld, zahlfeld, auswahl, knopf, karte, kopfzeile, wertzeile,
-  hinweisKasten, zuZahl, melde, anhaengen, geheZu,
+  el, eur, zahl, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile,
+  wertzeile, hinweisKasten, zuZahl, melde, anhaengen, fuellen, geheZu,
 } from '../hilfen.js';
+import { blattOeffnen } from '../blatt.js';
 import { daten, einstellung } from '../daten.js';
 import { bauweise, SCHLUESSELFERTIG, SANIERUNG } from '../bauweise.js';
-import { kostengruppeLang } from '../din276.js';
+import { kostengruppeLang, kostengruppenOptionen } from '../din276.js';
 import { LAENDER } from './baukosten.js';
 
-// Die Zeilen. "anteil" rechnet in Prozent der Basis, "pauschal" ist ein
+// Die Vorgabe. "anteil" rechnet in Prozent der Basis, "pauschal" ist ein
 // Erfahrungswert in Euro -- eine Vermessung kostet nicht mehr, weil das
 // Haus teurer ist.
 //
 // "ohne" nennt die Bauweisen, bei denen die Zeile nicht vorgeschlagen wird.
 // Beim schluesselfertigen Bauen stecken Planung, Statik und Bauleitung im
-// Vertragspreis; wer sie trotzdem braucht, hakt sie von Hand an.
+// Vertragspreis; wer sie trotzdem braucht, legt die Zeile von Hand an.
 const ZEILEN = [
   // ------------------------------------------------------ Grundstueck
   { id: 'grest', name: 'Grunderwerbsteuer', kg: '120', basis: 'grundstueck',
     art: 'anteil', wert: null, ohne: [SANIERUNG],
-    hinweis: 'Satz des Bundeslandes, fällig wenige Wochen nach dem Notartermin.' },
+    hinweis: 'Fällig wenige Wochen nach dem Notartermin.' },
   { id: 'notar', name: 'Notar und Grundbuch', kg: '120', basis: 'grundstueck',
     art: 'anteil', wert: 2.0, ohne: [SANIERUNG],
     hinweis: 'Beurkundung, Auflassungsvormerkung, Eintragung der Grundschuld.' },
   { id: 'makler', name: 'Maklerprovision', kg: '120', basis: 'grundstueck',
-    art: 'anteil', wert: 3.57, ohne: [SANIERUNG], aus: true,
-    hinweis: 'Nur bei Vermittlung. Seit 2020 wird sie geteilt.' },
+    art: 'anteil', wert: 3.57, ohne: [SANIERUNG],
+    hinweis: 'Ohne Vermittlung entfernen.' },
   { id: 'vermessung', name: 'Vermessung und Abmarkung', kg: '120', basis: 'fest',
     art: 'pauschal', wert: 2500, ohne: [SANIERUNG] },
   { id: 'boden', name: 'Bodengutachten', kg: '720', basis: 'fest',
@@ -80,7 +81,7 @@ const ZEILEN = [
 /**
  * Rechnet eine Zeile durch.
  *
- * @param {object} zeile   Eintrag aus ZEILEN
+ * @param {object} zeile   Eine Zeile mit art, wert und basis
  * @param {object} basen   { bau, grundstueck, grest }
  * @returns {number}
  */
@@ -89,6 +90,22 @@ export function zeilenbetrag(zeile, basen) {
   const satz = zeile.id === 'grest' ? basen.grest : zeile.wert;
   const basis = zeile.basis === 'grundstueck' ? basen.grundstueck : basen.bau;
   return Math.round((basis * satz) / 100);
+}
+
+/**
+ * Die Vorgabe fuer diese Bauweise, als eigenstaendige Liste.
+ *
+ * Sobald jemand etwas umbenennt, entfernt oder hinzufuegt, steht die ganze
+ * Liste in den Einstellungen und die Vorgabe spielt keine Rolle mehr --
+ * sonst kaeme eine entfernte Zeile beim naechsten Aufruf zurueck.
+ */
+function vorgabe(bauweiseId) {
+  return ZEILEN
+    .filter((z) => !(z.ohne || []).includes(bauweiseId))
+    .map((z) => ({
+      id: z.id, name: z.name, kg: z.kg, art: z.art, wert: z.wert,
+      basis: z.basis, hinweis: z.hinweis, betrag: null,
+    }));
 }
 
 export async function zeige(rahmen) {
@@ -112,23 +129,25 @@ export async function zeige(rahmen) {
     .filter((p) => !String(p.herkunft || '').startsWith('baunebenkosten:'))
     .reduce((s, p) => s + (p.tatsaechlich || p.geplant || 0), 0);
 
-  const eingaben = {
-    bau: stand.bau ?? (ausPosten || (haus.flaeche ? haus.flaeche * 2800 : 350000)),
-    grundstueck: stand.grundstueck ?? (haus.grundstueck ?? 100000),
-    land: stand.land || haus.land || 'rheinland-pfalz',
-  };
+  const bauFeld = zahlfeld({
+    value: String(Math.round(
+      stand.bau ?? (ausPosten || (haus.flaeche ? haus.flaeche * 2800 : 350000))
+    )),
+  });
+  const grundstueckFeld = zahlfeld({
+    value: String(Math.round(stand.grundstueck ?? (haus.grundstueck ?? 100000))),
+  });
+  const landFeld = auswahl(
+    LAENDER.map((l) => [l.slug, l.name]), stand.land || haus.land || 'rheinland-pfalz'
+  );
 
-  const bauFeld = zahlfeld({ value: String(Math.round(eingaben.bau)) });
-  const grundstueckFeld = zahlfeld({ value: String(Math.round(eingaben.grundstueck)) });
-  const landFeld = auswahl(LAENDER.map((l) => [l.slug, l.name]), eingaben.land);
+  // Die Liste des Nutzers, sobald es eine gibt. Sonst die Vorgabe.
+  let zeilen = Array.isArray(stand.zeilen) && stand.zeilen.length
+    ? stand.zeilen
+    : vorgabe(art.id);
 
-  // Je Zeile: angehakt und Betrag. Beides bleibt gemerkt, sonst waere jede
-  // Korrektur beim naechsten Aufruf wieder weg.
-  const zustand = stand.zeilen || {};
-  const felder = new Map();
+  const zeilenliste = el('div', { klasse: 'nebenliste' });
   const summenzeile = el('div');
-
-  const sichtbar = ZEILEN.filter((z) => !(z.ohne || []).includes(art.id));
 
   function basen() {
     const land = LAENDER.find((l) => l.slug === landFeld.value) || LAENDER[10];
@@ -139,29 +158,23 @@ export async function zeige(rahmen) {
     };
   }
 
-  /** Die Betragsfelder neu befuellen -- aber nur die, die niemand angefasst hat. */
-  function nachrechnen(auchGeaenderte) {
-    const b = basen();
-    for (const z of sichtbar) {
-      const f = felder.get(z.id);
-      if (!f) continue;
-      if (auchGeaenderte || !f.selbst) {
-        f.betrag.value = String(zeilenbetrag(z, b));
-        f.selbst = false;
-      }
-    }
-    summe();
+  // Eingetragen schlaegt gerechnet: Wer einen Betrag tippt, hat ein Angebot.
+  const betragVon = (z) => (z.betrag === null || z.betrag === undefined
+    ? zeilenbetrag(z, basen())
+    : z.betrag);
+
+  async function merken() {
+    await einstellung('nebenkosten_eingabe', {
+      bau: basen().bau, grundstueck: basen().grundstueck, land: landFeld.value, zeilen,
+    });
   }
 
   function summe() {
-    let gesamt = 0;
-    for (const z of sichtbar) {
-      const f = felder.get(z.id);
-      if (f && f.an.checked) gesamt += Math.max(0, zuZahl(f.betrag.value));
-    }
+    const gesamt = zeilen.reduce((s, z) => s + Math.max(0, betragVon(z)), 0);
     const b = basen();
     const anteil = b.bau > 0 ? (gesamt / b.bau) * 100 : 0;
-    summenzeile.replaceChildren(
+    fuellen(
+      summenzeile,
       wertzeile('Baunebenkosten gesamt', eur.format(gesamt), true),
       el('p', {
         klasse: 'unterzeile',
@@ -169,64 +182,123 @@ export async function zeige(rahmen) {
           'liegst du deutlich darunter, fehlt eine Zeile.',
       })
     );
-    return gesamt;
   }
 
-  const zeilenliste = el('div', { klasse: 'nebenliste' }, sichtbar.map((z) => {
-    const gemerkteZeile = zustand[z.id] || {};
-    const an = el('input', {
-      type: 'checkbox',
-      checked: gemerkteZeile.an ?? !z.aus,
-    });
-    const betrag = zahlfeld({ value: String(gemerkteZeile.betrag ?? 0) });
-    const f = { an, betrag, selbst: gemerkteZeile.betrag !== undefined };
-    felder.set(z.id, f);
+  function zeichne() {
+    fuellen(zeilenliste, ...zeilen.map((z) => {
+      const betrag = zahlfeld({ value: String(betragVon(z)) });
+      betrag.setAttribute('aria-label', z.name + ' in Euro');
+      betrag.addEventListener('input', () => {
+        z.betrag = Math.max(0, zuZahl(betrag.value));
+        summe();
+        merken();
+      });
 
-    an.addEventListener('change', summe);
-    betrag.addEventListener('input', () => { f.selbst = true; summe(); });
-
-    return el('label', { klasse: 'nebenzeile' }, [
-      an,
-      el('span', { klasse: 'zeilen-text' }, [
-        el('span', { klasse: 'zeilen-titel', text: z.name }),
-        el('span', {
-          klasse: 'zeilen-unter',
-          text: [
-            kostengruppeLang(z.kg),
-            z.art === 'anteil' && z.id !== 'grest' ? zahl(z.wert, 2) + ' %' : null,
-            z.hinweis,
-          ].filter(Boolean).join(' · '),
-        }),
-      ]),
-      betrag,
-    ]);
-  }));
-
-  for (const f of [bauFeld, grundstueckFeld, landFeld]) {
-    f.addEventListener('input', () => nachrechnen(false));
-    f.addEventListener('change', () => nachrechnen(false));
+      return el('div', { klasse: 'nebenzeile' }, [
+        el('div', { klasse: 'zeilen-text' }, [
+          el('span', { klasse: 'zeilen-titel', text: z.name }),
+          el('span', {
+            klasse: 'zeilen-unter',
+            text: [
+              kostengruppeLang(z.kg),
+              // Ein gerechneter Betrag sagt, woher er kommt. Ein getippter
+              // nicht: Der steht ja fest.
+              z.betrag === null && z.art === 'anteil'
+                ? (z.id === 'grest' ? zahl(basen().grest, 1) : zahl(z.wert, 2)) +
+                  ' % vom ' + (z.basis === 'grundstueck' ? 'Grundstück' : 'Bau')
+                : null,
+              z.hinweis,
+            ].filter(Boolean).join(' · '),
+          }),
+        ]),
+        betrag,
+        el('div', { klasse: 'nebenknoepfe' }, [
+          el('button', {
+            klasse: 'knopf knopf-schmal', type: 'button', text: 'Umbenennen',
+            onclick: () => aendern(z),
+          }),
+          el('button', {
+            klasse: 'knopf knopf-schmal', type: 'button', text: 'Entfernen',
+            onclick: async () => {
+              zeilen = zeilen.filter((x) => x !== z);
+              zeichne();
+              await merken();
+            },
+          }),
+        ]),
+      ]);
+    }));
+    summe();
   }
 
-  async function merken() {
-    const zeilen = {};
-    for (const z of sichtbar) {
-      const f = felder.get(z.id);
-      zeilen[z.id] = { an: f.an.checked, betrag: Math.max(0, zuZahl(f.betrag.value)) };
-    }
-    await einstellung('nebenkosten_eingabe', {
-      bau: basen().bau, grundstueck: basen().grundstueck, land: landFeld.value, zeilen,
-    });
+  function aendern(z) {
+    const name = eingabe({ value: z.name });
+    const kg = auswahl(kostengruppenOptionen(), z.kg);
+    const betrag = zahlfeld({ value: z.betrag === null ? '' : String(z.betrag) });
+    blattOeffnen(
+      'Zeile ändern',
+      [
+        feld('Bezeichnung', name),
+        art.zeigtKostengruppen ? feld('Kostengruppe (DIN 276)', kg) : null,
+        feld('Betrag in €', betrag,
+          z.art === 'anteil'
+            ? 'Leer lassen, dann rechnet die App den Prozentsatz aus.'
+            : 'Leer lassen, dann steht wieder der Erfahrungswert da.'),
+      ].filter(Boolean),
+      async () => {
+        const wert = name.value.trim();
+        if (!wert) throw new Error('Bitte eine Bezeichnung eintragen.');
+        z.name = wert;
+        z.kg = kg.value || z.kg;
+        z.betrag = betrag.value.trim() === '' ? null : Math.max(0, zuZahl(betrag.value));
+        zeichne();
+        await merken();
+      },
+      {
+        loeschen: async () => {
+          zeilen = zeilen.filter((x) => x !== z);
+          zeichne();
+          await merken();
+        },
+      }
+    );
   }
 
-  /** Jede angehakte Zeile wird eine Position -- vorhandene werden aktualisiert. */
+  function hinzufuegen() {
+    const name = eingabe({ placeholder: 'z. B. Baumfällung' });
+    const kg = auswahl(kostengruppenOptionen(), '760');
+    const betrag = zahlfeld({ value: '' });
+    blattOeffnen(
+      'Zeile hinzufügen',
+      [
+        feld('Bezeichnung', name),
+        art.zeigtKostengruppen ? feld('Kostengruppe (DIN 276)', kg) : null,
+        feld('Betrag in €', betrag),
+      ].filter(Boolean),
+      async () => {
+        const wert = name.value.trim();
+        if (!wert) throw new Error('Bitte eine Bezeichnung eintragen.');
+        const summe = Math.max(0, zuZahl(betrag.value));
+        zeilen = [...zeilen, {
+          // Die Kennung haengt am Namen: So findet "Übernehmen" beim zweiten
+          // Mal dieselbe Position wieder, statt eine zweite anzulegen.
+          id: 'eigen-' + wert.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+          name: wert, kg: kg.value || '760', art: 'pauschal', wert: summe,
+          basis: 'fest', hinweis: null, betrag: summe,
+        }];
+        zeichne();
+        await merken();
+      }
+    );
+  }
+
+  /** Jede Zeile mit Betrag wird eine Position -- vorhandene werden aktualisiert. */
   async function uebernehmen() {
     const vorhanden = await daten.alle('posten');
     let neu = 0;
     let ersetzt = 0;
-    for (const z of sichtbar) {
-      const f = felder.get(z.id);
-      if (!f.an.checked) continue;
-      const betrag = Math.max(0, zuZahl(f.betrag.value));
+    for (const z of zeilen) {
+      const betrag = Math.max(0, betragVon(z));
       if (!betrag) continue;
       const alt = vorhanden.find((p) => p.herkunft === 'baunebenkosten:' + z.id);
       await daten.sichern('posten', {
@@ -246,11 +318,16 @@ export async function zeige(rahmen) {
     }
     await merken();
     if (!neu && !ersetzt) {
-      melde('Nichts angehakt, nichts übernommen.');
+      melde('Keine Zeile mit Betrag, nichts übernommen.');
       return;
     }
     melde(`${neu} neu, ${ersetzt} aktualisiert. Öffne die Kostenaufstellung.`);
     geheZu('#/baukasse/kosten');
+  }
+
+  for (const f of [bauFeld, grundstueckFeld, landFeld]) {
+    f.addEventListener('input', () => { zeichne(); merken(); });
+    f.addEventListener('change', () => { zeichne(); merken(); });
   }
 
   anhaengen(
@@ -269,21 +346,32 @@ export async function zeige(rahmen) {
       el('h2', { text: 'Die einzelnen Posten' }),
       el('p', {
         klasse: 'unterzeile',
-        text: 'Jeder Betrag lässt sich überschreiben. Sobald du einen Wert von Hand ' +
-          'änderst, bleibt er stehen, auch wenn du oben etwas anpasst.',
+        text: 'Was auf dich nicht zutrifft, entfernst du. Jeden Betrag kannst du ' +
+          'überschreiben; getippte Beträge bleiben stehen, die übrigen rechnen sich ' +
+          'aus Bausumme und Grundstückspreis.',
       }),
       zeilenliste,
       summenzeile,
       el('div', { klasse: 'knopf-reihe' }, [
         knopf('In die Kostenaufstellung übernehmen', uebernehmen, 'knopf-haupt'),
-        knopf('Vorschläge zurücksetzen', () => nachrechnen(true), 'knopf-leise'),
+        knopf('Zeile hinzufügen', hinzufuegen),
+        knopf('Auf die Vorgabe zurücksetzen', async () => {
+          if (!window.confirm(
+            'Alle Zeilen auf die Vorgabe zurücksetzen? Eigene Zeilen und geänderte ' +
+            'Beträge gehen dabei verloren. Positionen in der Kostenaufstellung ' +
+            'bleiben stehen.'
+          )) return;
+          zeilen = vorgabe(art.id);
+          zeichne();
+          await merken();
+        }, 'knopf-leise'),
       ]),
     ]),
     hinweisKasten(
       art.istSchluesselfertig
         ? 'Bei schlüsselfertigem Bauen stecken Planung, Statik und Bauleitung im ' +
-          'Vertragspreis; sie stehen deshalb nicht in der Liste. Alles andere zahlst ' +
-          'du trotzdem selbst. Prüfe im Vertrag, was unter „Bauherrenleistungen" steht ' +
+          'Vertragspreis; sie stehen deshalb nicht in der Vorgabe. Alles andere zahlst ' +
+          'du trotzdem selbst. Prüfe im Vertrag, was unter Bauherrenleistungen steht ' +
           'oder ausdrücklich nicht enthalten ist.'
         : 'Bei Einzelvergabe ist das Architektenhonorar der größte Einzelposten. Die ' +
           'HOAI-Sätze sind seit 2021 unverbindlich, verhandelbar und je nach ' +
@@ -302,11 +390,5 @@ export async function zeige(rahmen) {
     ])
   );
 
-  // Erst jetzt rechnen: Die Felder haengen im Baum und koennen sich fuellen.
-  nachrechnen(false);
-  for (const z of sichtbar) {
-    const g = zustand[z.id];
-    if (g && g.betrag !== undefined) felder.get(z.id).betrag.value = String(g.betrag);
-  }
-  summe();
+  zeichne();
 }

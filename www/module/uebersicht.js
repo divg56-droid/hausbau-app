@@ -9,11 +9,14 @@
 // kostet das nichts und kann dafuer nicht veralten.
 
 import {
-  el, eur, knopf, karte, kopfzeile, hinweisKasten, datumLang, heute, zahl, fuellen,
+  el, eur, feld, eingabe, knopf, karte, kopfzeile, hinweisKasten, datumLang,
+  heute, zahl, fuellen,
   anhaengen,
   geheZu,
 } from '../hilfen.js';
+import { blattOeffnen } from '../blatt.js';
 import { daten, einstellung } from '../daten.js';
+import { projekteListe, projektAnlegen } from '../projekte.js';
 import { finanzierungsstand } from './finanzierung.js';
 import { postenRechnen } from './baukasse.js';
 import { terminePlanen } from './ablauf.js';
@@ -24,7 +27,8 @@ import { zeichen, wetterZeichen } from '../zeichen.js';
 import { todoStand, todosSortieren } from './todos.js';
 
 export async function zeige(rahmen) {
-  const [projekt, stand, posten, belege, aufgaben, maengel, tagebuch, haken, todos, art] =
+  const [projekt, stand, posten, belege, aufgaben, maengel, tagebuch, haken, todos, art,
+    projekte] =
     await Promise.all([
     einstellung('projektname'),
     finanzierungsstand(),
@@ -36,6 +40,7 @@ export async function zeige(rahmen) {
     daten.alle('leitfaden'),
     daten.alle('todos'),
     bauweise(),
+    projekteListe(),
   ]);
   const leitfaden = leitfadenStand(haken, art.id);
 
@@ -53,7 +58,8 @@ export async function zeige(rahmen) {
       stand.gesamt > 0 || posten.length
         ? 'Stand ' + datumLang(heute())
         : 'Alle Daten bleiben auf diesem Gerät. Kein Konto, keine Übertragung.'
-    )
+    ),
+    projektaktionen(projekte.length)
   );
 
   // Erst gar nichts erfasst: Dann hilft keine Kennzahl, sondern ein Weg hinein.
@@ -459,5 +465,36 @@ function kennzahl(name, wert, klasse) {
   return el('div', { klasse: 'kennzahl' }, [
     el('span', { klasse: 'wert' + (klasse ? ' ' + klasse : ''), text: wert }),
     el('span', { klasse: 'name', text: name }),
+  ]);
+}
+
+/**
+ * Ein zweites Bauvorhaben anlegen, und der Weg zur Verwaltung.
+ *
+ * Steht hier oben statt in der Seitenleiste: Die meisten bauen einmal. Wer
+ * ein zweites Projekt braucht, sucht es genau dann, wenn er auf die
+ * Uebersicht schaut -- und nicht jeden Tag daneben.
+ */
+function projektaktionen(anzahl) {
+  return el('div', { klasse: 'knopf-reihe kopfaktionen' }, [
+    knopf('Neues Projekt anlegen', () => {
+      const name = eingabe({ placeholder: 'z. B. Haus Musterweg 3' });
+      blattOeffnen(
+        'Neues Bauprojekt',
+        [feld('Name', name,
+          'Jedes Projekt hat eigene Kosten, Mängel und Dokumente. Nichts vermischt sich.')],
+        async () => {
+          const wert = name.value.trim();
+          if (!wert) throw new Error('Bitte einen Namen eintragen.');
+          await projektAnlegen(wert);
+          // Ganz neu laden: Jeder Bildschirm haelt seine Daten im Speicher,
+          // und die gehoeren jetzt zu einem anderen Projekt.
+          location.reload();
+        }
+      );
+    }, 'knopf-leise'),
+    anzahl > 1
+      ? knopf('Bauprojekte verwalten', () => { geheZu('#/projekte'); }, 'knopf-leise')
+      : null,
   ]);
 }

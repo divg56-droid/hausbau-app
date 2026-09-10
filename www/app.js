@@ -77,16 +77,21 @@ function leisteBauen() {
   seitenleiste.replaceChildren(
     projektwahl(),
     ...BEREICHE.map((gruppe) => {
+      // "ausLeiste" heisst: erreichbar, aber nicht in der Liste. Ein Bereich,
+      // den man einmal im Leben braucht, muss nicht jeden Tag danebenstehen.
+      const punkte = gruppe.punkte.filter((p) => !p.ausLeiste);
+      if (!punkte.length) return null;
+
       // Gruppen mit nur einem Punkt brauchen keine Ueberschrift, die man
       // aufklappen muss. Der Punkt steht dann fuer sich.
-      if (gruppe.punkte.length === 1) {
+      if (punkte.length === 1) {
         return el('a', {
           klasse: 'leiste-punkt leiste-allein',
-          href: '#/' + gruppe.punkte[0].weg,
-          'data-weg': gruppe.punkte[0].weg,
+          href: '#/' + punkte[0].weg,
+          'data-weg': punkte[0].weg,
         }, [
           el('span', { klasse: 'leiste-zeichen', text: gruppe.zeichen }),
-          gruppe.punkte[0].titel,
+          punkte[0].titel,
         ]);
       }
       return el('details', { klasse: 'leiste-gruppe', open: true }, [
@@ -94,13 +99,13 @@ function leisteBauen() {
           el('span', { klasse: 'leiste-zeichen', text: gruppe.zeichen }),
           gruppe.titel,
         ]),
-        ...gruppe.punkte.map((punkt) =>
+        ...punkte.map((punkt) =>
           el('a', {
             klasse: 'leiste-punkt', href: '#/' + punkt.weg, 'data-weg': punkt.weg,
           }, [punkt.titel])
         ),
       ]);
-    })
+    }).filter(Boolean)
   );
 }
 
