@@ -7,7 +7,7 @@
 
 import {
   el, feld, eingabe, auswahl, knopf, karte, kopfzeile, hinweisKasten,
-  leerzustand, melde, datumLang, heute,
+  leerzustand, melde, datumLang, heute, kontaktName, kontaktLang,
   anhaengen,
   kartengitter,
 } from '../hilfen.js';
@@ -122,7 +122,7 @@ async function zeichne(rahmen, filter = 'alle') {
                 el('span', { klasse: 'zeilen-titel', text: m.titel }),
                 el('span', {
                   klasse: 'zeilen-unter',
-                  text: [m.gewerk, kontakt ? kontakt.name : null, datumLang(m.angelegt)]
+                  text: [m.gewerk, kontakt ? kontaktName(kontakt) : null, datumLang(m.angelegt)]
                     .filter(Boolean).join(' · '),
                 }),
               ]),
@@ -165,7 +165,7 @@ async function mangelBearbeiten(mangel, kontakte, nachher) {
   const status = auswahl(Object.entries(STATUS).map(([w, s]) => [w, s.name]), mangel.status || 'offen');
   const beschreibung = el('textarea', {}, [mangel.beschreibung || '']);
   const kontakt = auswahl(
-    [['', '– kein Kontakt –'], ...kontakte.map((k) => [k.id, k.name + (k.gewerk ? ' (' + k.gewerk + ')' : '')])],
+    [['', '– kein Kontakt –'], ...kontakte.map((k) => [k.id, kontaktLang(k, k.gewerk)])],
     mangel.kontaktId ?? ''
   );
   const frist = el('input', { type: 'date', value: mangel.frist || '' });
@@ -254,7 +254,7 @@ function ruegeBlatt(maengel, kontakte) {
   }
 
   const empfaenger = auswahl(
-    firmen.map((k) => [k.id, k.name + (k.firma ? ' (' + k.firma + ')' : '')]),
+    firmen.map((k) => [k.id, kontaktLang(k, k.firma)]),
     firmen[0].id
   );
 
@@ -314,7 +314,7 @@ async function ruegeErzeugen(firma, maengel, frist) {
     [absender.name, absender.strasse, absender.plzOrt],
     [
       firma.firma || firma.name,
-      firma.firma && firma.name !== firma.firma ? 'z. Hd. ' + firma.name : null,
+      firma.name && firma.firma && firma.name !== firma.firma ? 'z. Hd. ' + firma.name : null,
       firma.strasse || null,
       firma.plzOrt || null,
     ],
@@ -439,7 +439,7 @@ async function pdfErzeugen(maengel, kontakte) {
     blatt.wertzeile('Raum', m.raum || 'ohne Angabe');
     blatt.wertzeile('Gewerk', m.gewerk || 'ohne Angabe');
     blatt.wertzeile('Erfasst am', datumLang(m.angelegt));
-    if (kontakt) blatt.wertzeile('Zuständig', [kontakt.name, kontakt.firma].filter(Boolean).join(', '));
+    if (kontakt) blatt.wertzeile('Zuständig', kontaktLang(kontakt, kontakt.firma));
     if (m.frist) blatt.wertzeile('Frist', datumLang(m.frist));
     blatt.wertzeile('Status', STATUS[m.status].name, true);
     if (m.beschreibung) blatt.absatz(m.beschreibung, 9.5);

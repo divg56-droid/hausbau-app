@@ -12,6 +12,7 @@ import {
   el, eur, zahl, feld, zahlfeld, auswahl, knopf, karte, kopfzeile, wertzeile,
   hinweisKasten, zuZahl,
   anhaengen,
+  geheZu,
 } from '../hilfen.js';
 import { einstellung } from '../daten.js';
 import { LAENDER } from './baukosten.js';
@@ -146,7 +147,7 @@ async function zeigeNebenkosten(rahmen) {
           'am Kaufpreis erwartet.',
         'warn'
       ),
-      knopf('In die Baufinanzierung übernehmen', () => { location.hash = '#/finanzierung'; }, 'knopf-leise')
+      knopf('In die Baufinanzierung übernehmen', () => { geheZu('#/finanzierung'); }, 'knopf-leise')
     );
 
     await einstellung('nebenkosten_eingabe', eingaben);
@@ -338,7 +339,7 @@ async function zeigeKredite(rahmen) {
             'gut'
           )
         : hinweisKasten('Trage bei mindestens einem Angebot Zins und Tilgung ein.', 'info'),
-      knopf('Einzelnen Verlauf ansehen', () => { location.hash = '#/tilgung'; }, 'knopf-leise')
+      knopf('Einzelnen Verlauf ansehen', () => { geheZu('#/tilgung'); }, 'knopf-leise')
     );
 
     await einstellung('kreditvergleich', eingaben);

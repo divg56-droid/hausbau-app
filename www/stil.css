@@ -195,6 +195,20 @@ input[type="checkbox"] { width: 22px; height: 22px; min-height: 0; accent-color:
   font: inherit; color: var(--tinte); cursor: pointer; min-height: 56px;
 }
 .listenzeile:last-child { border-bottom: none; }
+
+/* Baunebenkosten: Haken, Bezeichnung, Betrag. Der Betrag steht rechts und
+   bleibt schmal -- sonst zieht ein Eingabefeld die Zeile auseinander. */
+.nebenzeile {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--linie);
+  cursor: pointer; min-height: 56px;
+}
+.nebenliste > .nebenzeile:last-child { border-bottom: none; }
+.nebenzeile > input[type="checkbox"] { flex: 0 0 auto; width: 22px; height: 22px; }
+.nebenzeile .zeilen-text { flex: 1 1 auto; min-width: 0; }
+.nebenzeile > input:not([type="checkbox"]) {
+  flex: 0 0 130px; width: 130px; text-align: right;
+}
 .listenzeile .zeilen-text { flex: 1; min-width: 0; }
 .zeilen-titel { font-weight: 600; display: block; }
 .zeilen-unter { font-size: 13px; color: var(--tinte-leise); display: block; }

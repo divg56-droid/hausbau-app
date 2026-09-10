@@ -7,7 +7,9 @@ import {
   el, eur, zahl, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile,
   wertzeile, hinweisKasten, leerzustand, zuZahl, melde, datumLang,
   anhaengen,
+  geheZu,
 } from '../hilfen.js';
+import { bauweise } from '../bauweise.js';
 import { daten, einstellung } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
 
@@ -264,6 +266,15 @@ async function zeichne(rahmen) {
   const geschaetzteKosten = (await einstellung('finanzierung_kosten')) || 0;
   const neu = () => zeichne(rahmen);
 
+  // Zuschuesse gehoeren zur Sanierung und zur Einzelvergabe. Wer
+  // schluesselfertig baut, kauft eine Leistung zum Festpreis: Die
+  // Foerdertoepfe hier -- Heizungstausch, Gebaeudehuelle, Einzelmassnahmen --
+  // haengen an Massnahmen am Bestand, die es dort nicht gibt. Schon
+  // Eingetragenes bleibt trotzdem stehen.
+  const { istSchluesselfertig } = await bauweise();
+  const ohneZuschuesse = istSchluesselfertig &&
+    !stand.posten.some((p) => p.art === 'zuschuss');
+
   anhaengen(rahmen, kopfzeile('Baufinanzierung', 'Eigenkapital und Darlehen an einer Stelle.'));
 
   if (!stand.posten.length) {
@@ -277,7 +288,9 @@ async function zeichne(rahmen) {
         ),
         el('div', { klasse: 'knopf-reihe' }, [
           knopf('Eigenkapital', () => postenBearbeiten({ art: 'eigenkapital' }, neu)),
-          knopf('Zuschuss', () => postenBearbeiten({ art: 'zuschuss' }, neu)),
+          istSchluesselfertig
+            ? null
+            : knopf('Zuschuss', () => postenBearbeiten({ art: 'zuschuss' }, neu)),
           knopf('Darlehen', () => postenBearbeiten({ art: 'darlehen' }, neu), 'knopf-haupt'),
         ]),
       ]),
@@ -334,6 +347,7 @@ async function zeichne(rahmen) {
     ['zuschuss', 'Förderungen und Zuschüsse'],
     ['darlehen', 'Darlehen'],
   ]) {
+    if (art === 'zuschuss' && ohneZuschuesse) continue;
     const liste = stand.posten.filter((p) => p.art === art);
     anhaengen(
       rahmen,
@@ -363,13 +377,15 @@ async function zeichne(rahmen) {
               })
             )
           : el('p', { klasse: 'unterzeile', text: 'Noch nichts erfasst.' }),
-        knopf(
-          art === 'darlehen' ? 'Darlehen hinzufügen'
-            : art === 'zuschuss' ? 'Zuschuss hinzufügen'
-            : 'Eigenkapital hinzufügen',
-          () => postenBearbeiten({ art }, neu),
-          'knopf-leise'
-        ),
+        art === 'zuschuss' && istSchluesselfertig
+          ? null
+          : knopf(
+              art === 'darlehen' ? 'Darlehen hinzufügen'
+                : art === 'zuschuss' ? 'Zuschuss hinzufügen'
+                : 'Eigenkapital hinzufügen',
+              () => postenBearbeiten({ art }, neu),
+              'knopf-leise'
+            ),
         art === 'zuschuss'
           ? el('p', {
               klasse: 'unterzeile',
@@ -392,8 +408,8 @@ async function zeichne(rahmen) {
       'info'
     ),
     el('div', { klasse: 'knopf-reihe' }, [
-      knopf('Tilgungsverlauf', () => { location.hash = '#/tilgung'; }),
-      knopf('Zur Budgetplanung', () => { location.hash = '#/baukasse'; }),
+      knopf('Tilgungsverlauf', () => { geheZu('#/tilgung'); }),
+      knopf('Zur Budgetplanung', () => { geheZu('#/baukasse'); }),
     ]),
     vorschlagsblock(geschaetzteKosten, neu)
   );

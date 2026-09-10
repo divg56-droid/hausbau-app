@@ -10,8 +10,9 @@
 
 import {
   el, feld, auswahl, knopf, karte, kopfzeile, hinweisKasten,
-  leerzustand, melde, datumLang, heute, zahl, zuZahl,
+  leerzustand, melde, datumLang, heute, zahl, zuZahl, kontaktName,
   anhaengen,
+  geheZu,
 } from '../hilfen.js';
 import { daten, einstellung, bildUrl, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -86,7 +87,7 @@ async function zeichne(rahmen) {
           'Wer regelmäßig auf der Baustelle mithilft, gehört in die Kontakte. ' +
             'Danach hakst du im Tageseintrag nur noch ab, wer da war, und trägst die Stunden ein.'
         ),
-        knopf('Helfer anlegen', () => { location.hash = '#/kontakte'; }, 'knopf-haupt'),
+        knopf('Helfer anlegen', () => { geheZu('#/kontakte'); }, 'knopf-haupt'),
         knopf('Ohne Helfer beginnen', () => eintragBearbeiten({ datum: heute() }, helfer, eintraege, neu)),
       ]),
       hinweisKasten(
@@ -331,7 +332,7 @@ function freigabekarte() {
     if (!konto.angemeldet()) {
       stand.textContent =
         'Dafür brauchst du ein Konto: Die öffentliche Seite liest die Einträge vom Server.';
-      knoepfe.append(knopf('Zum Konto', () => { location.hash = '#/konto'; }));
+      knoepfe.append(knopf('Zum Konto', () => { geheZu('#/konto'); }));
       return;
     }
     try {
@@ -461,7 +462,7 @@ function eintragBearbeiten(eintrag, helfer, alleEintraege, nachher) {
           text: unterschriften.has(k.id) ? '\u2713 Unterschrieben' : 'Unterschrift',
           disabled: !stand.has(k.id),
           onclick: async () => {
-            const id = await unterschriftAufnehmen(k.name);
+            const id = await unterschriftAufnehmen(kontaktName(k));
             if (!id) return;
             unterschriften.set(k.id, id);
             zeichnen.textContent = '\u2713 Unterschrieben';
@@ -498,7 +499,7 @@ function eintragBearbeiten(eintrag, helfer, alleEintraege, nachher) {
         return el('div', { klasse: 'helferzeile' }, [
           el('label', { klasse: 'helfername' }, [
             haken,
-            el('span', { text: k.name }),
+            el('span', { text: kontaktName(k) }),
           ]),
           stundenfeld,
           zeichnen,

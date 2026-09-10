@@ -10,8 +10,10 @@
 import {
   el, eur, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile,
   wertzeile, hinweisKasten, leerzustand, zuZahl, melde, datumLang, zahl,
+  kontaktName,
   anhaengen,
   kartengitter,
+  geheZu,
 } from '../hilfen.js';
 import { daten, bildUrl, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -153,7 +155,7 @@ async function zeichne(rahmen) {
           el('button', {
             klasse: 'raumkachel-flaeche',
             type: 'button',
-            onclick: () => { location.hash = '#/raeume/' + r.id; },
+            onclick: () => { geheZu('#/raeume/' + r.id); },
           }, [
             // Ein Foto sagt mehr als ein Zeichen, ein Zeichen mehr als ein
             // leeres graues Kaestchen.
@@ -238,7 +240,7 @@ async function zeigeRaum(rahmen, kennung) {
     anhaengen(
       rahmen,
       karte([leerzustand('Diesen Raum gibt es nicht mehr', 'Vielleicht wurde er gelöscht.',
-        knopf('Zur Übersicht', () => { location.hash = '#/raeume'; }, 'knopf-haupt'))]),
+        knopf('Zur Übersicht', () => { geheZu('#/raeume'); }, 'knopf-haupt'))]),
     );
     return;
   }
@@ -299,7 +301,7 @@ async function zeigeRaum(rahmen, kennung) {
                     el('span', { klasse: 'zeilen-titel', text: m.titel }),
                     el('span', {
                       klasse: 'zeilen-unter',
-                      text: [m.gewerk, kontakt ? kontakt.name : null, datumLang(m.angelegt)]
+                      text: [m.gewerk, kontakt ? kontaktName(kontakt) : null, datumLang(m.angelegt)]
                         .filter(Boolean).join(' · '),
                     }),
                   ]),
@@ -308,7 +310,7 @@ async function zeigeRaum(rahmen, kennung) {
               ]);
             }))
         : el('p', { klasse: 'unterzeile', text: 'Kein Mangel in diesem Raum.' }),
-      knopf('Zur Mängelliste', () => { location.hash = '#/maengel'; }, 'knopf-leise'),
+      knopf('Zur Mängelliste', () => { geheZu('#/maengel'); }, 'knopf-leise'),
     ])
   );
 
@@ -334,14 +336,14 @@ async function zeigeRaum(rahmen, kennung) {
             text: 'Keine Kostenposition diesem Raum zugeordnet. In der '  +
                   'Kostenaufstellung lässt sich das bei der Position einstellen.',
           }),
-      knopf('Zur Kostenaufstellung', () => { location.hash = '#/baukasse/kosten'; }, 'knopf-leise'),
+      knopf('Zur Kostenaufstellung', () => { geheZu('#/baukasse/kosten'); }, 'knopf-leise'),
     ])
   );
 
   anhaengen(
     rahmen,
     knopf('Raum bearbeiten', () => raumBearbeiten(raum, geschosse, neu), 'knopf-haupt'),
-    knopf('Zurück zur Übersicht', () => { location.hash = '#/raeume'; })
+    knopf('Zurück zur Übersicht', () => { geheZu('#/raeume'); })
   );
 }
 
@@ -396,7 +398,11 @@ function raumBearbeiten(raum, geschosse, nachher) {
             }
             for (const bildId of raum.bildIds || []) await bildLoeschen(bildId);
             await daten.loeschen('raeume', raum.id);
-            location.hash = '#/raeume';
+
+            // Geloescht wird von zwei Stellen aus: aus dem Raum heraus und
+            // aus der Liste. Beide Male fuehrt der Weg zur Liste zurueck --
+            // geheZu zeichnet auch dann neu, wenn sie schon offen ist.
+            geheZu('#/raeume');
           }
         : null,
     }

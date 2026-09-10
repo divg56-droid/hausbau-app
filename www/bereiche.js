@@ -34,6 +34,8 @@ export const BEREICHE = [
         text: 'Gesamtbudget, Budget je Quadratmeter, Geldmittel und Zahlungsverlauf.' },
       { weg: 'baukasse/kosten', titel: 'Kostenaufstellung',
         text: 'Alle Positionen als Tabelle, sortierbar, filterbar, als PDF und CSV.' },
+      { weg: 'baunebenkosten', titel: 'Baunebenkosten',
+        text: 'Notar, Vermessung, Statik, Anschlüsse: was in keinem Angebot steht.' },
       { weg: 'baukasse/statistik', titel: 'Statistiken',
         text: 'Kosten je Status, je Gewerk, je Kostengruppe und je Geldmittel.' },
       { weg: 'baukasse/rechnungen', titel: 'Rechnungen',

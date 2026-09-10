@@ -7,6 +7,7 @@ import {
   el, eur, zahl, feld, zahlfeld, auswahl, knopf, karte, kopfzeile,
   wertzeile, hinweisKasten, zuZahl, melde, datumLang, heute,
   anhaengen,
+  geheZu,
 } from '../hilfen.js';
 import { einstellung } from '../daten.js';
 import { finanzierungsstand, ZINS_JE_BINDUNG } from './finanzierung.js';
@@ -240,7 +241,7 @@ export async function zeige(rahmen) {
         const stand = await finanzierungsstand();
         if (!stand.darlehen.length) {
           melde('Noch kein Darlehen erfasst.');
-          location.hash = '#/finanzierung';
+          geheZu('#/finanzierung');
           return;
         }
         // Mehrere Darlehen werden zu einem zusammengefasst; der Zins wird

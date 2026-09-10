@@ -16,6 +16,7 @@ import {
   leerzustand, melde, datumLang, heute,
   anhaengen,
   kartengitter,
+  geheZu,
 } from '../hilfen.js';
 import { daten } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -111,7 +112,7 @@ function zeigeTodos(rahmen, todos, neu) {
           'Schreib auf, was zu tun ist: nachfragen, nachmessen, nachbestellen. ' +
             'Was hier steht, geht auf der Baustelle nicht unter.'
         ),
-        knopf('Checklisten ansehen', () => { location.hash = '#/todos/checklisten'; }, 'knopf-leise'),
+        knopf('Checklisten ansehen', () => { geheZu('#/todos/checklisten'); }, 'knopf-leise'),
       ])
     );
     return;

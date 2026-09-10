@@ -63,6 +63,7 @@ const SCHALE = [
   './module/anschlussplan.js',
   './module/baukasse.js',
   './module/baukosten.js',
+  './module/baunebenkosten.js',
   './module/einstellungen.js',
   './module/finanzierung.js',
   './module/kontakte.js',

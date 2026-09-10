@@ -14,6 +14,7 @@ import {
   hinweisKasten, leerzustand, zuZahl, melde, datumLang, heute, zahl,
   anhaengen,
   kartengitter,
+  geheZu,
 } from '../hilfen.js';
 import { daten, bildUrl, bildLoeschen, einstellung, neueKennung } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -140,7 +141,7 @@ async function zeichne(rahmen) {
             'Lege die Positionen in der Kostenaufstellung an, danach hängst du hier die '  +
             'Angebote daran.'
         ),
-        knopf('Zur Kostenaufstellung', () => { location.hash = '#/baukasse/kosten'; }, 'knopf-haupt'),
+        knopf('Zur Kostenaufstellung', () => { geheZu('#/baukasse/kosten'); }, 'knopf-haupt'),
       ])
     );
     return;

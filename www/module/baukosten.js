@@ -8,6 +8,7 @@
 import {
   el, eur, zahl, feld, zahlfeld, auswahl, knopf, karte, kopfzeile, wertzeile,
   hinweisKasten, zuZahl, melde, anhaengen,
+  geheZu,
 } from '../hilfen.js';
 import { einstellung } from '../daten.js';
 
@@ -127,7 +128,7 @@ export async function zeige(rahmen) {
       knopf('In die Baufinanzierung übernehmen', async () => {
         await einstellung('finanzierung_kosten', r.gesamt);
         melde('Übernommen. Öffne die Baufinanzierung.');
-        location.hash = '#/finanzierung';
+        geheZu('#/finanzierung');
       }, 'knopf-haupt')
     );
 

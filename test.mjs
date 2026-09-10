@@ -861,9 +861,10 @@ console.log('Baukosten in drei Sichten');
     (baukasse.match(/kopfzeile\(/g) || []).length >= 4);
 
   const wege = MODULE.filter((m) => m.gruppe === 'Baukosten').map((m) => m.weg);
-  pruef('Die Baukosten fuehren auf vier Sichten und die Angebote',
+  pruef('Die Baukosten fuehren auf ihre Sichten, den Rechner und die Angebote',
     JSON.stringify(wege) === JSON.stringify(
-      ['baukasse', 'baukasse/kosten', 'baukasse/statistik', 'baukasse/rechnungen', 'angebote']),
+      ['baukasse', 'baukasse/kosten', 'baunebenkosten', 'baukasse/statistik',
+       'baukasse/rechnungen', 'angebote']),
     wege.join(', '));
 
   // Die Wohnflaeche darf nicht zweimal gefuehrt werden, sonst widersprechen
@@ -1653,6 +1654,34 @@ console.log('Anhaengen und Anordnung');
   // In einer schmalen Spalte bleibt es einspaltig.
   pruef('Die Spaltenzahl richtet sich nach dem Platz',
     css.includes('repeat(auto-fit, minmax(340px, 1fr))'));
+}
+
+
+console.log('Wege und Kontakte');
+{
+  // Ein Wechsel auf denselben Hash loest kein hashchange aus. Wer aus einer
+  // Liste heraus loescht und danach "zurueck zur Liste" will, steht schon
+  // dort -- der Bildschirm blieb stehen und zeigte den geloeschten Satz
+  // weiter. Deshalb geht Navigation in den Modulen ueber geheZu().
+  const h = readFileSync('./www/hilfen.js', 'utf8');
+  pruef('Es gibt einen Helfer fuers Wechseln', h.includes('export function geheZu'));
+  pruef('Der zeichnet auch beim gleichen Weg neu',
+    h.includes("new HashChangeEvent('hashchange')"));
+
+  const direkt = [];
+  for (const datei of readdirSync('./www/module')) {
+    const t = readFileSync('./www/module/' + datei, 'utf8');
+    if (/location\.hash\s*=/.test(t)) direkt.push(datei);
+  }
+  pruef('Kein Modul setzt den Hash selbst', direkt.length === 0, direkt.join(', '));
+
+  // Eine Firma hat oft keinen Ansprechpartner, eine Privatperson keine
+  // Firma. Pflicht ist nur, dass eins von beidem dasteht.
+  const k = readFileSync('./www/module/kontakte.js', 'utf8');
+  pruef('Name oder Firma genuegt', k.includes('if (!wert.name && !wert.firma)'));
+  pruef('Das Feld heisst Firma, nicht Betrieb',
+    k.includes("feld('Firma', firma)") && !k.includes("feld('Betrieb'"));
+  pruef('Kontakte ohne Namen bleiben lesbar', h.includes('export const kontaktName'));
 }
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');

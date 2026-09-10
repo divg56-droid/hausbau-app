@@ -2,7 +2,9 @@
 
 import {
   el, feld, eingabe, knopf, karte, kopfzeile, wertzeile, hinweisKasten, melde, heute,
+  kontaktName,
   anhaengen,
+  geheZu,
 } from '../hilfen.js';
 import { daten, einstellung } from '../daten.js';
 
@@ -194,7 +196,7 @@ async function zeichne(rahmen) {
         if (!window.confirm('Sicher? Fotos, Mängel, Rechnungen und Pläne sind danach weg.')) return;
         for (const name of [...SPEICHER, 'bilder', 'einstellungen']) await daten.leeren(name);
         melde('Alles gelöscht.');
-        location.hash = '';
+        geheZu('');
       }, 'knopf-warn'),
     ]),
 
@@ -415,7 +417,7 @@ async function csvBelege() {
         const p = posten.find((x) => x.id === b.postenId);
         return [
           b.datum || '', b.beschreibung || '', b.betrag || 0,
-          b.kontaktName || '', k ? k.name : '', p ? p.name : '',
+          b.kontaktName || '', k ? kontaktName(k) : '', p ? p.name : '',
         ];
       }),
     'rechnungen.csv', 'Rechnungen'
@@ -456,7 +458,7 @@ async function csvAufgaben() {
       const k = kontakte.find((x) => x.id === a.kontaktId);
       return [
         a.titel || '', a.phase || '', a.start || '', a.ende || '', a.dauer || 0,
-        k ? k.name : '',
+        k ? kontaktName(k) : '',
         a.status === 'fertig' ? 'Fertig' : a.status === 'laeuft' ? 'Läuft' : 'Offen',
         a.notiz || '',
       ];

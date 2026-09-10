@@ -17,6 +17,7 @@
 import {
   el, feld, auswahl, knopf, karte, kartengitter, kopfzeile, hinweisKasten, melde,
   datumLang, heute, zahl, anhaengen,
+  geheZu,
 } from '../hilfen.js';
 import { daten, einstellung } from '../daten.js';
 import { leitfadenStand } from '../leitfaden-daten.js';
@@ -152,7 +153,7 @@ function zeigeWizard(rahmen, stand, gemerkt, neu) {
       : null,
     el('p', { klasse: 'wizard-text', text: punkt.text }),
     punkt.ziel
-      ? knopf('Dort hin', () => { location.hash = punkt.ziel; }, 'knopf-leise')
+      ? knopf('Dort hin', () => { geheZu(punkt.ziel); }, 'knopf-leise')
       : null,
 
     el('div', { klasse: 'wizard-fuss' }, [
@@ -272,7 +273,7 @@ function zeile(punkt, neu) {
       punkt.ziel
         ? el('button', {
             klasse: 'zeilen-knopf', type: 'button',
-            onclick: () => { location.hash = punkt.ziel; },
+            onclick: () => { geheZu(punkt.ziel); },
           }, [
             el('span', { klasse: 'zeilen-titel', text: punkt.titel }),
             el('span', { klasse: 'zeilen-unter', text: punkt.text }),

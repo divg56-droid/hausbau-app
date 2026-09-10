@@ -11,6 +11,7 @@
 import {
   el, eur, knopf, karte, kopfzeile, hinweisKasten, datumLang, heute, zahl, fuellen,
   anhaengen,
+  geheZu,
 } from '../hilfen.js';
 import { daten, einstellung } from '../daten.js';
 import { finanzierungsstand } from './finanzierung.js';
@@ -67,9 +68,9 @@ export async function zeige(rahmen) {
           text: 'Aus Eigenkapital und Darlehen entsteht dein Budget. Alles Weitere, ' +
             'von der Kostenaufstellung bis zum Restbudget, rechnet sich daraus.',
         }),
-        knopf('Budget anlegen', () => { location.hash = '#/finanzierung'; }, 'knopf-haupt'),
-        knopf('Erst einmal Baukosten schätzen', () => { location.hash = '#/baukosten'; }),
-        knopf('Oder dem Bauleitfaden folgen', () => { location.hash = '#/leitfaden'; }, 'knopf-leise'),
+        knopf('Budget anlegen', () => { geheZu('#/finanzierung'); }, 'knopf-haupt'),
+        knopf('Erst einmal Baukosten schätzen', () => { geheZu('#/baukosten'); }),
+        knopf('Oder dem Bauleitfaden folgen', () => { geheZu('#/leitfaden'); }, 'knopf-leise'),
       ]),
       hinweisKasten(
         'Links in der Leiste stehen alle Bereiche. Auf dem Telefon öffnest du sie ' +
@@ -114,7 +115,7 @@ export async function zeige(rahmen) {
         : null,
       knopf(
         leitfaden.naechster ? 'Zum Leitfaden' : 'Leitfaden ansehen',
-        () => { location.hash = '#/leitfaden'; },
+        () => { geheZu('#/leitfaden'); },
         'knopf-leise'
       ),
     ])
@@ -139,7 +140,7 @@ export async function zeige(rahmen) {
           klasse: 'unterzeile',
           text: `Davon bereits bezahlt ${eur.format(gezahlt)}.`,
         }),
-        knopf('Zur Budgetplanung', () => { location.hash = '#/baukasse'; }, 'knopf-leise'),
+        knopf('Zur Budgetplanung', () => { geheZu('#/baukasse'); }, 'knopf-leise'),
       ])
     );
   }
@@ -183,7 +184,7 @@ export async function zeige(rahmen) {
               'warn'
             )
           : null,
-        knopf('Zu den To-Dos', () => { location.hash = '#/todos'; }, 'knopf-leise'),
+        knopf('Zu den To-Dos', () => { geheZu('#/todos'); }, 'knopf-leise'),
       ])
     );
   }
@@ -219,7 +220,7 @@ export async function zeige(rahmen) {
               text: `ab ${datumLang(naechste.start)}, ${naechste.dauer} Tage`,
             })
           : null,
-        knopf('Zum Bauablauf', () => { location.hash = '#/ablauf'; }, 'knopf-leise'),
+        knopf('Zum Bauablauf', () => { geheZu('#/ablauf'); }, 'knopf-leise'),
       ])
     );
   }
@@ -264,7 +265,7 @@ export async function zeige(rahmen) {
               'warn'
             )
           : null,
-        knopf('Zur Mängelliste', () => { location.hash = '#/maengel'; }, 'knopf-leise'),
+        knopf('Zur Mängelliste', () => { geheZu('#/maengel'); }, 'knopf-leise'),
       ])
     );
   }
@@ -283,7 +284,7 @@ export async function zeige(rahmen) {
           text: `${tagebuch.length} Tage dokumentiert, ${zahl(stunden, stunden % 1 ? 1 : 0)} ` +
             `Helferstunden. Zuletzt ${datumLang(letzter.datum)}.`,
         }),
-        knopf('Eintrag für heute', () => { location.hash = '#/tagebuch'; }, 'knopf-leise'),
+        knopf('Eintrag für heute', () => { geheZu('#/tagebuch'); }, 'knopf-leise'),
       ])
     );
   }
@@ -333,7 +334,7 @@ function wetterkarte() {
           text: 'Trage die Adresse deiner Baustelle ein, dann siehst du hier das ' +
             'aktuelle Wetter. Im Bautagebuch trägt es sich danach von allein ein.',
         }),
-        knopf('Projektadresse eintragen', () => { location.hash = '#/einstellungen'; }, 'knopf-haupt')
+        knopf('Projektadresse eintragen', () => { geheZu('#/einstellungen'); }, 'knopf-haupt')
       );
       return;
     }
@@ -387,7 +388,7 @@ function wetterkarte() {
       hinweis
         ? hinweisKasten(hinweis, 'warn')
         : hinweisKasten('Nichts spricht gegen Arbeiten im Freien.', 'gut'),
-      knopf('Ins Bautagebuch übernehmen', () => { location.hash = '#/tagebuch'; }, 'knopf-leise')
+      knopf('Ins Bautagebuch übernehmen', () => { geheZu('#/tagebuch'); }, 'knopf-leise')
     );
   })();
 

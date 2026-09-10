@@ -7,7 +7,7 @@
 
 import {
   el, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile, hinweisKasten,
-  leerzustand, zuZahl, melde, datumLang, heute,
+  leerzustand, zuZahl, melde, datumLang, heute, kontaktName, kontaktLang,
   anhaengen,
 } from '../hilfen.js';
 import { daten, einstellung } from '../daten.js';
@@ -275,7 +275,7 @@ async function zeichne(rahmen, ansicht = 'liste') {
                 el('span', { klasse: 'zeilen-titel', text: a.titel }),
                 el('span', {
                   klasse: 'zeilen-unter',
-                  text: [zeit, kontakt ? kontakt.name : null].filter(Boolean).join(' · '),
+                  text: [zeit, kontakt ? kontaktName(kontakt) : null].filter(Boolean).join(' · '),
                 }),
               ]),
               el('span', {
@@ -352,7 +352,7 @@ function zeigeBalken(rahmen, aufgaben, roh, kontakte, maengel, neu) {
         el('strong', { text: z.titel }),
         el('span', {
           klasse: 'zeilen-unter',
-          text: [`${z.dauer} T.`, kontakt ? kontakt.name : null].filter(Boolean).join(' · '),
+          text: [`${z.dauer} T.`, kontakt ? kontaktName(kontakt) : null].filter(Boolean).join(' · '),
         }),
       ]),
       el('span', { klasse: 'balken-bahn', stil: { width: breite + 'px' } }, [balken]),
@@ -556,7 +556,7 @@ function aufgabeBearbeiten(aufgabe, alleAufgaben, kontakte, maengel, nachher) {
   startSichtbarkeit();
 
   const kontakt = auswahl(
-    [['', '– kein Kontakt –'], ...kontakte.map((k) => [k.id, k.name + (k.gewerk ? ' (' + k.gewerk + ')' : '')])],
+    [['', '– kein Kontakt –'], ...kontakte.map((k) => [k.id, kontaktLang(k, k.gewerk)])],
     aufgabe.kontaktId ?? ''
   );
   const notiz = el('textarea', {}, [aufgabe.notiz || '']);
@@ -629,7 +629,7 @@ async function pdfErzeugen(aufgaben, kontakte) {
         a.titel, a.phase,
         a.start ? datumLang(a.start) : '',
         a.ende ? datumLang(a.ende) : '',
-        kontakt ? kontakt.name : '',
+        kontakt ? kontaktName(kontakt) : '',
         a.status === 'fertig' ? 'Fertig' : a.status === 'laeuft' ? 'Läuft' : 'Offen',
       ];
     }),

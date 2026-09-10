@@ -12,7 +12,7 @@
 
 import {
   el, feld, eingabe, auswahl, knopf, karte, kopfzeile, leerzustand,
-  hinweisKasten, melde,
+  hinweisKasten, melde, kontaktName,
   anhaengen,
 } from '../hilfen.js';
 import { daten } from '../daten.js';
@@ -65,7 +65,7 @@ async function zeigePersonen(rahmen, art, neu) {
 
   const drin = alle
     .filter((k) => (k.art || 'firma') === art)
-    .sort((a, b) => a.name.localeCompare(b.name, 'de'));
+    .sort((a, b) => kontaktName(a).localeCompare(kontaktName(b), 'de'));
 
   anhaengen(rahmen, kopfzeile(was.titel, was.unter));
 
@@ -88,11 +88,13 @@ async function zeigePersonen(rahmen, art, neu) {
           el('button', { klasse: 'listenzeile', onclick: () => bearbeiten(k, neu) }, [
             el('span', { klasse: 'zeilenzeichen' }, [zeichen(kontaktZeichen(k))]),
             el('span', { klasse: 'zeilen-text' }, [
-              el('span', { klasse: 'zeilen-titel', text: k.name }),
+              el('span', { klasse: 'zeilen-titel', text: kontaktName(k) }),
               el('span', {
                 klasse: 'zeilen-unter',
-                text: [k.firma, k.gewerk, k.telefon].filter(Boolean).join(' · ') ||
-                  'ohne weitere Angaben',
+                // Steht die Firma schon in der Ueberschrift, waere sie hier
+                // dieselbe Zeile zweimal.
+                text: [k.name ? k.firma : null, k.gewerk, k.telefon]
+                  .filter(Boolean).join(' · ') || 'ohne weitere Angaben',
               }),
             ]),
             // tel: oeffnet im WebView die Telefon-App.
@@ -117,7 +119,7 @@ async function bearbeiten(kontakt, nachher) {
     [['firma', 'Firma'], ['helfer', 'Privatperson']], kontakt.art || 'firma'
   );
   const name = eingabe({ value: kontakt.name || '', placeholder: 'Vor- und Nachname' });
-  const firma = eingabe({ value: kontakt.firma || '', placeholder: 'Betrieb' });
+  const firma = eingabe({ value: kontakt.firma || '', placeholder: 'z. B. Elektro Meier GmbH' });
   // Ein Gewerk, das es in der Liste nicht mehr gibt, bleibt trotzdem waehlbar:
   // Sonst wuerde es beim naechsten Speichern stillschweigend verschwinden.
   const bekannt = kontakt.gewerk && !gewerke.includes(kontakt.gewerk)
@@ -137,8 +139,8 @@ async function bearbeiten(kontakt, nachher) {
     kontakt.id ? 'Kontakt bearbeiten' : 'Kontakt anlegen',
     [
       feld('Art', art),
-      feld('Name', name),
-      feld('Betrieb', firma),
+      feld('Name', name, 'Name oder Firma genügt, beides ist besser.'),
+      feld('Firma', firma),
       feld('Gewerk', gewerk),
       feld('Straße und Hausnummer', strasse),
       feld('PLZ und Ort', plzOrt),
@@ -158,7 +160,11 @@ async function bearbeiten(kontakt, nachher) {
         epost: epost.value.trim(),
         notiz: notiz.value.trim(),
       };
-      if (!wert.name) throw new Error('Bitte einen Namen eintragen.');
+      // Eine Firma hat oft keinen Ansprechpartner, eine Privatperson keine
+      // Firma. Pflicht ist deshalb nur, dass ueberhaupt etwas dasteht.
+      if (!wert.name && !wert.firma) {
+        throw new Error('Bitte einen Namen oder eine Firma eintragen.');
+      }
       if (kontakt.id) wert.id = kontakt.id;
       await daten.sichern('kontakte', wert);
       await nachher();

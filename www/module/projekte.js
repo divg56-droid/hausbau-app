@@ -7,6 +7,7 @@
 import {
   el, feld, eingabe, knopf, karte, kopfzeile, hinweisKasten, melde, datumLang,
   anhaengen,
+  geheZu,
 } from '../hilfen.js';
 import { projektAktiv, projektWechseln } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -83,7 +84,7 @@ async function wechseln(projekt) {
   melde(projekt.name + ' ist offen.');
   // Ganz neu laden: Jeder Bildschirm haelt seine Daten im Speicher, und die
   // gehoeren jetzt zu einem anderen Projekt.
-  location.hash = '';
+  geheZu('');
   location.reload();
 }
 
@@ -103,7 +104,7 @@ function anlegen(nachher) {
       const wert = name.value.trim();
       if (!wert) throw new Error('Bitte einen Namen eintragen.');
       await projektAnlegen(wert);
-      location.hash = '';
+      geheZu('');
       location.reload();
     }
   );

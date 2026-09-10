@@ -13,7 +13,9 @@
 import {
   el, eur, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile,
   wertzeile, hinweisKasten, leerzustand, zuZahl, melde, datumLang, heute,
+  kontaktName,
   anhaengen,
+  geheZu,
 } from '../hilfen.js';
 import { daten, einstellung, bildUrl, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -190,7 +192,7 @@ function zeigeBudgetplanung(rahmen, stand, summe, belege, hausdaten, neu) {
           'Darlehen an, dann füllen sich die Zahlen hier von allein.',
         'info'
       ),
-      knopf('Zur Baufinanzierung', () => { location.hash = '#/finanzierung'; }, 'knopf-haupt')
+      knopf('Zur Baufinanzierung', () => { geheZu('#/finanzierung'); }, 'knopf-haupt')
     );
   }
 
@@ -319,7 +321,7 @@ function zeigeBudgetplanung(rahmen, stand, summe, belege, hausdaten, neu) {
         ]),
       ]);
     })),
-    knopf('Geldmittel ändern', () => { location.hash = '#/finanzierung'; }, 'knopf-leise')
+    knopf('Geldmittel ändern', () => { geheZu('#/finanzierung'); }, 'knopf-leise')
   );
 
   // ---------------------------------------------------------- Zahlungsverlauf
@@ -693,7 +695,7 @@ function zeigeStatistik(rahmen, gerechnet, summe, stand, belege, art, neu) {
   if (!gerechnet.length) {
     anhaengen(
       rahmen,
-      knopf('Positionen anlegen', () => { location.hash = '#/baukasse/kosten'; }, 'knopf-haupt')
+      knopf('Positionen anlegen', () => { geheZu('#/baukasse/kosten'); }, 'knopf-haupt')
     );
   }
 }
@@ -1243,10 +1245,11 @@ function belegBearbeiten(beleg, posten, stand, kontakte, nachher) {
   // Der Firmenname darf als Freitext stehen bleiben, auch ohne passenden
   // Kontakt. Gibt es einen mit gleichem Namen, wird er vorgewaehlt.
   const treffer = kontakte.find(
-    (k) => beleg.kontaktName && k.name.toLowerCase() === String(beleg.kontaktName).toLowerCase()
+    (k) => beleg.kontaktName &&
+      kontaktName(k).toLowerCase() === String(beleg.kontaktName).toLowerCase()
   );
   const kontakt = auswahl(
-    [['', '– kein Kontakt –'], ...kontakte.map((k) => [k.id, k.name])],
+    [['', '– kein Kontakt –'], ...kontakte.map((k) => [k.id, kontaktName(k)])],
     beleg.kontaktId ?? (treffer ? treffer.id : '')
   );
   const kontaktName = eingabe({ value: beleg.kontaktName || '', placeholder: 'Firma laut Rechnung' });

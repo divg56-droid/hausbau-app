@@ -18,6 +18,30 @@ export function datumLang(iso) {
   return `${t}.${m}.${j}`;
 }
 
+// Wechselt den Bildschirm.
+//
+// Nicht "location.hash = ...": Ein Wechsel auf denselben Hash loest kein
+// hashchange aus, und der Bildschirm bleibt stehen. Genau das passiert
+// nach dem Loeschen aus einer Liste heraus -- der geloeschte Satz blieb
+// bis zum naechsten Laden sichtbar.
+export function geheZu(weg) {
+  const ziel = weg.startsWith('#') ? weg : '#' + weg;
+  if (location.hash === ziel) window.dispatchEvent(new HashChangeEvent('hashchange'));
+  else location.hash = ziel;
+}
+
+// Ein Kontakt hat einen Namen oder eine Firma; Pflicht ist nur eins von
+// beidem. Wo ein Kontakt in einer Zeile steht, steht der Name -- und wenn
+// keiner erfasst ist, die Firma. Sonst blieben Zeilen leer.
+export const kontaktName = (k) => (k && (k.name || k.firma)) || '';
+
+// "Meier (Elektro Meier GmbH)". Der Zusatz faellt weg, wenn er schon der
+// Name ist -- bei einer Firma ohne Ansprechpartner waere er es.
+export function kontaktLang(k, zusatz) {
+  const name = kontaktName(k);
+  return zusatz && zusatz !== name ? name + ' (' + zusatz + ')' : name;
+}
+
 // Erzeugt ein Element. kind kann Text, Element oder eine Liste davon sein.
 export function el(tag, eigenschaften = {}, kinder = []) {
   const knoten = document.createElement(tag);
