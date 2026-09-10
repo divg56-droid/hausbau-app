@@ -269,19 +269,24 @@ function zeile(punkt, neu) {
   return el('li', {}, [
     el('div', { klasse: 'leitfaden-zeile' + (punkt.erledigt ? ' erledigt' : '') }, [
       haken,
-      el('div', { klasse: 'zeilen-text' }, [
-        el('span', { klasse: 'zeilen-titel', text: punkt.titel }),
-        el('span', { klasse: 'zeilen-unter', text: punkt.text }),
-        punkt.erledigt && punkt.am
-          ? el('span', { klasse: 'zeilen-unter', text: 'erledigt am ' + datumLang(punkt.am) })
-          : null,
-      ]),
       punkt.ziel
         ? el('button', {
-            klasse: 'knopf knopf-schmal', type: 'button', text: 'Öffnen',
+            klasse: 'zeilen-knopf', type: 'button',
             onclick: () => { location.hash = punkt.ziel; },
-          })
-        : null,
+          }, [
+            el('span', { klasse: 'zeilen-titel', text: punkt.titel }),
+            el('span', { klasse: 'zeilen-unter', text: punkt.text }),
+            punkt.erledigt && punkt.am
+              ? el('span', { klasse: 'zeilen-unter', text: 'erledigt am ' + datumLang(punkt.am) })
+              : null,
+          ])
+        : el('div', { klasse: 'zeilen-text' }, [
+            el('span', { klasse: 'zeilen-titel', text: punkt.titel }),
+            el('span', { klasse: 'zeilen-unter', text: punkt.text }),
+            punkt.erledigt && punkt.am
+              ? el('span', { klasse: 'zeilen-unter', text: 'erledigt am ' + datumLang(punkt.am) })
+              : null,
+          ]),
     ]),
   ]);
 }

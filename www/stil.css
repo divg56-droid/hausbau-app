@@ -28,6 +28,12 @@
   --gut-flaeche: #e6f4ec;   --gut-schrift: #1e5c39;
   --info-flaeche: #e6eefc;  --info-schrift: #1e429f;
   --arbeit-flaeche: #efe9fa; --arbeit-schrift: #4a327d;
+  /* Wetterlagen. Die Farbe sagt, ob draussen gearbeitet werden kann: klar
+     und bewoelkt ruhig, Regen und Schnee kuehl, Sturm und Frost warnen. */
+  --w-klar-flaeche: #dff0f2;   --w-klar-schrift: #0a5155;
+  --w-grau-flaeche: #e7ebed;   --w-grau-schrift: #46545c;
+  --w-nass-flaeche: #e2ecfb;   --w-nass-schrift: #1e429f;
+  --w-kalt-flaeche: #e5eef7;   --w-kalt-schrift: #245b8c;
   --offen-flaeche: #fdecea; --offen-schrift: #9b2c22;
   /* Schrift auf einer Akzentflaeche. Im dunklen Design bleibt sie dunkel,
      weil der Akzent dort das helle Petrol ist. */
@@ -501,6 +507,10 @@ html:not([data-thema="hell"]) {
     --warn: #ff8b80;
     --arbeit: #b9a4e6;
     --offen: #7d8a95;
+    --w-klar-flaeche: #16323a;   --w-klar-schrift: #7fd3d6;
+    --w-grau-flaeche: #232c31;   --w-grau-schrift: #aab6bd;
+    --w-nass-flaeche: #1b2740;   --w-nass-schrift: #9dc0f5;
+    --w-kalt-flaeche: #1d2b39;   --w-kalt-schrift: #96bde3;
 
     --warn-flaeche: #3a1f1d;  --warn-schrift: #ffb3aa;
     --gut-flaeche: #17301f;   --gut-schrift: #86ddaa;
@@ -527,6 +537,10 @@ html[data-thema="dunkel"] {
   --warn: #ff8b80;
   --arbeit: #b9a4e6;
   --offen: #7d8a95;
+  --w-klar-flaeche: #16323a;   --w-klar-schrift: #7fd3d6;
+  --w-grau-flaeche: #232c31;   --w-grau-schrift: #aab6bd;
+  --w-nass-flaeche: #1b2740;   --w-nass-schrift: #9dc0f5;
+  --w-kalt-flaeche: #1d2b39;   --w-kalt-schrift: #96bde3;
 
   --warn-flaeche: #3a1f1d;  --warn-schrift: #ffb3aa;
   --gut-flaeche: #17301f;   --gut-schrift: #86ddaa;
@@ -814,14 +828,54 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
     gap: 12px; align-items: start;
   }
   .kartengitter > .karte { margin-bottom: 0; }
+  /* Eine einzelne Karte soll sich nicht ueber die ganze Breite ziehen, nur
+     weil neben ihr gerade keine zweite steht. */
+  .kartengitter > .karte { max-width: 620px; }
 }
 
-/* Wetterkarte: Zeichen und Grad nebeneinander, gross genug fuer einen Blick
-   im Vorbeigehen. */
-.wetterkopf { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
-.wetterzeichen { flex: none; color: var(--akzent-dunkel); }
-.wettergrad { display: block; font-size: 30px; font-weight: 700; line-height: 1.1; }
-.wetterlage { display: block; font-size: 14px; color: var(--tinte-leise); }
+/* ------------------------------------------------------------- Wetterkarte
+
+   Farbe bekommt hier eine Bedeutung, statt nur huebsch zu sein: Sie sagt,
+   ob draussen gearbeitet werden kann. Klar und bewoelkt sind ruhig, Regen
+   und Schnee kuehl, Sturm und Frost warnen. Wer im Vorbeigehen hinsieht,
+   weiss es, bevor er gelesen hat.
+
+   Kein Gelb fuer die Sonne: Die Form aus Kreis und Strahlen ist eindeutig
+   genug, und ein Goldton passt weder zur Marke noch zum Rest. */
+
+.wetterkarte { border-left: 5px solid var(--wetterfarbe, var(--linie)); }
+.wetterkopf {
+  display: flex; align-items: center; gap: 16px; margin-bottom: 12px;
+  background: var(--wetterflaeche, var(--band)); color: var(--wetterfarbe, var(--tinte));
+  border-radius: 12px; padding: 14px 16px;
+}
+.wetterzeichen { flex: none; color: var(--wetterfarbe, var(--akzent-dunkel)); }
+.wettergrad {
+  display: block; font-size: 34px; font-weight: 700; line-height: 1.05;
+  color: var(--tinte);
+}
+.wetterlage {
+  display: block; font-size: 15px; font-weight: 700;
+  color: var(--wetterfarbe, var(--tinte-leise));
+}
+
+.wetter-sonnig   { --wetterflaeche: var(--w-klar-flaeche); --wetterfarbe: var(--w-klar-schrift); }
+.wetter-bewoelkt { --wetterflaeche: var(--w-grau-flaeche); --wetterfarbe: var(--w-grau-schrift); }
+.wetter-regen    { --wetterflaeche: var(--w-nass-flaeche); --wetterfarbe: var(--w-nass-schrift); }
+.wetter-schnee   { --wetterflaeche: var(--w-kalt-flaeche); --wetterfarbe: var(--w-kalt-schrift); }
+.wetter-frost    { --wetterflaeche: var(--w-kalt-flaeche); --wetterfarbe: var(--w-kalt-schrift); }
+.wetter-sturm    { --wetterflaeche: var(--warn-flaeche);   --wetterfarbe: var(--warn-schrift); }
+
+/* Die Kennzahlen des Tages als kleine Kaesten, nicht als Satz mit Punkten. */
+.wetterwerte {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 8px; margin-bottom: 10px;
+}
+.wetterwert {
+  background: var(--band); border-radius: 10px; padding: 8px 10px; text-align: center;
+}
+.wetterwert strong { display: block; font-size: 16px; }
+.wetterwert span { font-size: 11.5px; color: var(--tinte-leise); }
 
 /* Zeichen stehen in der Schriftfarbe und tragen sie mit: In einer
    markierten Zeile wechseln sie mit, ohne eine eigene Regel zu brauchen. */
@@ -837,11 +891,57 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
   color: var(--akzent-dunkel);
 }
 
-/* Raumzeile: die Zeile selbst oeffnet den Raum, die Knoepfe rechts aendern
-   ihn. Auf dem Telefon rutschen sie unter den Namen. */
-.raumzeile { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.raumzeile > .listenzeile { flex: 1 1 190px; }
-.raumzeile .zeilen-aktionen { padding-bottom: 8px; }
+/* Der Text einer Listenzeile ist zugleich der Knopf. Er sieht nicht danach
+   aus: Ein Knopfrahmen um jede Zeile waere ein Zaun um jeden Satz. */
+.zeilen-knopf {
+  flex: 1 1 150px; min-width: 0; text-align: left; cursor: pointer;
+  border: 0; background: none; color: inherit; font: inherit;
+  padding: 2px 4px; margin: -2px -4px; border-radius: 8px;
+}
+.zeilen-knopf:hover { background: var(--band); }
+.zeilen-knopf .zeilen-unter { white-space: normal; }
+
+/* --------------------------------------------------------- Raum- und
+   Gewerkekacheln
+
+   Ein Raum ist ein Ding mit Bild, Flaeche und Kosten -- und Dinge stehen
+   nebeneinander, nicht in einem Band, das sich ueber die ganze Breite zieht
+   und in der Mitte ein Loch hat. */
+
+.raumgitter, .gewerkegitter {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+}
+.gewerkegitter { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+
+.raumkachel, .gewerkekachel {
+  border: 1px solid var(--linie); border-radius: 12px; background: var(--karte);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.raumkachel-flaeche {
+  flex: 1; display: block; width: 100%; text-align: left; cursor: pointer;
+  border: 0; background: none; color: inherit; font: inherit; padding: 10px 12px 8px;
+}
+.raumkachel-flaeche:hover { background: var(--band); }
+.raumbild {
+  display: block; width: 100%; height: 92px; object-fit: cover;
+  border-radius: 8px; background: var(--band); margin-bottom: 8px;
+}
+.raumbild-zeichen {
+  display: flex; align-items: center; justify-content: center;
+  color: var(--akzent-dunkel);
+}
+.raumkachel-kopf { display: flex; align-items: center; gap: 8px; }
+.raumkachel-name { font-weight: 700; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.raumkachel-unter {
+  display: block; font-size: 12.5px; color: var(--tinte-leise); margin-top: 2px;
+}
+.raumkachel-aendern { margin: 0 12px 12px; width: auto; }
+
+.gewerkekachel { padding: 10px 12px; gap: 10px; }
+.gewerkekopf { display: flex; align-items: center; gap: 10px; }
+.gewerkeknoepfe { display: flex; gap: 8px; }
+.gewerkeknoepfe .knopf-schmal { flex: 1; }
 .zeilen-aktionen .knopf-schmal { flex: none; }
 .leitfaden-zeile input[type="checkbox"] { margin-top: 3px; flex: none; }
 .leitfaden-zeile .zeilen-text { flex: 1 1 150px; min-width: 0; }

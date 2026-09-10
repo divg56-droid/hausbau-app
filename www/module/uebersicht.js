@@ -316,7 +316,10 @@ const HALTBAR = 60 * 60 * 1000;
  */
 function wetterkarte() {
   const inhalt = el('div');
-  const karteInhalt = karte([el('h2', { text: 'Wetter auf der Baustelle' }), inhalt]);
+  const karteInhalt = karte(
+    [el('h2', { text: 'Wetter auf der Baustelle' }), inhalt],
+    'wetterkarte'
+  );
 
   inhalt.append(el('p', { klasse: 'unterzeile', text: 'Wird geholt …' }));
 
@@ -350,23 +353,29 @@ function wetterkarte() {
     const w = stand.wetter;
     const hinweis = wetterHinweisText(w);
 
+    // Die Farbe der Karte folgt der Lage: Sie sagt im Vorbeigehen, ob
+    // draussen gearbeitet werden kann, bevor irgendetwas gelesen ist.
+    karteInhalt.classList.add('wetter-' + w.wetter);
+
     fuellen(
       inhalt,
       el('div', { klasse: 'wetterkopf' }, [
-        el('span', { klasse: 'wetterzeichen' }, [zeichen(wetterZeichen(w.wetter), { groesse: 46 })]),
+        el('span', { klasse: 'wetterzeichen' }, [zeichen(wetterZeichen(w.wetter), { groesse: 60 })]),
         el('div', {}, [
           el('span', { klasse: 'wettergrad', text: zahl(w.temperatur, 0) + ' °C' }),
           el('span', { klasse: 'wetterlage', text: WETTERNAMEN[w.wetter] || w.wetter }),
         ]),
       ]),
-      el('p', {
-        klasse: 'unterzeile',
-        text: [
-          w.min !== null && w.max !== null ? `${zahl(w.min, 0)} bis ${zahl(w.max, 0)} °C` : null,
-          w.niederschlag ? `${zahl(w.niederschlag, 1)} mm Niederschlag` : 'kein Niederschlag',
-          w.wind ? `Wind bis ${zahl(w.wind, 0)} km/h` : null,
-        ].filter(Boolean).join(' · '),
-      }),
+      // Vier Zahlen als Kaesten statt als Satz mit Trennpunkten: So findet
+      // das Auge die eine, die es sucht.
+      el('div', { klasse: 'wetterwerte' }, [
+        wetterwert(
+          w.min !== null && w.max !== null ? `${zahl(w.min, 0)}/${zahl(w.max, 0)} °C` : '–',
+          'tiefste/höchste'
+        ),
+        wetterwert(zahl(w.niederschlag, 1) + ' mm', 'Niederschlag'),
+        wetterwert(zahl(w.wind, 0) + ' km/h', 'Wind in Spitzen'),
+      ]),
       el('p', {
         klasse: 'unterzeile leise',
         text: [
@@ -375,7 +384,9 @@ function wetterkarte() {
           stand.alt ? 'Stand ' + stand.alt : null,
         ].filter(Boolean).join(' · '),
       }),
-      hinweis ? hinweisKasten(hinweis, 'warn') : null,
+      hinweis
+        ? hinweisKasten(hinweis, 'warn')
+        : hinweisKasten('Nichts spricht gegen Arbeiten im Freien.', 'gut'),
       knopf('Ins Bautagebuch übernehmen', () => { location.hash = '#/tagebuch'; }, 'knopf-leise')
     );
   })();
@@ -420,6 +431,13 @@ async function wetterStand(ort) {
     };
   }
 }
+
+/** Eine Zahl des Tages als kleiner Kasten. */
+const wetterwert = (wert, name) =>
+  el('div', { klasse: 'wetterwert' }, [
+    el('strong', { text: wert }),
+    el('span', { text: name }),
+  ]);
 
 /** Der Satz, der auf der Baustelle zaehlt: Ruht die Arbeit? */
 function wetterHinweisText(w) {

@@ -208,10 +208,13 @@ async function zeigeGewerke(rahmen, neu) {
     rahmen,
     kopfzeile('Gewerke', 'Die Liste, aus der Positionen, Mängel und Kontakte wählen.'),
     karte([
-      el('ul', { klasse: 'liste' }, gewerke.map((g) => {
+      // Kacheln statt Zeilenband: Fuenfzehn kurze Namen mit je zwei
+      // Knoepfen ziehen sich sonst ueber die ganze Breite, mit einem Loch in
+      // der Mitte.
+      el('div', { klasse: 'gewerkegitter' }, gewerke.map((g) => {
         const wo = verwendung.get(g);
-        return el('li', {}, [
-          el('div', { klasse: 'leitfaden-zeile' }, [
+        return el('div', { klasse: 'gewerkekachel' }, [
+          el('div', { klasse: 'gewerkekopf' }, [
             el('span', { klasse: 'zeilenzeichen' }, [zeichen(gewerkZeichen(g))]),
             el('div', { klasse: 'zeilen-text' }, [
               el('span', { klasse: 'zeilen-titel', text: g }),
@@ -226,18 +229,16 @@ async function zeigeGewerke(rahmen, neu) {
                   : 'noch nicht verwendet',
               }),
             ]),
-            // Beide Knoepfe in einem Behaelter: So brechen sie als Paar um
-            // und nicht einzeln, wenn der Name lang und das Telefon schmal ist.
-            el('span', { klasse: 'zeilen-aktionen' }, [
-              el('button', {
-                klasse: 'knopf knopf-schmal', type: 'button', text: 'Umbenennen',
-                onclick: () => umbenennen(g, gewerke, neu),
-              }),
-              el('button', {
-                klasse: 'knopf knopf-schmal', type: 'button', text: 'Löschen',
-                onclick: () => loeschen(g, wo, gewerke, neu),
-              }),
-            ]),
+          ]),
+          el('div', { klasse: 'gewerkeknoepfe' }, [
+            el('button', {
+              klasse: 'knopf knopf-schmal', type: 'button', text: 'Umbenennen',
+              onclick: () => umbenennen(g, gewerke, neu),
+            }),
+            el('button', {
+              klasse: 'knopf knopf-schmal', type: 'button', text: 'Löschen',
+              onclick: () => loeschen(g, wo, gewerke, neu),
+            }),
           ]),
         ]);
       })),

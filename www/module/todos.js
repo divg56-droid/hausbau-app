@@ -303,7 +303,13 @@ function zeile(todo, neu, mitListe) {
         'aria-label': todo.titel,
         onchange: (e) => abhaken(todo, e.target.checked, neu),
       }),
-      el('div', { klasse: 'zeilen-text' }, [
+      // Der Text ist der Knopf zum Aendern. Ein eigener Knopf daneben
+      // haengt in einer breiten Karte weit rechts, mit einem Loch dazwischen
+      // -- und die Zeile anzutippen erwartet man ohnehin.
+      el('button', {
+        klasse: 'zeilen-knopf', type: 'button',
+        onclick: () => bearbeiten(todo, neu),
+      }, [
         el('span', { klasse: 'zeilen-titel', text: todo.titel }),
         el('span', {
           klasse: 'zeilen-unter' + (spaet ? ' mehr' : ''),
@@ -317,10 +323,6 @@ function zeile(todo, neu, mitListe) {
           ].filter(Boolean).join(' · ') || 'ohne Frist',
         }),
       ]),
-      el('button', {
-        klasse: 'knopf knopf-schmal', type: 'button', text: 'Ändern',
-        onclick: () => bearbeiten(todo, neu),
-      }),
     ]),
   ]);
 }

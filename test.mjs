@@ -1484,11 +1484,21 @@ console.log('Kopfzeile und Verweise auf einen Satz');
 
   // Zeilen mit mehreren Knoepfen: Sie muessen als Paar umbrechen, sonst
   // steht auf dem Telefon ein Knopf allein und der Name in drei Zeichen.
-  for (const datei of ['kontakte', 'dokumente', 'projekte', 'raeume']) {
+  // Wo Zeilen mehrere Knoepfe tragen, muessen sie als Paar umbrechen. Wo
+  // stattdessen Kacheln stehen, stellt sich die Frage nicht mehr.
+  for (const datei of ['dokumente', 'projekte']) {
     pruef(datei + ': die Knoepfe einer Zeile stehen zusammen',
       readFileSync('./www/module/' + datei + '.js', 'utf8')
         .includes("klasse: 'zeilen-aktionen'"));
   }
+  // Raeume und Gewerke stehen als Kacheln nebeneinander: Ein Raum ist ein
+  // Ding mit Bild, Flaeche und Kosten, kein Band ueber die ganze Breite.
+  pruef('Raeume stehen in einem Kachelgitter',
+    readFileSync('./www/module/raeume.js', 'utf8').includes("klasse: 'raumgitter'"));
+  pruef('Gewerke ebenso',
+    readFileSync('./www/module/kontakte.js', 'utf8').includes("klasse: 'gewerkegitter'"));
+  pruef('Und beide Gitter richten sich nach dem Platz',
+    readFileSync('./www/stil.css', 'utf8').includes('.raumgitter, .gewerkegitter'));
   pruef('Der Raum laesst sich aus der Liste heraus aendern',
     readFileSync('./www/module/raeume.js', 'utf8')
       .includes('raumBearbeiten(r, geschosse, neu)'));

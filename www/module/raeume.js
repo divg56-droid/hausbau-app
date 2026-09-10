@@ -145,54 +145,50 @@ async function zeichne(rahmen) {
           .filter((p) => p.raumId === r.id)
           .reduce((s, p) => s + postenRechnen(p, belege).massgeblich, 0);
 
-        // Die Zeile oeffnet den Raum, die Knoepfe rechts aendern ihn. Beides
-        // in einer Schaltflaeche waere ein Klick, der zweierlei tut.
-        return el('li', {}, [
-          el('div', { klasse: 'raumzeile' }, [
-            el('button', {
-              klasse: 'listenzeile',
-              onclick: () => { location.hash = '#/raeume/' + r.id; },
-            }, [
-              // Ein Foto sagt mehr als ein Zeichen, ein Zeichen mehr als ein
-              // leeres graues Kaestchen.
-              url
-                ? el('img', { klasse: 'vorschau', src: url, alt: '' })
-                : el('span', { klasse: 'vorschau vorschau-zeichen' }, [
-                    zeichen(raumZeichen(r.name), { groesse: 26 }),
-                  ]),
-              el('span', { klasse: 'zeilen-text' }, [
-                el('span', { klasse: 'zeilen-titel', text: r.name }),
-                el('span', {
-                  klasse: 'zeilen-unter',
-                  text: [
-                    r.flaeche ? zahl(r.flaeche, 1) + ' m²' : null,
-                    (r.bildIds || []).length ? (r.bildIds || []).length + ' Fotos' : null,
-                    kosten ? eur.format(kosten) : null,
-                  ].filter(Boolean).join(' · ') || 'noch nichts erfasst',
-                }),
-              ]),
+        // Eine Kachel je Raum, kein Zeilenband: Ein Raum ist ein Ding mit
+        // Bild, Flaeche und Kosten, und Dinge stehen nebeneinander. Die
+        // ganze Kachel oeffnet ihn; der kleine Knopf unten aendert ihn,
+        // damit ein Klick nicht zweierlei tut.
+        return el('div', { klasse: 'raumkachel' }, [
+          el('button', {
+            klasse: 'raumkachel-flaeche',
+            type: 'button',
+            onclick: () => { location.hash = '#/raeume/' + r.id; },
+          }, [
+            // Ein Foto sagt mehr als ein Zeichen, ein Zeichen mehr als ein
+            // leeres graues Kaestchen.
+            url
+              ? el('img', { klasse: 'raumbild', src: url, alt: '' })
+              : el('span', { klasse: 'raumbild raumbild-zeichen' }, [
+                  zeichen(raumZeichen(r.name), { groesse: 40 }),
+                ]),
+            el('span', { klasse: 'raumkachel-kopf' }, [
+              el('span', { klasse: 'raumkachel-name', text: r.name }),
               offen
                 ? el('span', { klasse: 'marke marke-offen', text: offen + ' offen' })
                 : null,
             ]),
-            el('span', { klasse: 'zeilen-aktionen' }, [
-              el('button', {
-                klasse: 'knopf knopf-schmal', type: 'button', text: 'Öffnen',
-                onclick: () => { location.hash = '#/raeume/' + r.id; },
-              }),
-              el('button', {
-                klasse: 'knopf knopf-schmal', type: 'button', text: 'Ändern',
-                onclick: () => raumBearbeiten(r, geschosse, neu),
-              }),
-            ]),
+            el('span', {
+              klasse: 'raumkachel-unter',
+              text: [
+                r.flaeche ? zahl(r.flaeche, 1) + ' m²' : null,
+                (r.bildIds || []).length ? (r.bildIds || []).length + ' Fotos' : null,
+                kosten ? eur.format(kosten) : null,
+              ].filter(Boolean).join(' · ') || 'noch nichts erfasst',
+            }),
           ]),
+          el('button', {
+            klasse: 'knopf knopf-schmal raumkachel-aendern',
+            type: 'button', text: 'Ändern',
+            onclick: () => raumBearbeiten(r, geschosse, neu),
+          }),
         ]);
       })
     );
 
     anhaengen(gitter, karte([
       g.name ? el('h2', { text: g.name }) : null,
-      el('ul', { klasse: 'liste' }, zeilen),
+      el('div', { klasse: 'raumgitter' }, zeilen),
     ].filter(Boolean)));
   }
 
