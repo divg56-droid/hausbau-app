@@ -16,6 +16,7 @@ import {
 } from '../hilfen.js';
 import { daten } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
+import { zeichen, gewerkZeichen, kontaktZeichen } from '../zeichen.js';
 import {
   gewerkeListe, gewerkeSetzen, gewerkVerwendung, gewerkUmbenennen, GEWERKE_VORGABE,
 } from '../gewerke.js';
@@ -82,6 +83,7 @@ async function zeigePersonen(rahmen, art, neu) {
       el('ul', { klasse: 'liste' }, drin.map((k) =>
         el('li', {}, [
           el('button', { klasse: 'listenzeile', onclick: () => bearbeiten(k, neu) }, [
+            el('span', { klasse: 'zeilenzeichen' }, [zeichen(kontaktZeichen(k))]),
             el('span', { klasse: 'zeilen-text' }, [
               el('span', { klasse: 'zeilen-titel', text: k.name }),
               el('span', {
@@ -206,6 +208,7 @@ async function zeigeGewerke(rahmen, neu) {
         const wo = verwendung.get(g);
         return el('li', {}, [
           el('div', { klasse: 'leitfaden-zeile' }, [
+            el('span', { klasse: 'zeilenzeichen' }, [zeichen(gewerkZeichen(g))]),
             el('div', { klasse: 'zeilen-text' }, [
               el('span', { klasse: 'zeilen-titel', text: g }),
               el('span', {

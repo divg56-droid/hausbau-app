@@ -55,6 +55,7 @@ const SCHALE = [
   './konto.js',
   './pdf.js',
   './thema.js',
+  './zeichen.js',
   './unterschrift.js',
   './wetter.js',
   './module/ablauf.js',

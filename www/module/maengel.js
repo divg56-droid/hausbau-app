@@ -14,6 +14,7 @@ import { blattOeffnen } from '../blatt.js';
 import { fotofeld } from '../fotos.js';
 import { Blatt, pdfTeilen, bildLaden } from '../pdf.js';
 import { gewerkeListe } from '../gewerke.js';
+import { zeichen, gewerkZeichen } from '../zeichen.js';
 import { einstellung } from '../daten.js';
 
 export const STATUS = {
@@ -103,7 +104,12 @@ async function zeichne(rahmen, filter = 'alle') {
           const kontakt = kontakte.find((k) => k.id === m.kontaktId);
           return el('li', {}, [
             el('button', { klasse: 'listenzeile', onclick: () => mangelBearbeiten(m, kontakte, neu) }, [
-              url ? el('img', { klasse: 'vorschau', src: url, alt: '' }) : el('span', { klasse: 'vorschau' }),
+              // Foto, wenn eines da ist, sonst das Zeichen des Gewerks.
+              url
+                ? el('img', { klasse: 'vorschau', src: url, alt: '' })
+                : el('span', { klasse: 'vorschau vorschau-zeichen' }, [
+                    zeichen(gewerkZeichen(m.gewerk), { groesse: 26 }),
+                  ]),
               el('span', { klasse: 'zeilen-text' }, [
                 el('span', { klasse: 'zeilen-titel', text: m.titel }),
                 el('span', {

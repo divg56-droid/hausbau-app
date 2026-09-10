@@ -25,6 +25,10 @@ import {
   PHASEN, ALLE_PUNKTE, leitfadenStand, punkteFuer, giltFuer,
 } from './www/leitfaden-daten.js';
 import { csvText, zelle } from './www/csv.js';
+import {
+  ZEICHENNAMEN, ZUORDNUNGEN, raumZeichen, gewerkZeichen, dokumentZeichen,
+  kontaktZeichen,
+} from './www/zeichen.js';
 import { xlsxBytes, spalte } from './www/xlsx.js';
 import {
   KOSTENGRUPPEN, kostengruppeName, kostengruppeLang, hauptgruppe,
@@ -1488,6 +1492,70 @@ console.log('Kopfzeile und Verweise auf einen Satz');
   pruef('Der Raum laesst sich aus der Liste heraus aendern',
     readFileSync('./www/module/raeume.js', 'utf8')
       .includes('raumBearbeiten(r, geschosse, neu)'));
+}
+
+console.log('Zeichen');
+{
+  // Ein Verweis auf ein Zeichen, das es nicht gibt, faellt im Browser nicht
+  // auf: Es erscheint einfach das Ersatzzeichen, und niemand merkt, dass die
+  // Zuordnung ins Leere zeigt.
+  for (const [name, liste] of Object.entries(ZUORDNUNGEN)) {
+    const fehlend = liste.map(([, z]) => z).filter((z) => !ZEICHENNAMEN.includes(z));
+    pruef(name + ': jede Zuordnung zeigt auf ein Zeichen', fehlend.length === 0,
+      fehlend.join(', '));
+    // Doppelte Wortteile: Der zweite waere nie erreichbar.
+    const worte = liste.flatMap(([w]) => w);
+    pruef(name + ': kein Wortteil kommt doppelt vor',
+      new Set(worte).size === worte.length,
+      worte.filter((w, i) => worte.indexOf(w) !== i).join(', '));
+    pruef(name + ': alles klein geschrieben', worte.every((w) => w === w.toLowerCase()));
+  }
+
+  // Das Genauere muss oben stehen, sonst gewinnt das Allgemeinere.
+  pruef('Hauswirtschaftsraum ist keine Technik', raumZeichen('Hauswirtschaftsraum') === 'waschen');
+  pruef('Gästezimmer ist kein Gäste-WC', raumZeichen('Gästezimmer') === 'bett');
+  pruef('Gäste-WC bleibt ein Bad', raumZeichen('Gäste-WC') === 'bad');
+
+  // Gesucht wird nach Wortteilen, damit auch "Kinderzimmer 2" etwas findet.
+  pruef('Kinderzimmer 2 findet sein Zeichen', raumZeichen('Kinderzimmer 2') === 'bett');
+  pruef('Bad oben findet sein Zeichen', raumZeichen('Bad oben') === 'bad');
+  pruef('Grossschreibung stoert nicht', raumZeichen('KELLER') === 'keller');
+
+  // Ohne Treffer ein sinnvolles Ersatzzeichen statt nichts.
+  pruef('Unbekannter Raum bekommt das Haus', raumZeichen('Hobbyraum') === 'haus');
+  pruef('Unbekanntes Gewerk bekommt das Werkzeug', gewerkZeichen('Sonstiges') === 'werkzeug');
+  pruef('Unbekannte Papierart bekommt das Blatt', dokumentZeichen('Sonstiges') === 'blatt');
+  pruef('Auch ohne Namen kommt ein Zeichen', raumZeichen(null) === 'haus');
+
+  // Jedes Zeichen muss auch benutzt werden, sonst ist es toter Text.
+  const benutzt = new Set([
+    ...Object.values(ZUORDNUNGEN).flatMap((l) => l.map(([, z]) => z)),
+    'haus', 'werkzeug', 'blatt', 'firma', 'person',
+  ]);
+  const unbenutzt = ZEICHENNAMEN.filter((z) => !benutzt.has(z));
+  pruef('Kein Zeichen liegt ungenutzt herum', unbenutzt.length === 0, unbenutzt.join(', '));
+
+  const quelle = readFileSync('./www/zeichen.js', 'utf8');
+  // Ohne currentColor stuende dasselbe Zeichen im dunklen Design falsch.
+  pruef('Die Zeichen erben die Schriftfarbe', quelle.includes("'stroke', 'currentColor'"));
+  pruef('Und tragen keine eigene Fuellung', quelle.includes("'fill', 'none'"));
+
+  // In einer Liste von zwanzig Firmen sucht man den Elektriker, nicht "eine
+  // Firma". Also zeigt der Kontakt sein Gewerk, wenn er eines hat.
+  pruef('Ein Kontakt mit Gewerk zeigt das Gewerk',
+    kontaktZeichen({ art: 'firma', gewerk: 'Elektro' }) === 'blitz');
+  pruef('Eine Firma ohne Gewerk zeigt ein Gebaeude',
+    kontaktZeichen({ art: 'firma' }) === 'firma');
+  pruef('Eine Privatperson zeigt einen Kopf',
+    kontaktZeichen({ art: 'helfer' }) === 'person');
+
+  for (const [datei, was] of [
+    ['raeume', 'Raeume'], ['kontakte', 'Gewerke'], ['dokumente', 'Dokumente'],
+    ['baukasse', 'Statistik'], ['maengel', 'Maengel'],
+  ]) {
+    pruef(was + ' zeigen Zeichen',
+      readFileSync('./www/module/' + datei + '.js', 'utf8').includes("from '../zeichen.js'"));
+  }
 }
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');

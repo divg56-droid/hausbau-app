@@ -20,6 +20,7 @@ import { finanzierungsstand } from './finanzierung.js';
 import { fotofeld } from '../fotos.js';
 import { gewerkeListe } from '../gewerke.js';
 import { bauweise } from '../bauweise.js';
+import { zeichen, gewerkZeichen } from '../zeichen.js';
 import {
   kostengruppenOptionen, kostengruppeLang, kostengruppeVorschlag, nachHauptgruppen,
 } from '../din276.js';
@@ -121,12 +122,22 @@ async function zeichne(rahmen, ansicht) {
 
 // --------------------------------------------------------------- Bausteine
 
-/** Ein Betrag als Zeile mit Anteilsbalken. Die Statistiken bestehen daraus. */
-function balkenzeile(name, betrag, gesamt, unter) {
+/**
+ * Ein Betrag als Zeile mit Anteilsbalken. Die Statistiken bestehen daraus.
+ *
+ * Mit "mitZeichen" steht das Zeichen des Gewerks davor: In einer Liste von
+ * zwoelf Gewerken findet man so seines, ohne zu lesen.
+ */
+function balkenzeile(name, betrag, gesamt, unter, mitZeichen) {
   const anteil = gesamt > 0 ? (betrag / gesamt) * 100 : 0;
   return el('div', { klasse: 'balkenzeile' }, [
     el('div', { klasse: 'wertzeile' }, [
-      el('span', { text: name }),
+      mitZeichen
+        ? el('span', { klasse: 'mit-zeichen' }, [
+            zeichen(gewerkZeichen(name), { groesse: 18 }),
+            el('span', { text: name }),
+          ])
+        : el('span', { text: name }),
       el('strong', { text: eur.format(betrag) }),
     ]),
     el('div', { klasse: 'fortschrittsbalken' }, [
@@ -583,7 +594,7 @@ function zeigeStatistik(rahmen, gerechnet, summe, stand, belege, art, neu) {
         ? [...gewerke.entries()]
             .sort((a, b) => b[1].summe - a[1].summe)
             .map(([name, k]) =>
-              balkenzeile(name, k.summe, gesamt, 'geplant ' + eur.format(k.geplant))
+              balkenzeile(name, k.summe, gesamt, 'geplant ' + eur.format(k.geplant), true)
             )
         : [nochNichts('Sobald Positionen erfasst sind, steht hier, welches Gewerk ' +
             'welchen Anteil an der Bausumme hat.')]

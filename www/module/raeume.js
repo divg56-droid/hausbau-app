@@ -14,6 +14,7 @@ import {
 import { daten, bildUrl, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
 import { fotofeld } from '../fotos.js';
+import { zeichen, raumZeichen } from '../zeichen.js';
 import { STATUS } from './maengel.js';
 import { postenRechnen } from './baukasse.js';
 
@@ -145,7 +146,13 @@ async function zeichne(rahmen) {
               klasse: 'listenzeile',
               onclick: () => { location.hash = '#/raeume/' + r.id; },
             }, [
-              url ? el('img', { klasse: 'vorschau', src: url, alt: '' }) : el('span', { klasse: 'vorschau' }),
+              // Ein Foto sagt mehr als ein Zeichen, ein Zeichen mehr als ein
+              // leeres graues Kaestchen.
+              url
+                ? el('img', { klasse: 'vorschau', src: url, alt: '' })
+                : el('span', { klasse: 'vorschau vorschau-zeichen' }, [
+                    zeichen(raumZeichen(r.name), { groesse: 26 }),
+                  ]),
               el('span', { klasse: 'zeilen-text' }, [
                 el('span', { klasse: 'zeilen-titel', text: r.name }),
                 el('span', {

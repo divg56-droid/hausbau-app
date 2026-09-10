@@ -761,6 +761,20 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
 .leitfaden-zeile .knopf-schmal { white-space: nowrap; }
 .zeilen-aktionen { display: flex; gap: 8px; flex: none; margin-left: auto; }
 
+/* Zeichen stehen in der Schriftfarbe und tragen sie mit: In einer
+   markierten Zeile wechseln sie mit, ohne eine eigene Regel zu brauchen. */
+.zeichen { display: block; flex: none; }
+.zeilenzeichen {
+  flex: none; width: 34px; height: 34px; border-radius: 8px;
+  background: var(--band); color: var(--akzent-dunkel);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.mit-zeichen { display: inline-flex; align-items: center; gap: 7px; }
+.vorschau-zeichen {
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--akzent-dunkel);
+}
+
 /* Raumzeile: die Zeile selbst oeffnet den Raum, die Knoepfe rechts aendern
    ihn. Auf dem Telefon rutschen sie unter den Namen. */
 .raumzeile { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

@@ -21,6 +21,7 @@ import {
 import { daten, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
 import { fotofeld } from '../fotos.js';
+import { zeichen, dokumentZeichen } from '../zeichen.js';
 // pdfTeilen schiebt einen beliebigen Blob nach draussen: auf dem Telefon
 // ueber das Teilen-Menue, im Browser als Download. Fuer ein Dokument ist das
 // genau der richtige Weg, auch wenn der Name nach PDF klingt.
@@ -130,10 +131,16 @@ async function zeichne(rahmen) {
 
     rahmen.append(
       karte([
-        el('h2', { text: art }),
+        el('h2', { klasse: 'mit-zeichen' }, [
+          zeichen(dokumentZeichen(art), { groesse: 20 }),
+          el('span', { text: art }),
+        ]),
         el('ul', { klasse: 'liste' }, drin.map((d) =>
           el('li', {}, [
             el('div', { klasse: 'leitfaden-zeile' }, [
+              el('span', { klasse: 'zeilenzeichen' }, [
+                zeichen(dokumentZeichen(art)),
+              ]),
               el('div', { klasse: 'zeilen-text' }, [
                 el('span', { klasse: 'zeilen-titel', text: d.titel }),
                 el('span', {
