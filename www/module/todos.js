@@ -246,11 +246,15 @@ function zeigeChecklisten(rahmen, todos, neu) {
 
 async function vorlageLaden(vorlage, nachher) {
   if (!window.confirm(
-    `Checkliste "${vorlage.titel}" mit ${vorlage.punkte.length} Punkten anlegen?`
+    `Checkliste „${vorlage.titel}“ mit ${vorlage.punkte.length} Punkten anlegen?`
   )) return;
-  for (const titel of vorlage.punkte) {
+  // Ein Punkt ist entweder ein Satz oder ein Satz mit Begruendung und
+  // naechstem Schritt. Beides kommt vor, beides wird gleich gespeichert.
+  for (const punkt of vorlage.punkte) {
+    const p = typeof punkt === 'string' ? { titel: punkt } : punkt;
     await daten.sichern('todos', {
-      titel, notiz: '', liste: vorlage.titel, erledigt: false, am: null, faellig: null,
+      titel: p.titel, warum: p.warum || '', tun: p.tun || '',
+      notiz: '', liste: vorlage.titel, erledigt: false, am: null, faellig: null,
     });
   }
   melde(vorlage.punkte.length + ' Punkte angelegt.');
@@ -312,12 +316,18 @@ function zeile(todo, neu, mitListe) {
         onclick: () => bearbeiten(todo, neu),
       }, [
         el('span', { klasse: 'zeilen-titel', text: todo.titel }),
+        // Was jetzt zu tun ist, steht vor allem anderen. Der Titel sagt,
+        // worum es geht; diese Zeile sagt, womit man anfaengt.
+        todo.tun && !todo.erledigt
+          ? el('span', { klasse: 'zeilen-tun', text: 'Jetzt: ' + todo.tun })
+          : null,
         el('span', {
           klasse: 'zeilen-unter' + (spaet ? ' mehr' : ''),
           text: [
             todo.faellig
               ? (spaet ? 'überfällig seit ' : 'fällig ') + datumLang(todo.faellig)
               : null,
+            todo.warum || null,
             mitListe && todo.liste ? todo.liste : null,
             todo.erledigt && todo.am ? 'erledigt am ' + datumLang(todo.am) : null,
             todo.notiz || null,
@@ -349,6 +359,11 @@ function bearbeiten(todo, nachher) {
     ],
     async () => {
       const wert = {
+        // Warum und Jetzt kommen aus der Vorlage und werden hier nicht
+        // bearbeitet. Sie muessen trotzdem mitgeschrieben werden, sonst
+        // sind sie nach der ersten Aenderung weg.
+        ...(todo.warum ? { warum: todo.warum } : {}),
+        ...(todo.tun ? { tun: todo.tun } : {}),
         titel: titel.value.trim(),
         faellig: faellig.value || null,
         liste: liste.value.trim(),

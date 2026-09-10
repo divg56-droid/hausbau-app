@@ -64,6 +64,25 @@ export const BAUWEISEN = [
   },
 ];
 
+/**
+ * Wo das Vorhaben steht. Zwei Zustaende reichen.
+ *
+ * Feiner einzuteilen waere geraten: Ob "Planung" oder "Vertrag" ist eine
+ * Auslegungsfrage, ob die Baustelle offen ist, nicht. Was davon abhaengt,
+ * ist auch nur die Betonung -- in der Planung zaehlen Budget und Angebote,
+ * im Bau Rechnungen, Maengel und das Wetter am Morgen.
+ */
+export const BAUPHASEN = [
+  { id: 'planung', name: 'Planungsphase',
+    text: 'Noch keine Baustelle: Budget, Grundstück, Angebote und Verträge.' },
+  { id: 'bau', name: 'Bauphase',
+    text: 'Es wird gebaut: Rechnungen, Mängel, Bautagebuch und Termine.' },
+];
+
+export async function bauphaseSetzen(id) {
+  await einstellung('bauphase', BAUPHASEN.some((p) => p.id === id) ? id : 'planung');
+}
+
 // Der frueher gespeicherte Wert. "Bautraeger" war als Bezeichnung zu eng: Er
 // meint einen bestimmten Vertragstyp, gemeint war die ganze Gruppe.
 const ALTNAMEN = { traeger: SCHLUESSELFERTIG };
@@ -72,13 +91,13 @@ const ALTNAMEN = { traeger: SCHLUESSELFERTIG };
  * Die Bauweise dieses Projekts samt allem, was daraus folgt.
  *
  * @returns {Promise<{
- *   id: string, name: string, istSchluesselfertig: boolean,
+ *   id: string, name: string, phase: string, istSchluesselfertig: boolean,
  *   eigenleistungen: string[], zeigtKostengruppen: boolean, versteckt: Set<string>
  * }>}
  */
 export async function bauweise() {
-  const [gesetzt, eigen] = await Promise.all([
-    einstellung('bauweise'), einstellung('eigenleistungen'),
+  const [gesetzt, eigen, phase] = await Promise.all([
+    einstellung('bauweise'), einstellung('eigenleistungen'), einstellung('bauphase'),
   ]);
   const roh = ALTNAMEN[gesetzt] || gesetzt;
   const gewaehlt = BAUWEISEN.find((b) => b.id === roh) || BAUWEISEN[0];
@@ -87,6 +106,9 @@ export async function bauweise() {
   return {
     id: gewaehlt.id,
     name: gewaehlt.name,
+    // Ohne gesetzte Phase: Planung. Wer schon baut, sagt es -- wer noch
+    // nicht angefangen hat, soll nicht erst etwas wegklicken muessen.
+    phase: BAUPHASEN.some((p) => p.id === phase) ? phase : 'planung',
     istSchluesselfertig: gewaehlt.id === SCHLUESSELFERTIG,
     eigenleistungen,
     // Die Kostengruppen sind die Sprache der Planer und Banken bei einem

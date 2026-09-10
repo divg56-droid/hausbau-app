@@ -742,6 +742,91 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
 .kennzahl .wert { font-size: 21px; font-weight: 700; display: block; line-height: 1.2; }
 .kennzahl .name { font-size: 13px; color: var(--tinte-leise); }
 
+/* Wo nichts steht, steht der Weg dorthin: Die Kachel wird ein Knopf,
+   bleibt aber ruhig -- vier laute Aufforderungen nebeneinander waeren
+   schlimmer als vier Nullen. */
+.kennzahl-leer {
+  text-align: left; font: inherit; cursor: pointer;
+  border-style: dashed; background: none;
+}
+.kennzahl-leer:hover { border-color: var(--akzent); border-style: solid; }
+.kennzahl-leer .wert-leer {
+  display: block; font-size: 15px; font-weight: 600; line-height: 1.25;
+  color: var(--tinte-leise);
+}
+.kennzahl-aktion {
+  display: block; margin-top: 6px; font-size: 12.5px; font-weight: 700;
+  color: var(--akzent-dunkel);
+}
+
+/* ---------------------------------------------------- Willkommen und Kopf */
+
+/* Der erste Bildschirm hat genau eine Handlung. Sie muss so aussehen. */
+.willkommenskarte { border-top: 5px solid var(--akzent); }
+/* Kein Versalsatz: Er wuerde aus BauZeuge BAUZEUGE machen, und das grosse
+   Z in der Mitte ist die Marke. */
+.willkommen-marke {
+  margin: 0 0 2px; font-size: 13px; font-weight: 700; letter-spacing: .02em;
+  color: var(--akzent-dunkel);
+}
+.willkommen-titel { margin: 0 0 6px; font-size: 24px; line-height: 1.2; }
+.willkommen-text { margin: 0 0 14px; font-size: 15.5px; line-height: 1.55; color: var(--tinte-leise); }
+.knopf-gross { font-size: 17px; min-height: 56px; }
+.einstiege {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px; margin-bottom: 12px;
+}
+.einstieg {
+  display: block; text-align: left; font: inherit; cursor: pointer;
+  background: var(--karte); color: var(--tinte);
+  border: 1px solid var(--linie); border-radius: 12px; padding: 14px 16px;
+}
+.einstieg:hover { border-color: var(--akzent); }
+.einstieg-titel { display: block; font-weight: 700; margin-bottom: 4px; }
+.einstieg-text { display: block; font-size: 13px; line-height: 1.45; color: var(--tinte-leise); }
+
+/* Der Projektkopf: Bauweise, Phase, Fortschritt. Eine Zeile, kein Kasten --
+   er gehoert zur Ueberschrift und nicht zum Inhalt. */
+.projektkopf {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px;
+  margin: -6px 0 12px;
+}
+.projektzeichen {
+  flex: none; width: 46px; height: 46px; border-radius: 12px;
+  background: var(--band); color: var(--akzent-dunkel);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.projektkopf-text { flex: 1 1 240px; min-width: 0; }
+.projektkopf-zeile { display: block; font-weight: 700; font-size: 15px; }
+.projektkopf-unter { display: block; font-size: 13px; color: var(--tinte-leise); }
+.projektkopf-stand { font-size: 12.5px; color: var(--tinte-leise); white-space: nowrap; }
+
+/* Die Phasen des Leitfadens als Band. Kein Prozentbalken: Die Phasen sind
+   verschieden gross, und "60 Prozent" saehe genauer aus, als es ist. */
+.phasenband {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 6px; margin: 10px 0;
+}
+.phasenstueck {
+  border-radius: 8px; padding: 7px 9px; border: 1px solid var(--linie);
+  background: var(--karte); min-width: 0;
+}
+.phasenname {
+  display: block; font-size: 11.5px; font-weight: 600; line-height: 1.3;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.phasenzahl { display: block; font-size: 11px; color: var(--tinte-leise); }
+.phase-fertig { background: var(--gut-flaeche); border-color: transparent; }
+.phase-fertig .phasenname { color: var(--gut-schrift); }
+.phase-laufend { border-color: var(--akzent); border-width: 2px; }
+.phase-laufend .phasenname { color: var(--akzent-dunkel); }
+
+/* Was jetzt zu tun ist, steht an der Aufgabe -- nicht nur, warum sie
+   wichtig ist. */
+.zeilen-tun {
+  display: block; font-size: 13px; font-weight: 600; color: var(--akzent-dunkel);
+}
+
 /* --------------------------------------------------------- Bauleitfaden */
 
 /* Die Aufgabe links, die Phasenliste rechts. Auf dem Telefon untereinander,
@@ -872,6 +957,21 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
   display: block; font-size: 15px; font-weight: 700;
   color: var(--wetterfarbe, var(--tinte-leise));
 }
+
+/* Die kleine Fassung: eine Zeile. Solange geplant wird, ist das Wetter
+   eine Randnotiz -- erst auf der offenen Baustelle entscheidet es den Tag. */
+.wetterkarte-klein h2 { font-size: 15px; }
+.wetterzeile {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+  background: var(--wetterflaeche, var(--band)); border-radius: 12px;
+  padding: 10px 14px;
+}
+.wettergrad-klein { font-size: 22px; font-weight: 700; color: var(--tinte); }
+.wetterlage-klein {
+  flex: 1 1 auto; font-size: 14px; font-weight: 600;
+  color: var(--wetterfarbe, var(--tinte-leise));
+}
+.wetterzeile .knopf { flex: 0 0 auto; width: auto; margin-bottom: 0; }
 
 .wetter-sonnig   { --wetterflaeche: var(--w-klar-flaeche); --wetterfarbe: var(--w-klar-schrift); }
 .wetter-bewoelkt { --wetterflaeche: var(--w-grau-flaeche); --wetterfarbe: var(--w-grau-schrift); }

@@ -272,7 +272,8 @@ function formatwahl() {
  */
 async function bauweisekarte() {
   const {
-    BAUWEISEN, SCHLUESSELFERTIG, bauweise, bauweiseSetzen, eigenleistungenSetzen,
+    BAUWEISEN, BAUPHASEN, SCHLUESSELFERTIG, bauweise, bauweiseSetzen,
+    bauphaseSetzen, eigenleistungenSetzen,
   } = await import('../bauweise.js');
   const { gewerkeListe } = await import('../gewerke.js');
 
@@ -303,6 +304,23 @@ async function bauweisekarte() {
       ])
     )),
     el('p', { klasse: 'unterzeile', text: gewaehlt.text })
+  );
+
+  // Die Phase betont nur: In der Planung zaehlen Budget und Angebote, im Bau
+  // Rechnungen, Maengel und das Wetter am Morgen. Nichts verschwindet.
+  anhaengen(
+    inhalt,
+    el('h3', { klasse: 'unterabschnitt', text: 'Wo stehst du gerade?' }),
+    el('div', { klasse: 'bauweisewahl' }, BAUPHASEN.map((ph) =>
+      el('button', {
+        type: 'button',
+        klasse: 'bauweise' + (ph.id === art.phase ? ' aktiv' : ''),
+        onclick: async () => { await bauphaseSetzen(ph.id); location.reload(); },
+      }, [
+        el('span', { klasse: 'bauweise-name', text: ph.name }),
+        el('span', { klasse: 'bauweise-klammer', text: ph.text }),
+      ])
+    ))
   );
 
   // Eigenleistungen zaehlen bei beiden Bauweisen. Beim Bautraeger sind sie

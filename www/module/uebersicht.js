@@ -1,8 +1,14 @@
 // Projektuebersicht: der erste Bildschirm nach dem Start.
 //
 // Die Frage, die er beantwortet, ist nicht "was kann die App", sondern "wie
-// steht mein Bau gerade". Deshalb Zahlen und offene Punkte statt einer
-// Kachelwand. Wohin man gehen kann, sagt die Seitenleiste.
+// steht mein Bau gerade". Deshalb steht oben, in welcher Phase das Vorhaben
+// ist und was als Naechstes ansteht, und erst darunter die Zahlen.
+//
+// Die Reihenfolge ist die Reihenfolge der Dringlichkeit, nicht die der
+// Funktionen: Projektstand, Geld, naechste Schritte, dann die Bereiche,
+// zuletzt das Wetter. Wer noch gar nichts erfasst hat, sieht statt aller
+// Kennzahlen einen einzigen Weg hinein -- vier Nullen nebeneinander sagen
+// nichts, ausser dass hier noch nichts passiert ist.
 //
 // Alles hier ist abgeleitet und wird nirgends gespeichert. Der Bildschirm
 // rechnet bei jedem Aufruf neu; bei den Datenmengen eines Einfamilienhauses
@@ -22,13 +28,15 @@ import { postenRechnen } from './baukasse.js';
 import { terminePlanen } from './ablauf.js';
 import { STATUS } from './maengel.js';
 import { leitfadenStand } from '../leitfaden-daten.js';
-import { bauweise } from '../bauweise.js';
+import {
+  bauweise, bauweiseSetzen, bauphaseSetzen, BAUPHASEN, SANIERUNG,
+} from '../bauweise.js';
 import { zeichen, wetterZeichen } from '../zeichen.js';
 import { todoStand, todosSortieren } from './todos.js';
 
 export async function zeige(rahmen) {
   const [projekt, stand, posten, belege, aufgaben, maengel, tagebuch, haken, todos, art,
-    projekte] =
+    projekte, ort] =
     await Promise.all([
     einstellung('projektname'),
     finanzierungsstand(),
@@ -41,6 +49,7 @@ export async function zeige(rahmen) {
     daten.alle('todos'),
     bauweise(),
     projekteListe(),
+    einstellung('baustelle'),
   ]);
   const leitfaden = leitfadenStand(haken, art.id);
 
@@ -51,79 +60,53 @@ export async function zeige(rahmen) {
   const mehr = gerechnet.reduce((s, p) => s + p.differenz, 0);
   const rest = stand.gesamt - auftrag;
 
-  anhaengen(
-    rahmen,
-    kopfzeile(
-      projekt || 'Dein Bauprojekt',
-      stand.gesamt > 0 || posten.length
-        ? 'Stand ' + datumLang(heute())
-        : 'Alle Daten bleiben auf diesem Gerät. Kein Konto, keine Übertragung.'
-    ),
-    projektaktionen(projekte.length)
-  );
+  // Ganz am Anfang: nichts erfasst, nichts abgehakt, kein Name vergeben.
+  const nochNichts = !stand.posten.length && !posten.length && !aufgaben.length &&
+    !maengel.length && !todos.length && !leitfaden.erledigt;
 
-  // Erst gar nichts erfasst: Dann hilft keine Kennzahl, sondern ein Weg hinein.
-  if (!stand.posten.length && !posten.length && !aufgaben.length && !maengel.length &&
-      !todos.length) {
+  if (nochNichts) {
     anhaengen(
       rahmen,
-      karte([
-        el('h2', { text: 'Fang mit dem Geld an' }),
-        el('p', {
-          klasse: 'unterzeile',
-          text: 'Aus Eigenkapital und Darlehen entsteht dein Budget. Alles Weitere, ' +
-            'von der Kostenaufstellung bis zum Restbudget, rechnet sich daraus.',
-        }),
-        knopf('Budget anlegen', () => { geheZu('#/finanzierung'); }, 'knopf-haupt'),
-        knopf('Erst einmal Baukosten schätzen', () => { geheZu('#/baukosten'); }),
-        knopf('Oder dem Bauleitfaden folgen', () => { geheZu('#/leitfaden'); }, 'knopf-leise'),
-      ]),
+      willkommen(projekt),
       hinweisKasten(
         'Links in der Leiste stehen alle Bereiche. Auf dem Telefon öffnest du sie ' +
           'oben links über das Menü.',
         'info'
       ),
-      wetterkarte()
+      wetterkarte(true)
     );
     return;
   }
 
   anhaengen(
     rahmen,
-    el('div', { klasse: 'kennzahlen' }, [
-      kennzahl('Budget', eur.format(stand.gesamt)),
-      kennzahl('Geplante Kosten', eur.format(geplant)),
-      kennzahl('Auftragssumme', eur.format(auftrag)),
-      kennzahl('Mehrkosten', (mehr > 0 ? '+' : '') + eur.format(mehr),
-        mehr > 0 ? 'mehr' : mehr < 0 ? 'weniger' : null),
-    ])
+    kopfzeile(projekt || 'Dein Bauprojekt', null),
+    projektkopf(art, leitfaden, todos, maengel, ort || {}),
+    projektaktionen(projekte.length)
   );
 
-  anhaengen(rahmen, wetterkarte());
-
-  const lfAnteil = Math.round((leitfaden.erledigt / leitfaden.gesamt) * 100);
+  // ------------------------------------------------------------- Kennzahlen
+  // Eine Null ist keine Zahl, sondern eine Luecke. Wo nichts steht, steht
+  // deshalb der Weg dorthin und nicht "0 €".
   anhaengen(
     rahmen,
-    karte([
-      el('h2', { text: 'Bauleitfaden' }),
-      el('p', {
-        klasse: 'unterzeile',
-        text: `${leitfaden.laufend.titel} · ${leitfaden.erledigt} von ${leitfaden.gesamt} Punkten erledigt.`,
-      }),
-      el('div', { klasse: 'fortschrittsbalken' }, [
-        el('div', { stil: { width: lfAnteil + '%' } }),
-      ]),
-      leitfaden.naechster
-        ? el('div', { klasse: 'wertzeile' }, [
-            el('span', { text: 'Als Nächstes' }),
-            el('strong', { text: leitfaden.naechster.titel }),
-          ])
-        : null,
-      knopf(
-        leitfaden.naechster ? 'Zum Leitfaden' : 'Leitfaden ansehen',
-        () => { geheZu('#/leitfaden'); },
-        'knopf-leise'
-      ),
+    el('div', { klasse: 'kennzahlen' }, [
+      stand.gesamt > 0
+        ? kennzahl('Budget', eur.format(stand.gesamt))
+        : kennzahlLeer('Budget', 'Noch nicht festgelegt', 'Budget anlegen', '#/finanzierung'),
+      posten.length
+        ? kennzahl('Geplante Kosten', eur.format(geplant))
+        : kennzahlLeer('Geplante Kosten', 'Noch keine Position',
+            'Kosten erfassen', '#/baukasse/kosten'),
+      posten.length
+        ? kennzahl('Auftragssumme', eur.format(auftrag))
+        : kennzahlLeer('Auftragssumme', 'Noch nichts beauftragt',
+            'Angebote vergleichen', '#/angebote'),
+      posten.length
+        ? kennzahl('Mehrkosten', (mehr > 0 ? '+' : '') + eur.format(mehr),
+            mehr > 0 ? 'mehr' : mehr < 0 ? 'weniger' : null)
+        : kennzahlLeer('Mehrkosten', 'Nichts zu vergleichen',
+            'Baukosten schätzen', '#/baukosten'),
     ])
   );
 
@@ -151,12 +134,74 @@ export async function zeige(rahmen) {
     );
   }
 
+  // -------------------------------------------------- Die naechsten Schritte
+  const todoZahlen = todoStand(todos, heute());
+  const offeneTodos = todosSortieren(todos.filter((t) => !t.erledigt));
+  const offeneMaengel = maengel.filter((m) => m.status !== 'behoben');
+  const geplantTermine = terminePlanen(aufgaben);
+  const naechsterSchritt = geplantTermine
+    .filter((a) => a.status !== 'fertig' && a.start)
+    .sort((a, b) => a.start.localeCompare(b.start))[0];
+
+  const schritte = naechsteSchritte({
+    leitfaden, offeneTodos, offeneMaengel, naechsterSchritt, stand, posten,
+  });
+  if (schritte.length) {
+    anhaengen(
+      rahmen,
+      karte([
+        el('h2', { text: 'Deine nächsten Schritte' }),
+        el('p', {
+          klasse: 'unterzeile',
+          text: 'Aus dem Bauleitfaden, deinen To-Dos und den offenen Mängeln, nach ' +
+            'Dringlichkeit sortiert.',
+        }),
+        ...schritte.map((s) =>
+          el('button', { klasse: 'listenzeile', onclick: () => { geheZu(s.ziel); } }, [
+            el('span', { klasse: 'zeilen-text' }, [
+              el('span', { klasse: 'zeilen-titel', text: s.titel }),
+              el('span', { klasse: 'zeilen-unter' + (s.dringend ? ' mehr' : ''), text: s.warum }),
+            ]),
+            el('span', { klasse: 'marke', text: s.wo }),
+          ])
+        ),
+      ])
+    );
+  }
+
+  // -------------------------------------------------------------- Bauleitfaden
+  const lfAnteil = Math.round((leitfaden.erledigt / leitfaden.gesamt) * 100);
+  anhaengen(
+    rahmen,
+    karte([
+      el('h2', { text: 'Bauleitfaden' }),
+      el('p', {
+        klasse: 'unterzeile',
+        text: `${leitfaden.laufend.titel} · ${leitfaden.erledigt} von ${leitfaden.gesamt} Punkten erledigt.`,
+      }),
+      el('div', { klasse: 'fortschrittsbalken' }, [
+        el('div', { stil: { width: lfAnteil + '%' } }),
+      ]),
+      phasenband(leitfaden),
+      leitfaden.naechster
+        ? el('p', {
+            klasse: 'unterzeile',
+            text: 'Nächster Schritt: ' + leitfaden.naechster.titel +
+              (leitfaden.naechster.text ? ' – ' + leitfaden.naechster.text : ''),
+          })
+        : null,
+      knopf(
+        leitfaden.naechster ? 'Zum Leitfaden' : 'Leitfaden ansehen',
+        () => { geheZu('#/leitfaden'); },
+        'knopf-leise'
+      ),
+    ])
+  );
+
   // ------------------------------------------------------------------ To-Dos
   // Vor dem Bauablauf: Ein ueberfaelliger Anruf ist dringender als ein
   // Gewerk, das erst in drei Wochen anfaengt.
-  const todoZahlen = todoStand(todos, heute());
   if (todoZahlen.offen) {
-    const naechsteTodos = todosSortieren(todos.filter((t) => !t.erledigt)).slice(0, 4);
     anhaengen(
       rahmen,
       karte([
@@ -165,18 +210,23 @@ export async function zeige(rahmen) {
           klasse: 'unterzeile',
           text: `${todoZahlen.offen} offen, ${todoZahlen.erledigt} erledigt.`,
         }),
-        ...naechsteTodos.map((t) => {
+        ...offeneTodos.slice(0, 4).map((t) => {
           const spaet = t.faellig && t.faellig < heute();
           return el('div', { klasse: 'listenzeile', stil: { cursor: 'default' } }, [
             el('span', { klasse: 'zeilen-text' }, [
               el('span', { klasse: 'zeilen-titel', text: t.titel }),
+              // "Warum" und "Was jetzt" stehen an der Aufgabe, wenn die
+              // Vorlage sie mitgebracht hat. Ein Satz wie "Abnahme ist
+              // foermlich geregelt" ist fachlich richtig und sagt einem
+              // Bauherrn trotzdem nicht, was er tun soll.
+              t.tun ? el('span', { klasse: 'zeilen-tun', text: 'Jetzt: ' + t.tun }) : null,
               el('span', {
                 klasse: 'zeilen-unter' + (spaet ? ' mehr' : ''),
                 text: [
                   t.faellig
                     ? (spaet ? 'überfällig seit ' : 'fällig ') + datumLang(t.faellig)
                     : 'ohne Frist',
-                  t.liste || null,
+                  t.warum || t.liste || null,
                 ].filter(Boolean).join(' · '),
               }),
             ]),
@@ -196,10 +246,6 @@ export async function zeige(rahmen) {
   }
 
   // ------------------------------------------------------------- Was ansteht
-  const geplantTermine = terminePlanen(aufgaben);
-  const naechste = geplantTermine
-    .filter((a) => a.status !== 'fertig' && a.start)
-    .sort((a, b) => a.start.localeCompare(b.start))[0];
   const fertig = geplantTermine.filter((a) => a.status === 'fertig').length;
 
   if (aufgaben.length) {
@@ -214,16 +260,16 @@ export async function zeige(rahmen) {
         el('div', { klasse: 'fortschrittsbalken' }, [
           el('div', { stil: { width: Math.round((fertig / aufgaben.length) * 100) + '%' } }),
         ]),
-        naechste
+        naechsterSchritt
           ? el('div', { klasse: 'wertzeile' }, [
               el('span', { text: 'Als Nächstes' }),
-              el('strong', { text: naechste.titel }),
+              el('strong', { text: naechsterSchritt.titel }),
             ])
           : null,
-        naechste
+        naechsterSchritt
           ? el('p', {
               klasse: 'unterzeile',
-              text: `ab ${datumLang(naechste.start)}, ${naechste.dauer} Tage`,
+              text: `ab ${datumLang(naechsterSchritt.start)}, ${naechsterSchritt.dauer} Tage`,
             })
           : null,
         knopf('Zum Bauablauf', () => { geheZu('#/ablauf'); }, 'knopf-leise'),
@@ -232,7 +278,6 @@ export async function zeige(rahmen) {
   }
 
   // -------------------------------------------------------------- Offene Maengel
-  const offeneMaengel = maengel.filter((m) => m.status !== 'behoben');
   if (maengel.length) {
     const mitFrist = offeneMaengel
       .filter((m) => m.frist)
@@ -294,6 +339,225 @@ export async function zeige(rahmen) {
       ])
     );
   }
+
+  // ------------------------------------------------------------------- Wetter
+  // Zuletzt und klein, solange geplant wird. Erst wenn wirklich gebaut wird,
+  // entscheidet das Wetter ueber den Tag -- dann steht die Karte gross da.
+  anhaengen(rahmen, wetterkarte(art.phase !== 'bau'));
+}
+
+// -------------------------------------------------------------- Willkommen
+
+/**
+ * Der erste Bildschirm, wenn noch nichts da ist.
+ *
+ * Genau eine Handlung, gross und farbig, und drei Wege hinein statt einer
+ * Kachelwand. Wer hier laenger als drei Sekunden ueberlegen muss, was er
+ * tun soll, kommt nicht wieder.
+ */
+function willkommen(projekt) {
+  const einstiege = [
+    {
+      titel: 'Hausbau planen',
+      text: 'Noch nichts gebaut: Budget, Grundstück, Angebote und Verträge stehen an.',
+      phase: 'planung', sanierung: false,
+    },
+    {
+      titel: 'Bau läuft bereits',
+      text: 'Die Baustelle ist offen: Rechnungen, Mängel, Bautagebuch und Termine.',
+      phase: 'bau', sanierung: false,
+    },
+    {
+      titel: 'Modernisierung oder Sanierung',
+      text: 'Am Haus, das schon steht: Bestand, Förderung und die richtige Reihenfolge.',
+      phase: 'planung', sanierung: true,
+    },
+  ];
+
+  return karte([
+    el('p', { klasse: 'willkommen-marke', text: 'Willkommen bei BauZeuge' }),
+    el('h2', {
+      klasse: 'willkommen-titel',
+      text: projekt ? 'Leg los mit ' + projekt : 'Dein Bauvorhaben an einer Stelle',
+    }),
+    el('p', {
+      klasse: 'willkommen-text',
+      text: 'Erstelle dein Projekt und behalte Kosten, Termine, Dokumente und Aufgaben ' +
+        'an einem Ort im Blick – von der ersten Schätzung bis zur Abnahme.',
+    }),
+    knopf('+ Bauprojekt anlegen', () => projektBlatt(), 'knopf-haupt knopf-gross'),
+    el('p', { klasse: 'unterzeile', text: 'Oder wähle, wo du gerade stehst:' }),
+    el('div', { klasse: 'einstiege' }, einstiege.map((e) =>
+      el('button', { klasse: 'einstieg', type: 'button', onclick: () => projektBlatt(e) }, [
+        el('span', { klasse: 'einstieg-titel', text: e.titel }),
+        el('span', { klasse: 'einstieg-text', text: e.text }),
+      ])
+    )),
+    el('p', {
+      klasse: 'unterzeile leise',
+      text: 'Deine Projektdaten bleiben lokal auf diesem Gerät – ohne Konto und ohne ' +
+        'Übertragung an uns. Ein Konto brauchst du erst, wenn App und Internetseite ' +
+        'dieselben Daten zeigen sollen.',
+    }),
+  ], 'willkommenskarte');
+}
+
+/** Legt ein Projekt an, auf Wunsch schon mit Bauweise und Phase. */
+function projektBlatt(einstieg) {
+  const name = eingabe({ placeholder: 'z. B. Haus Musterweg 3' });
+  blattOeffnen(
+    einstieg ? einstieg.titel : 'Neues Bauprojekt',
+    [
+      feld('Name des Projekts', name,
+        'Jedes Projekt hat eigene Kosten, Mängel und Dokumente. Nichts vermischt sich.'),
+      einstieg
+        ? el('p', { klasse: 'unterzeile', text: einstieg.text })
+        : null,
+    ].filter(Boolean),
+    async () => {
+      const wert = name.value.trim();
+      if (!wert) throw new Error('Bitte einen Namen eintragen.');
+      await projektAnlegen(wert);
+      if (einstieg) {
+        if (einstieg.sanierung) await bauweiseSetzen(SANIERUNG);
+        await bauphaseSetzen(einstieg.phase);
+      }
+      // Ganz neu laden: Jeder Bildschirm haelt seine Daten im Speicher, und
+      // die gehoeren jetzt zu einem anderen Projekt.
+      location.reload();
+    }
+  );
+}
+
+// ------------------------------------------------------------- Projektkopf
+
+/**
+ * Wo das Vorhaben steht, in einer Zeile.
+ *
+ * Bauweise, Phase, Fortschritt und was noch offen ist. Der Fortschritt kommt
+ * aus dem Bauleitfaden: Der hat die Phasen ohnehin, und eine zweite,
+ * daneben gefuehrte Einteilung waere eine, die irgendwann widerspricht.
+ */
+function projektkopf(art, leitfaden, todos, maengel, ort) {
+  const anteil = leitfaden.gesamt
+    ? Math.round((leitfaden.erledigt / leitfaden.gesamt) * 100) : 0;
+  const offen = todos.filter((t) => !t.erledigt).length +
+    (leitfaden.laufend.gesamt - leitfaden.laufend.fertig);
+  const phase = BAUPHASEN.find((p) => p.id === art.phase);
+
+  return el('div', { klasse: 'projektkopf' }, [
+    el('span', { klasse: 'projektzeichen' }, [
+      zeichen(art.id === SANIERUNG ? 'kelle' : 'haus', { groesse: 34 }),
+    ]),
+    el('div', { klasse: 'projektkopf-text' }, [
+      el('span', {
+        klasse: 'projektkopf-zeile',
+        text: [
+          art.name,
+          phase ? phase.name : null,
+          ort.ort || ort.name || null,
+        ].filter(Boolean).join(' · '),
+      }),
+      el('span', {
+        klasse: 'projektkopf-unter',
+        text: [
+          leitfaden.laufend.titel,
+          `${anteil} % des Bauleitfadens erledigt`,
+          offen ? offen + (offen === 1 ? ' offene Entscheidung' : ' offene Entscheidungen') : null,
+        ].filter(Boolean).join(' · '),
+      }),
+    ]),
+    el('span', { klasse: 'projektkopf-stand', text: 'Stand ' + datumLang(heute()) }),
+  ]);
+}
+
+/** Die Phasen des Leitfadens als Band: wo man war, ist und hinwill. */
+function phasenband(leitfaden) {
+  return el('div', { klasse: 'phasenband' }, leitfaden.phasen
+    .filter((p) => p.gesamt > 0)
+    .map((p) => {
+      const zustand = p.fertig >= p.gesamt ? 'fertig'
+        : p.id === leitfaden.laufend.id ? 'laufend' : 'offen';
+      return el('span', { klasse: 'phasenstueck phase-' + zustand, title: p.titel }, [
+        el('span', { klasse: 'phasenname', text: p.titel }),
+        el('span', { klasse: 'phasenzahl', text: p.fertig + '/' + p.gesamt }),
+      ]);
+    }));
+}
+
+/**
+ * Die drei Dinge, die als Naechstes anstehen.
+ *
+ * Zusammengezogen aus dem, was ohnehin da ist: der offene Leitfadenpunkt,
+ * die dringendste Aufgabe, der Mangel mit ablaufender Frist. Erfunden wird
+ * nichts -- eine Liste, die sich Schritte ausdenkt, verliert man nach dem
+ * zweiten Mal aus den Augen.
+ */
+function naechsteSchritte({ leitfaden, offeneTodos, offeneMaengel, naechsterSchritt, stand, posten }) {
+  const schritte = [];
+
+  if (!stand.gesamt) {
+    schritte.push({
+      titel: 'Budget festlegen',
+      warum: 'Ohne Finanzrahmen rechnet nichts anderes mit: Restbudget, Abweichung, Puffer.',
+      wo: 'Finanzierung', ziel: '#/finanzierung',
+    });
+  } else if (!posten.length) {
+    schritte.push({
+      titel: 'Erste Kostenpositionen anlegen',
+      warum: 'Erst mit Positionen zeigt die App, wo das Budget hingeht.',
+      wo: 'Kosten', ziel: '#/baukasse/kosten',
+    });
+  }
+
+  const dringend = offeneTodos.find((t) => t.faellig && t.faellig < heute()) || offeneTodos[0];
+  if (dringend) {
+    schritte.push({
+      titel: dringend.titel,
+      warum: dringend.tun
+        ? dringend.tun
+        : dringend.faellig
+          ? (dringend.faellig < heute()
+              ? 'Überfällig seit ' + datumLang(dringend.faellig)
+              : 'Fällig ' + datumLang(dringend.faellig))
+          : 'Ohne Frist notiert.',
+      wo: 'To-Do', ziel: '#/todos',
+      dringend: Boolean(dringend.faellig && dringend.faellig < heute()),
+    });
+  }
+
+  const mangel = offeneMaengel
+    .filter((m) => m.frist)
+    .sort((a, b) => a.frist.localeCompare(b.frist))[0];
+  if (mangel) {
+    schritte.push({
+      titel: mangel.titel,
+      warum: mangel.frist < heute()
+        ? 'Frist abgelaufen am ' + datumLang(mangel.frist) + '. Jetzt schriftlich nachfassen.'
+        : 'Frist bis ' + datumLang(mangel.frist) + '.',
+      wo: 'Mangel', ziel: '#/maengel',
+      dringend: mangel.frist < heute(),
+    });
+  }
+
+  if (leitfaden.naechster) {
+    schritte.push({
+      titel: leitfaden.naechster.titel,
+      warum: leitfaden.naechster.text || leitfaden.laufend.titel,
+      wo: 'Leitfaden', ziel: '#/leitfaden',
+    });
+  }
+
+  if (naechsterSchritt && schritte.length < 3) {
+    schritte.push({
+      titel: naechsterSchritt.titel,
+      warum: 'Ab ' + datumLang(naechsterSchritt.start) + ', ' + naechsterSchritt.dauer + ' Tage.',
+      wo: 'Ablauf', ziel: '#/ablauf',
+    });
+  }
+
+  // Drei sind genug. Wer fuenf naechste Schritte sieht, hat keinen naechsten.
+  return schritte.slice(0, 3);
 }
 
 // ------------------------------------------------------------------ Wetter
@@ -304,6 +568,10 @@ export async function zeige(rahmen) {
 // Die Karte steht auch dann da, wenn keine Adresse hinterlegt ist -- dann
 // sagt sie, was sie zeigen wuerde. Ein Bildschirm, auf dem etwas fehlt,
 // erklaert besser als einer, auf dem nichts steht.
+//
+// "kompakt" ist die Fassung fuer die Planungsphase: eine Zeile statt einer
+// halben Bildschirmhoehe. Wer noch keine Baustelle hat, muss nicht wissen,
+// wie viel Regen heute faellt -- wer eine hat, sehr wohl.
 
 const WETTERNAMEN = {
   sonnig: 'Sonnig', bewoelkt: 'Bewölkt', regen: 'Regen',
@@ -321,11 +589,11 @@ const HALTBAR = 60 * 60 * 1000;
  * Bildschirm auf eine fremde Netzantwort warten zu lassen waere der falsche
  * Tausch, gerade auf der Baustelle mit einem Balken Empfang.
  */
-function wetterkarte() {
+function wetterkarte(kompakt) {
   const inhalt = el('div');
   const karteInhalt = karte(
     [el('h2', { text: 'Wetter auf der Baustelle' }), inhalt],
-    'wetterkarte'
+    'wetterkarte' + (kompakt ? ' wetterkarte-klein' : '')
   );
 
   inhalt.append(el('p', { klasse: 'unterzeile', text: 'Wird geholt …' }));
@@ -340,7 +608,7 @@ function wetterkarte() {
           text: 'Trage die Adresse deiner Baustelle ein, dann siehst du hier das ' +
             'aktuelle Wetter. Im Bautagebuch trägt es sich danach von allein ein.',
         }),
-        knopf('Projektadresse eintragen', () => { geheZu('#/einstellungen'); }, 'knopf-haupt')
+        knopf('Projektadresse eintragen', () => { geheZu('#/einstellungen'); }, 'knopf-leise')
       );
       return;
     }
@@ -363,6 +631,31 @@ function wetterkarte() {
     // Die Farbe der Karte folgt der Lage: Sie sagt im Vorbeigehen, ob
     // draussen gearbeitet werden kann, bevor irgendetwas gelesen ist.
     karteInhalt.classList.add('wetter-' + w.wetter);
+
+    // Klein: Zeichen, Grad, Lage und der eine Satz, der zaehlt. Alles
+    // andere steht im Bautagebuch.
+    if (kompakt) {
+      fuellen(
+        inhalt,
+        el('div', { klasse: 'wetterzeile' }, [
+          el('span', { klasse: 'wetterzeichen' }, [
+            zeichen(wetterZeichen(w.wetter), { groesse: 32 }),
+          ]),
+          el('span', { klasse: 'wettergrad-klein', text: zahl(w.temperatur, 0) + ' °C' }),
+          el('span', {
+            klasse: 'wetterlage-klein',
+            text: [WETTERNAMEN[w.wetter] || w.wetter, ort.ort || ort.name || null]
+              .filter(Boolean).join(' · '),
+          }),
+          el('button', {
+            klasse: 'knopf knopf-schmal', type: 'button', text: 'Ins Bautagebuch',
+            onclick: () => { geheZu('#/tagebuch'); },
+          }),
+        ]),
+        hinweis ? el('p', { klasse: 'unterzeile mehr', text: hinweis }) : null
+      );
+      return;
+    }
 
     fuellen(
       inhalt,
@@ -469,6 +762,22 @@ function kennzahl(name, wert, klasse) {
 }
 
 /**
+ * Dieselbe Kachel, solange es nichts zu zeigen gibt.
+ *
+ * "0 €" ist keine Auskunft, sondern eine Luecke mit Waehrungszeichen. Hier
+ * steht stattdessen, was fehlt und wo man es eintraegt.
+ */
+function kennzahlLeer(name, text, aktion, ziel) {
+  return el('button', {
+    klasse: 'kennzahl kennzahl-leer', type: 'button', onclick: () => { geheZu(ziel); },
+  }, [
+    el('span', { klasse: 'wert-leer', text }),
+    el('span', { klasse: 'name', text: name }),
+    el('span', { klasse: 'kennzahl-aktion', text: aktion + ' →' }),
+  ]);
+}
+
+/**
  * Ein zweites Bauvorhaben anlegen, und der Weg zur Verwaltung.
  *
  * Steht hier oben statt in der Seitenleiste: Die meisten bauen einmal. Wer
@@ -477,22 +786,7 @@ function kennzahl(name, wert, klasse) {
  */
 function projektaktionen(anzahl) {
   return el('div', { klasse: 'knopf-reihe kopfaktionen' }, [
-    knopf('Neues Projekt anlegen', () => {
-      const name = eingabe({ placeholder: 'z. B. Haus Musterweg 3' });
-      blattOeffnen(
-        'Neues Bauprojekt',
-        [feld('Name', name,
-          'Jedes Projekt hat eigene Kosten, Mängel und Dokumente. Nichts vermischt sich.')],
-        async () => {
-          const wert = name.value.trim();
-          if (!wert) throw new Error('Bitte einen Namen eintragen.');
-          await projektAnlegen(wert);
-          // Ganz neu laden: Jeder Bildschirm haelt seine Daten im Speicher,
-          // und die gehoeren jetzt zu einem anderen Projekt.
-          location.reload();
-        }
-      );
-    }, 'knopf-leise'),
+    knopf('Neues Projekt anlegen', () => projektBlatt(), 'knopf-leise'),
     anzahl > 1
       ? knopf('Bauprojekte verwalten', () => { geheZu('#/projekte'); }, 'knopf-leise')
       : null,
