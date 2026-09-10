@@ -12,8 +12,9 @@
 
 import {
   el, feld, eingabe, auswahl, knopf, karte, kopfzeile, leerzustand,
-  hinweisKasten, melde, kontaktName,
-  anhaengen,
+  wertzeile, hinweisKasten, melde, kontaktName, datumLang,
+  anhaengen, kartengitter,
+  geheZu,
 } from '../hilfen.js';
 import { daten } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -54,6 +55,12 @@ async function zeichne(rahmen, ansicht) {
   const neu = () => zeichne(rahmen, ansicht);
 
   if (ansicht === 'gewerke') return zeigeGewerke(rahmen, neu);
+  // Was weder Sicht noch leer ist, ist die Kennung eines Kontakts: So
+  // laesst sich ein einzelner Eintrag verlinken, aus dem Mangel heraus
+  // oder aus der Position.
+  if (ansicht && ansicht !== 'firmen' && ansicht !== 'personen') {
+    return zeigeKontakt(rahmen, ansicht);
+  }
   return zeigePersonen(rahmen, ansicht === 'personen' ? 'helfer' : 'firma', neu);
 }
 
@@ -85,7 +92,10 @@ async function zeigePersonen(rahmen, art, neu) {
     karte([
       el('ul', { klasse: 'liste' }, drin.map((k) =>
         el('li', {}, [
-          el('button', { klasse: 'listenzeile', onclick: () => bearbeiten(k, neu) }, [
+          el('button', {
+            klasse: 'listenzeile',
+            onclick: () => { geheZu('#/kontakte/' + k.id); },
+          }, [
             el('span', { klasse: 'zeilenzeichen' }, [zeichen(kontaktZeichen(k))]),
             el('span', { klasse: 'zeilen-text' }, [
               el('span', { klasse: 'zeilen-titel', text: kontaktName(k) }),
@@ -109,14 +119,205 @@ async function zeigePersonen(rahmen, art, neu) {
         ])
       )),
     ]),
-    knopf(was.knopf, () => bearbeiten({ art }, neu), 'knopf-haupt')
+    knopf(was.knopf, () => bearbeiten({ art }, neu), 'knopf-haupt'),
+    knopf('Alle Adressen als PDF', () => adressenPdf(alle), 'knopf-leise')
   );
+}
+
+// -------------------------------------------------------------- Einzelseite
+
+/**
+ * Ein Kontakt mit allem, was an ihm haengt.
+ *
+ * Der Sinn ist der Anruf mit Rueckfrage: "Was hatten wir mit denen noch
+ * offen?" Dafuer muss an einer Stelle stehen, welche Positionen, Angebote,
+ * Rechnungen, Maengel, Arbeitsschritte und Dokumente auf diese Firma zeigen.
+ */
+async function zeigeKontakt(rahmen, kennung) {
+  const [alle, posten, angebote, belege, maengel, aufgaben, dokumente] = await Promise.all([
+    daten.alle('kontakte'), daten.alle('posten'), daten.alle('angebote'),
+    daten.alle('belege'), daten.alle('maengel'), daten.alle('aufgaben'),
+    daten.alle('dokumente'),
+  ]);
+  const k = alle.find((x) => x.id === kennung);
+  if (!k) {
+    anhaengen(rahmen, kopfzeile('Kontakt', 'Diesen Eintrag gibt es nicht mehr.'),
+      knopf('Zur Liste', () => { geheZu('#/kontakte'); }, 'knopf-haupt'));
+    return;
+  }
+  const neu = () => { rahmen.replaceChildren(); return zeigeKontakt(rahmen, kennung); };
+  const istFirma = (k.art || 'firma') === 'firma';
+
+  anhaengen(
+    rahmen,
+    kopfzeile(kontaktName(k), [
+      istFirma ? 'Firma' : 'Privatperson',
+      k.name && k.firma && k.firma !== k.name ? k.firma : null,
+      k.gewerk || null,
+    ].filter(Boolean).join(' · ')),
+    karte([
+      el('h2', { text: 'Anschrift und Erreichbarkeit' }),
+      k.strasse ? wertzeile('Straße', k.strasse) : null,
+      k.plzOrt ? wertzeile('PLZ und Ort', k.plzOrt) : null,
+      k.telefon ? wertzeile('Telefon', k.telefon) : null,
+      k.epost ? wertzeile('E-Mail', k.epost) : null,
+      k.notiz ? el('p', { klasse: 'unterzeile', text: k.notiz }) : null,
+      !k.strasse && !k.telefon && !k.epost
+        ? el('p', { klasse: 'unterzeile', text: 'Noch keine Erreichbarkeit erfasst.' })
+        : null,
+      el('div', { klasse: 'knopf-reihe' }, [
+        k.telefon
+          ? el('a', {
+              klasse: 'knopf', href: 'tel:' + k.telefon.replace(/\s/g, ''),
+            }, ['Anrufen'])
+          : null,
+        k.epost ? el('a', { klasse: 'knopf', href: 'mailto:' + k.epost }, ['E-Mail']) : null,
+      ]),
+      knopf('Bearbeiten', () => bearbeiten(k, neu), 'knopf-haupt'),
+    ])
+  );
+
+  // Ansprechpartner: Personen, die auf diese Firma zeigen.
+  if (istFirma) {
+    const leute = alle.filter((x) => x.firmaId === k.id);
+    anhaengen(
+      rahmen,
+      karte([
+        el('h2', { text: `Ansprechpartner (${leute.length})` }),
+        leute.length
+          ? el('ul', { klasse: 'liste' }, leute.map((x) =>
+              el('li', {}, [
+                el('button', {
+                  klasse: 'listenzeile', onclick: () => { geheZu('#/kontakte/' + x.id); },
+                }, [
+                  el('span', { klasse: 'zeilenzeichen' }, [zeichen('person')]),
+                  el('span', { klasse: 'zeilen-text' }, [
+                    el('span', { klasse: 'zeilen-titel', text: kontaktName(x) }),
+                    el('span', {
+                      klasse: 'zeilen-unter',
+                      text: [x.gewerk, x.telefon, x.epost].filter(Boolean).join(' · ') ||
+                        'ohne weitere Angaben',
+                    }),
+                  ]),
+                ]),
+              ])
+            ))
+          : el('p', {
+              klasse: 'unterzeile',
+              text: 'Bauleiter, Poliere, Sachbearbeiter: Wer bei dieser Firma für dich ' +
+                'zuständig ist, gehört hierher.',
+            }),
+        knopf('Ansprechpartner anlegen', () => bearbeiten({ art: 'firma', firmaId: k.id }, neu)),
+      ])
+    );
+  }
+
+  // Was auf diesen Kontakt zeigt.
+  const angebotName = (a) => a.firma || 'Angebot';
+  const bereiche = [
+    { titel: 'Positionen', ziel: '#/baukasse/kosten',
+      saetze: posten.filter((p) => p.kontaktId === k.id)
+        .map((p) => ({ titel: p.name, unter: [p.gewerk, p.kostengruppe].filter(Boolean).join(' · ') })) },
+    { titel: 'Angebote', ziel: '#/angebote',
+      saetze: angebote.filter((a) => a.kontaktId === k.id)
+        .map((a) => ({ titel: angebotName(a), unter: a.datum ? datumLang(a.datum) : '' })) },
+    { titel: 'Rechnungen', ziel: '#/baukasse/rechnungen',
+      saetze: belege.filter((b) => b.kontaktId === k.id)
+        .map((b) => ({ titel: b.name || 'Rechnung', unter: b.datum ? datumLang(b.datum) : '' })) },
+    { titel: 'Mängel', ziel: '#/maengel',
+      saetze: maengel.filter((m) => m.kontaktId === k.id)
+        .map((m) => ({ titel: m.titel, unter: [m.raum, m.gewerk].filter(Boolean).join(' · ') })) },
+    { titel: 'Arbeitsschritte', ziel: '#/ablauf',
+      saetze: aufgaben.filter((a) => a.kontaktId === k.id)
+        .map((a) => ({ titel: a.titel, unter: a.phase || '' })) },
+    { titel: 'Dokumente', ziel: '#/dokumente',
+      saetze: dokumente.filter((d) => d.kontaktId === k.id)
+        .map((d) => ({ titel: d.titel || d.name || 'Dokument', unter: d.art || '' })) },
+  ].filter((b) => b.saetze.length);
+
+  anhaengen(
+    rahmen,
+    bereiche.length
+      ? kartengitter(bereiche.map((b) => karte([
+          el('h2', { text: `${b.titel} (${b.saetze.length})` }),
+          el('ul', { klasse: 'liste' }, b.saetze.slice(0, 8).map((s) =>
+            el('li', {}, [
+              el('div', { klasse: 'listenzeile', stil: { cursor: 'default' } }, [
+                el('span', { klasse: 'zeilen-text' }, [
+                  el('span', { klasse: 'zeilen-titel', text: s.titel }),
+                  s.unter ? el('span', { klasse: 'zeilen-unter', text: s.unter }) : null,
+                ]),
+              ]),
+            ])
+          )),
+          b.saetze.length > 8
+            ? el('p', { klasse: 'unterzeile', text: `und ${b.saetze.length - 8} weitere` })
+            : null,
+          knopf('Dorthin', () => { geheZu(b.ziel); }, 'knopf-leise'),
+        ])))
+      : karte([
+          el('h2', { text: 'Verknüpfungen' }),
+          el('p', {
+            klasse: 'unterzeile',
+            text: 'Noch nichts zugeordnet. Sobald du bei einer Position, einem Mangel ' +
+              'oder einer Rechnung diese Firma auswählst, steht sie hier.',
+          }),
+        ]),
+    knopf('Zurück zur Liste', () => {
+      geheZu(istFirma ? '#/kontakte' : '#/kontakte/personen');
+    })
+  );
+}
+
+/** Das Adressbuch auf Papier: fuer die Bauakte und den Ordner im Auto. */
+async function adressenPdf(alle) {
+  const { Blatt, pdfTeilen } = await import('../pdf.js');
+  const { einstellung } = await import('../daten.js');
+  const projekt = (await einstellung('projektname')) || '';
+  const blatt = new Blatt({ titel: 'Adressen', untertitel: projekt, fusszeile: 'Adressen' });
+
+  for (const [art, ueberschrift] of [['firma', 'Firmen'], ['helfer', 'Privatpersonen']]) {
+    const drin = alle
+      .filter((k) => (k.art || 'firma') === art)
+      .sort((a, b) => kontaktName(a).localeCompare(kontaktName(b), 'de'));
+    if (!drin.length) continue;
+    blatt.ueberschrift(`${ueberschrift} (${drin.length})`);
+    blatt.tabelle(
+      ['Name', 'Gewerk', 'Anschrift', 'Telefon', 'E-Mail'],
+      drin.map((k) => [
+        [kontaktName(k), k.name && k.firma && k.firma !== k.name ? k.firma : null]
+          .filter(Boolean).join(', '),
+        k.gewerk || '',
+        [k.strasse, k.plzOrt].filter(Boolean).join(', '),
+        k.telefon || '',
+        k.epost || '',
+      ]),
+      [2.2, 1.2, 2.2, 1.3, 2]
+    );
+  }
+
+  try {
+    await pdfTeilen(blatt.blob(), 'adressen.pdf', 'Adressen');
+  } catch (fehler) {
+    melde('PDF konnte nicht geteilt werden.');
+    console.error(fehler);
+  }
 }
 
 async function bearbeiten(kontakt, nachher) {
   const gewerke = await gewerkeListe();
   const art = auswahl(
     [['firma', 'Firma'], ['helfer', 'Privatperson']], kontakt.art || 'firma'
+  );
+  const alleKontakte = await daten.alle('kontakte');
+  // Nur Firmen kommen als Zugehoerigkeit in Frage, und ein Satz kann nicht
+  // sein eigener Ansprechpartner sein.
+  const firmen = alleKontakte
+    .filter((x) => (x.art || 'firma') === 'firma' && x.id !== kontakt.id)
+    .sort((a, b) => kontaktName(a).localeCompare(kontaktName(b), 'de'));
+  const gehoertZu = auswahl(
+    [['', '– eigenständig –'], ...firmen.map((x) => [x.id, kontaktName(x)])],
+    kontakt.firmaId || ''
   );
   const name = eingabe({ value: kontakt.name || '', placeholder: 'Vor- und Nachname' });
   const firma = eingabe({ value: kontakt.firma || '', placeholder: 'z. B. Elektro Meier GmbH' });
@@ -141,6 +342,10 @@ async function bearbeiten(kontakt, nachher) {
       feld('Art', art),
       feld('Name', name, 'Name oder Firma genügt.'),
       feld('Firma', firma),
+      firmen.length
+        ? feld('Gehört zu', gehoertZu,
+            'Für Ansprechpartner: Bauleiter, Polier, Sachbearbeiter einer Firma.')
+        : null,
       feld('Gewerk', gewerk),
       feld('Straße und Hausnummer', strasse),
       feld('PLZ und Ort', plzOrt),
@@ -153,6 +358,7 @@ async function bearbeiten(kontakt, nachher) {
         art: art.value,
         name: name.value.trim(),
         firma: firma.value.trim(),
+        firmaId: gehoertZu.value || null,
         gewerk: gewerk.value,
         strasse: strasse.value.trim(),
         plzOrt: plzOrt.value.trim(),

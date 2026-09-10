@@ -12,7 +12,7 @@
 // Reihenfolgen ganzer Gewerke, hier um einzelne Handgriffe.
 
 import {
-  el, feld, eingabe, knopf, karte, kopfzeile, hinweisKasten,
+  el, feld, eingabe, auswahl, knopf, karte, kopfzeile, hinweisKasten,
   leerzustand, melde, datumLang, heute,
   anhaengen,
   kartengitter,
@@ -56,16 +56,16 @@ export async function zeige(rahmen, unterweg) {
 
 async function zeichne(rahmen, ansicht) {
   rahmen.replaceChildren();
-  const todos = await daten.alle('todos');
+  const [todos, raeume] = await Promise.all([daten.alle('todos'), daten.alle('raeume')]);
   const neu = () => zeichne(rahmen, ansicht);
 
-  if (ansicht === 'checklisten') return zeigeChecklisten(rahmen, todos, neu);
-  return zeigeTodos(rahmen, todos, neu);
+  if (ansicht === 'checklisten') return zeigeChecklisten(rahmen, todos, raeume, neu);
+  return zeigeTodos(rahmen, todos, raeume, neu);
 }
 
 // ------------------------------------------------------------------- To-Dos
 
-function zeigeTodos(rahmen, todos, neu) {
+function zeigeTodos(rahmen, todos, raeume, neu) {
   const stand = todoStand(todos, heute());
   const offen = todosSortieren(todos.filter((t) => !t.erledigt));
   const erledigt = todos
@@ -135,7 +135,7 @@ function zeigeTodos(rahmen, todos, neu) {
     karte([
       el('h2', { text: offen.length ? 'Offen (' + offen.length + ')' : 'Alles erledigt' }),
       offen.length
-        ? el('ul', { klasse: 'liste' }, offen.map((t) => zeile(t, neu, true)))
+        ? el('ul', { klasse: 'liste' }, offen.map((t) => zeile(t, raeume, neu, true)))
         : el('p', {
             klasse: 'unterzeile',
             text: 'Kein offener Punkt. Das kommt am Bau selten vor, genieß es.',
@@ -151,15 +151,73 @@ function zeigeTodos(rahmen, todos, neu) {
           el('span', { klasse: 'phasen-titel', text: 'Erledigt' }),
           el('span', { klasse: 'phasen-zahl', text: String(erledigt.length) }),
         ]),
-        el('ul', { klasse: 'liste' }, erledigt.slice(0, 50).map((t) => zeile(t, neu, true))),
+        el('ul', { klasse: 'liste' }, erledigt.slice(0, 50).map((t) => zeile(t, raeume, neu, true))),
       ])
     );
+  }
+
+  if (todos.length) {
+    anhaengen(rahmen, knopf('Alle To-Dos als PDF', () => pdfErzeugen(todos, raeume), 'knopf-leise'));
+  }
+}
+
+/**
+ * Die ganze Liste auf Papier.
+ *
+ * Offen zuerst und nach Frist, weil man das Blatt mit auf die Baustelle
+ * nimmt und nicht ins Archiv legt. Das Erledigte steht darunter, damit man
+ * beim Bautraeger nachweisen kann, was wann abgehakt war.
+ */
+async function pdfErzeugen(todos, raeume) {
+  const { Blatt, pdfTeilen } = await import('../pdf.js');
+  const { einstellung } = await import('../daten.js');
+  const projekt = (await einstellung('projektname')) || '';
+  const stichtag = heute();
+
+  const raumVon = (t) => (raeume.find((r) => r.id === t.raumId) || {}).name || '';
+  const offen = todosSortieren(todos.filter((t) => !t.erledigt));
+  const erledigt = todos
+    .filter((t) => t.erledigt)
+    .sort((a, b) => String(b.am || '').localeCompare(String(a.am || '')));
+
+  const blatt = new Blatt({ titel: 'To-Dos', untertitel: projekt, fusszeile: 'To-Dos' });
+
+  blatt.ueberschrift(`Offen (${offen.length})`);
+  if (offen.length) {
+    blatt.tabelle(
+      ['Aufgabe', 'Fällig', 'Raum', 'Liste'],
+      offen.map((t) => [
+        t.titel,
+        t.faellig ? datumLang(t.faellig) + (t.faellig < stichtag ? ' (überfällig)' : '') : '',
+        raumVon(t),
+        t.liste || '',
+      ]),
+      [3, 1.4, 1.3, 1.5]
+    );
+  } else {
+    blatt.absatz('Kein offener Punkt.');
+  }
+
+  if (erledigt.length) {
+    blatt.ueberschrift(`Erledigt (${erledigt.length})`);
+    blatt.tabelle(
+      ['Aufgabe', 'Erledigt am', 'Raum', 'Liste'],
+      erledigt.map((t) => [t.titel, t.am ? datumLang(t.am) : '', raumVon(t), t.liste || '']),
+      [3, 1.4, 1.3, 1.5]
+    );
+  }
+
+  try {
+    await pdfTeilen(blatt.blob(), 'todos.pdf', 'To-Dos');
+  } catch (fehler) {
+    melde('PDF konnte nicht geteilt werden.');
+    console.error(fehler);
   }
 }
 
 // -------------------------------------------------------------- Checklisten
 
-function zeigeChecklisten(rahmen, todos, neu) {
+function zeigeChecklisten(rahmen, todos, raeume, neu) {
   const listen = [...new Set(todos.map((t) => t.liste).filter(Boolean))].sort(
     (a, b) => a.localeCompare(b, 'de')
   );
@@ -207,10 +265,10 @@ function zeigeChecklisten(rahmen, todos, neu) {
         el('div', { klasse: 'fortschrittsbalken' }, [
           el('div', { stil: { width: anteil + '%' } }),
         ]),
-        el('ul', { klasse: 'liste' }, todosSortieren(drin).map((t) => zeile(t, neu, false))),
+        el('ul', { klasse: 'liste' }, todosSortieren(drin).map((t) => zeile(t, raeume, neu, false))),
         el('div', { klasse: 'filterleiste' }, [
           knopf('Punkt ergänzen', () =>
-            bearbeiten({ liste: name }, neu), 'knopf-leise'),
+            bearbeiten({ liste: name }, raeume, neu), 'knopf-leise'),
           knopf('Liste löschen', () => listeLoeschen(name, drin, neu), 'knopf-leise'),
         ]),
       ])
@@ -297,7 +355,7 @@ async function listeLoeschen(name, drin, nachher) {
 
 // ---------------------------------------------------------------- Bausteine
 
-function zeile(todo, neu, mitListe) {
+function zeile(todo, raeume, neu, mitListe) {
   const spaet = !todo.erledigt && todo.faellig && todo.faellig < heute();
 
   return el('li', {}, [
@@ -313,7 +371,7 @@ function zeile(todo, neu, mitListe) {
       // -- und die Zeile anzutippen erwartet man ohnehin.
       el('button', {
         klasse: 'zeilen-knopf', type: 'button',
-        onclick: () => bearbeiten(todo, neu),
+        onclick: () => bearbeiten(todo, raeume, neu),
       }, [
         el('span', { klasse: 'zeilen-titel', text: todo.titel }),
         // Was jetzt zu tun ist, steht vor allem anderen. Der Titel sagt,
@@ -328,6 +386,7 @@ function zeile(todo, neu, mitListe) {
               ? (spaet ? 'überfällig seit ' : 'fällig ') + datumLang(todo.faellig)
               : null,
             todo.warum || null,
+            (raeume.find((r) => r.id === todo.raumId) || {}).name || null,
             mitListe && todo.liste ? todo.liste : null,
             todo.erledigt && todo.am ? 'erledigt am ' + datumLang(todo.am) : null,
             todo.notiz || null,
@@ -343,11 +402,17 @@ async function abhaken(todo, erledigt, nachher) {
   await nachher();
 }
 
-function bearbeiten(todo, nachher) {
+function bearbeiten(todo, raeume, nachher) {
   const titel = eingabe({ value: todo.titel || '', placeholder: 'Was ist zu tun?' });
   const faellig = el('input', { type: 'date', value: todo.faellig || '' });
   const notiz = el('textarea', {}, [todo.notiz || '']);
   const liste = eingabe({ value: todo.liste || '', placeholder: 'leer = freie Aufgabe' });
+  const raum = auswahl(
+    [['', '– kein Raum –'], ...raeume
+      .sort((a, b) => String(a.name).localeCompare(String(b.name), 'de'))
+      .map((r) => [r.id, r.name])],
+    todo.raumId || ''
+  );
 
   blattOeffnen(
     todo.id ? 'Aufgabe bearbeiten' : 'Aufgabe anlegen',
@@ -355,6 +420,8 @@ function bearbeiten(todo, nachher) {
       feld('Aufgabe', titel),
       feld('Fällig am', faellig, 'Leer lassen, wenn es nicht drängt.'),
       feld('Checkliste', liste, 'Steht hier ein Name, gehört die Aufgabe zu dieser Liste.'),
+      feld('Raum', raum,
+        'Damit steht die Aufgabe auch beim Raum. Für Arbeiten am ganzen Haus leer lassen.'),
       feld('Notiz', notiz),
     ],
     async () => {
@@ -367,6 +434,7 @@ function bearbeiten(todo, nachher) {
         titel: titel.value.trim(),
         faellig: faellig.value || null,
         liste: liste.value.trim(),
+        raumId: raum.value || null,
         notiz: notiz.value.trim(),
         erledigt: !!todo.erledigt,
         am: todo.am || null,

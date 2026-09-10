@@ -249,12 +249,14 @@ async function zeigeRaum(rahmen, kennung) {
     daten.alle('maengel'), daten.alle('posten'), daten.alle('belege'),
     daten.alle('geschosse'), daten.alle('kontakte'),
   ]);
+  const todos = await daten.alle('todos');
 
   const neu = () => zeigeRaum(rahmen, kennung);
   const geschoss = geschosse.find((g) => g.id === raum.geschossId);
   const eigeneMaengel = maengel.filter((m) => m.raumId === raum.id);
   const eigenePosten = posten.filter((p) => p.raumId === raum.id)
     .map((p) => ({ ...p, ...postenRechnen(p, belege) }));
+  const eigeneTodos = todos.filter((t) => t.raumId === raum.id);
 
   anhaengen(
     rahmen,
@@ -337,6 +339,39 @@ async function zeigeRaum(rahmen, kennung) {
                   'Kostenaufstellung lässt sich das bei der Position einstellen.',
           }),
       knopf('Zur Kostenaufstellung', () => { geheZu('#/baukasse/kosten'); }, 'knopf-leise'),
+    ])
+  );
+
+  // To-Dos in diesem Raum
+  const offeneTodos = eigeneTodos.filter((t) => !t.erledigt);
+  anhaengen(
+    rahmen,
+    karte([
+      el('h2', { text: `To-Dos (${offeneTodos.length} offen)` }),
+      eigeneTodos.length
+        ? el('ul', { klasse: 'liste' }, eigeneTodos
+            .sort((a, b) => Number(a.erledigt) - Number(b.erledigt))
+            .map((t) => el('li', {}, [
+              el('div', { klasse: 'listenzeile', stil: { cursor: 'default' } }, [
+                el('span', { klasse: 'zeilen-text' }, [
+                  el('span', { klasse: 'zeilen-titel', text: t.titel }),
+                  el('span', {
+                    klasse: 'zeilen-unter',
+                    text: [
+                      t.erledigt ? 'erledigt' : t.faellig ? 'fällig ' + datumLang(t.faellig) : 'ohne Frist',
+                      t.liste || null,
+                    ].filter(Boolean).join(' · '),
+                  }),
+                ]),
+                t.erledigt ? el('span', { klasse: 'marke marke-fertig', text: 'fertig' }) : null,
+              ]),
+            ])))
+        : el('p', {
+            klasse: 'unterzeile',
+            text: 'Keine Aufgabe diesem Raum zugeordnet. In der To-Do-Liste lässt ' +
+                  'sich das bei der Aufgabe einstellen.',
+          }),
+      knopf('Zu den To-Dos', () => { geheZu('#/todos'); }, 'knopf-leise'),
     ])
   );
 

@@ -1684,5 +1684,49 @@ console.log('Wege und Kontakte');
   pruef('Kontakte ohne Namen bleiben lesbar', h.includes('export const kontaktName'));
 }
 
+console.log('Auswertungen und Verknuepfungen');
+{
+  const b = readFileSync('./www/module/baukasse.js', 'utf8');
+  // Mehrkosten sind die andere Frage: nicht wohin das Geld geht, sondern
+  // wo es mehr wird als geplant. Zwei Blickwinkel, je Tabelle und Bild.
+  pruef('Mehrkosten je Gewerk und je Kostengruppe',
+    b.includes("mehrkostenkarte('Je Gewerk'") && b.includes("mehrkostenkarte('Je Kostengruppe'"));
+  pruef('Mit Tabelle und Balken', b.includes('function abweichungsbalken') &&
+    b.includes("el('table'"));
+  pruef('Mehrkosten lassen sich mitnehmen',
+    b.includes('async function mehrkostenPdf') && b.includes('async function mehrkostenTabelle'));
+  // Die Balken gehen von der Mitte aus: Ein Balken, der immer von links
+  // waechst, kann kein Vorzeichen zeigen.
+  const css = readFileSync('./www/stil.css', 'utf8');
+  pruef('Der Balken kennt beide Richtungen',
+    css.includes('.mittelbalken-strich.nach-rechts') &&
+    css.includes('.mittelbalken-strich.nach-links'));
+
+  pruef('Die Budgetplanung geht als PDF und CSV',
+    b.includes('async function budgetPdf') && b.includes('async function budgetTabelle'));
+  // Drei Stellen duerfen nicht drei Zahlen ergeben.
+  pruef('Geldmittel werden nur einmal gerechnet', b.includes('function geldmittelstand'));
+
+  const t = readFileSync('./www/module/todos.js', 'utf8');
+  pruef('Aufgaben haengen an Raeumen', t.includes("feld('Raum', raum,"));
+  pruef('Und werden dort auch angezeigt',
+    readFileSync('./www/module/raeume.js', 'utf8').includes("t.raumId === raum.id"));
+  pruef('Der Verweis ist dem Abgleich bekannt',
+    readFileSync('./www/daten.js', 'utf8').includes("todos: { raumId: 'raeume' }"));
+  pruef('Alle To-Dos gehen als PDF', t.includes("'Alle To-Dos als PDF'"));
+
+  const k = readFileSync('./www/module/kontakte.js', 'utf8');
+  pruef('Ein Kontakt hat eine eigene Seite', k.includes('async function zeigeKontakt'));
+  pruef('Sie zeigt, was an ihm haengt',
+    k.includes("titel: 'Positionen'") && k.includes("titel: 'Maengel'".replace('ae', 'ä')));
+  pruef('Firmen haben Ansprechpartner',
+    k.includes("feld('Gehört zu', gehoertZu") &&
+    readFileSync('./www/daten.js', 'utf8').includes("kontakte: { firmaId: 'kontakte' }"));
+  pruef('Das Adressbuch geht als PDF', k.includes('async function adressenPdf'));
+  // Die Sichten duerfen nicht als Kennung durchgehen.
+  pruef('Sichten bleiben Sichten',
+    k.includes("ansicht !== 'firmen' && ansicht !== 'personen'"));
+}
+
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');
 process.exit(fehler ? 1 : 0);

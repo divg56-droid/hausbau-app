@@ -67,6 +67,8 @@ const VERWEISE = {
   maengel: { kontaktId: 'kontakte', raumId: 'raeume' },
   aufgaben: { vorgaengerId: 'aufgaben', kontaktId: 'kontakte', mangelId: 'maengel' },
   dokumente: { mangelId: 'maengel', postenId: 'posten', kontaktId: 'kontakte' },
+  todos: { raumId: 'raeume' },
+  kontakte: { firmaId: 'kontakte' },
 };
 
 // Verweislisten: Feld enthaelt ein Feld von Kennungen.

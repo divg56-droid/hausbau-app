@@ -12,7 +12,7 @@
 
 import {
   el, eur, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile,
-  wertzeile, hinweisKasten, leerzustand, zuZahl, melde, datumLang, heute,
+  wertzeile, hinweisKasten, leerzustand, zuZahl, zahl, melde, datumLang, heute,
   kontaktName,
   anhaengen,
   geheZu,
@@ -25,7 +25,8 @@ import { gewerkeListe } from '../gewerke.js';
 import { bauweise } from '../bauweise.js';
 import { zeichen, gewerkZeichen } from '../zeichen.js';
 import {
-  kostengruppenOptionen, kostengruppeLang, kostengruppeVorschlag, nachHauptgruppen,
+  kostengruppenOptionen, kostengruppeLang, kostengruppeName, kostengruppeVorschlag,
+  hauptgruppe, nachHauptgruppen,
 } from '../din276.js';
 import { csvTeilen } from '../csv.js';
 
@@ -356,6 +357,114 @@ function zeigeBudgetplanung(rahmen, stand, summe, belege, hausdaten, neu) {
       ))
     );
   }
+
+  anhaengen(
+    rahmen,
+    el('div', { klasse: 'knopf-reihe' }, [
+      knopf('Budget als PDF', () => budgetPdf(stand, summe, belege, verlauf, hausdaten)),
+      knopf('Budget als CSV', () => budgetTabelle(stand, summe, belege, verlauf), 'knopf-leise'),
+    ])
+  );
+}
+
+/**
+ * Zieht die Geldmittel mit ihrem Verbrauch zusammen.
+ *
+ * Dieselbe Rechnung wie auf dem Bildschirm: PDF, CSV und Kachel duerfen
+ * nicht drei Zahlen ergeben.
+ */
+function geldmittelstand(stand, belege) {
+  return stand.posten.map((p) => {
+    const verbraucht = belege
+      .filter((b) => b.quelleId === p.id)
+      .reduce((s, b) => s + (b.betrag || 0), 0);
+    return {
+      name: p.name,
+      art: p.art === 'darlehen' ? 'Darlehen' : p.art === 'zuschuss' ? 'Zuschuss' : 'Eigenkapital',
+      betrag: p.betrag,
+      verbraucht,
+      offen: p.betrag - verbraucht,
+    };
+  });
+}
+
+async function budgetPdf(stand, summe, belege, verlauf, hausdaten) {
+  const { Blatt, pdfTeilen } = await import('../pdf.js');
+  const projekt = (await einstellung('projektname')) || '';
+  const blatt = new Blatt({
+    titel: 'Budgetplanung', untertitel: projekt, fusszeile: 'Budgetplanung',
+  });
+
+  const flaeche = (hausdaten || {}).flaeche || 0;
+  blatt.ueberschrift('Der Rahmen');
+  blatt.wertzeile('Budget', eur.format(stand.gesamt));
+  blatt.wertzeile('Geplante Kosten', eur.format(summe.geplant));
+  blatt.wertzeile('Auftragssumme', eur.format(summe.tatsaechlich));
+  blatt.wertzeile('Bereits bezahlt', eur.format(summe.gezahlt));
+  blatt.wertzeile('Noch frei', eur.format(stand.gesamt - summe.tatsaechlich), true);
+  if (flaeche > 0) {
+    blatt.absatz(`Bei ${zahl(flaeche)} m² Wohnfläche sind das ` +
+      `${eur.format(stand.gesamt / flaeche)} Budget je Quadratmeter.`);
+  }
+
+  const mittel = geldmittelstand(stand, belege);
+  if (mittel.length) {
+    blatt.ueberschrift('Geldmittel');
+    blatt.tabelle(
+      ['Geldmittel', 'Art', 'Gesamt', 'Verwendet', 'Offen'],
+      mittel.map((m) => [
+        m.name, m.art, eur.format(m.betrag), eur.format(m.verbraucht), eur.format(m.offen),
+      ]),
+      [2.2, 1.2, 1.2, 1.2, 1.2],
+      [2, 3, 4]
+    );
+  }
+
+  if (verlauf.length) {
+    blatt.ueberschrift('Zahlungsverlauf');
+    blatt.tabelle(
+      ['Monat', 'Geflossen', 'Aufgelaufen'],
+      verlauf.map((m) => [monatLang(m.monat), eur.format(m.betrag), eur.format(m.kumuliert)]),
+      [2.4, 1.6, 1.6],
+      [1, 2]
+    );
+  }
+
+  try {
+    await pdfTeilen(blatt.blob(), 'budgetplanung.pdf', 'Budgetplanung');
+  } catch (fehler) {
+    melde('PDF konnte nicht geteilt werden.');
+    console.error(fehler);
+  }
+}
+
+/**
+ * Beide Aufstellungen in einer Datei.
+ *
+ * Zwei Dateien waeren sauberer und in der Anwendung laestiger: Wer sie in
+ * einer Tabelle nebeneinanderlegen will, filtert die erste Spalte.
+ */
+async function budgetTabelle(stand, summe, belege, verlauf) {
+  try {
+    const kopf = ['Abschnitt', 'Bezeichnung', 'Art', 'Betrag', 'Verwendet', 'Offen'];
+    const zeilen = [
+      ['Rahmen', 'Budget', '', stand.gesamt, '', ''],
+      ['Rahmen', 'Geplante Kosten', '', summe.geplant, '', ''],
+      ['Rahmen', 'Auftragssumme', '', summe.tatsaechlich, '', ''],
+      ['Rahmen', 'Bereits bezahlt', '', summe.gezahlt, '', ''],
+      ['Rahmen', 'Noch frei', '', stand.gesamt - summe.tatsaechlich, '', ''],
+    ];
+    for (const m of geldmittelstand(stand, belege)) {
+      zeilen.push(['Geldmittel', m.name, m.art, m.betrag, m.verbraucht, m.offen]);
+    }
+    for (const m of verlauf) {
+      zeilen.push(['Zahlungsverlauf', monatLang(m.monat), '', m.betrag, m.kumuliert, '']);
+    }
+    await csvTeilen(kopf, zeilen, 'budgetplanung.csv', 'Budgetplanung');
+  } catch (fehler) {
+    melde('Die Datei konnte nicht geteilt werden.');
+    console.error(fehler);
+  }
 }
 
 /** Eine Kachel der oberen Reihe: Zahl, Plakette, Preis je Quadratmeter. */
@@ -634,6 +743,32 @@ function zeigeStatistik(rahmen, gerechnet, summe, stand, belege, art, neu) {
     }
   }
 
+  // ---------------------------------------------------------- Mehrkosten
+  // Die andere Frage: nicht wohin das Geld geht, sondern wo es mehr wird
+  // als geplant. Zwei Blickwinkel, weil sie verschiedene Antworten geben --
+  // ein Gewerk kann teurer werden, ohne dass seine Kostengruppe auffaellt.
+  const mitPlan = gerechnet.filter((p) => p.geplant || p.massgeblich);
+  anhaengen(rahmen, el('h2', { klasse: 'abschnitt', text: 'Mehrkosten' }));
+  if (!mitPlan.length) {
+    anhaengen(rahmen, karte([
+      nochNichts('Sobald geplante und tatsächliche Kosten nebeneinanderstehen, ' +
+        'zeigt sich hier, welches Gewerk und welche Kostengruppe aus dem Rahmen läuft.'),
+    ]));
+  } else {
+    anhaengen(rahmen, mehrkostenkarte('Je Gewerk',
+      zusammenziehen(mitPlan, (p) => p.gewerk || 'Sonstiges')));
+    if (art.zeigtKostengruppen) {
+      anhaengen(rahmen, mehrkostenkarte('Je Kostengruppe',
+        zusammenziehen(mitPlan, (p) => (p.kostengruppe
+          ? hauptgruppe(p.kostengruppe) + ' ' + kostengruppeName(hauptgruppe(p.kostengruppe))
+          : 'Ohne Kostengruppe'))));
+    }
+    anhaengen(rahmen, el('div', { klasse: 'knopf-reihe' }, [
+      knopf('Mehrkosten als PDF', () => mehrkostenPdf(mitPlan, art)),
+      knopf('Mehrkosten als CSV', () => mehrkostenTabelle(mitPlan, art), 'knopf-leise'),
+    ]));
+  }
+
   // -------------------------------------------------------- Nach Geldmittel
   // Aus welchem Topf die Rechnungen bezahlt wurden.
   anhaengen(
@@ -702,6 +837,162 @@ function zeigeStatistik(rahmen, gerechnet, summe, stand, belege, art, neu) {
 
 /** Der Platzhalter in einem Abschnitt, der noch keine Zahlen hat. */
 const nochNichts = (text) => el('p', { klasse: 'unterzeile leer-hinweis', text });
+
+// ---------------------------------------------------------------- Mehrkosten
+
+/**
+ * Zieht die Positionen auf einen Schluessel zusammen: Gewerk oder Hauptgruppe.
+ *
+ * @returns {Array<{name: string, geplant: number, tatsaechlich: number, differenz: number}>}
+ */
+function zusammenziehen(gerechnet, schluessel) {
+  const karte = new Map();
+  for (const p of gerechnet) {
+    const name = schluessel(p);
+    const k = karte.get(name) || { name, geplant: 0, tatsaechlich: 0, differenz: 0 };
+    k.geplant += p.geplant;
+    k.tatsaechlich += p.massgeblich;
+    k.differenz += p.differenz;
+    karte.set(name, k);
+  }
+  // Groesste Ueberschreitung zuerst: Danach sucht man, nicht nach dem A.
+  return [...karte.values()].sort((a, b) => b.differenz - a.differenz);
+}
+
+/**
+ * Ein Balken je Zeile, von der Mitte aus.
+ *
+ * Mehrkosten nach rechts, Ersparnis nach links. Ein Balken, der immer von
+ * links waechst, kann Vorzeichen nicht zeigen -- und genau darum geht es
+ * hier: Zwei Gewerke mit derselben Abweichung, einmal drueber und einmal
+ * drunter, saehen sonst gleich aus.
+ */
+function abweichungsbalken(eintrag, groesste) {
+  const anteil = groesste > 0 ? Math.min(50, (Math.abs(eintrag.differenz) / groesste) * 50) : 0;
+  const drueber = eintrag.differenz > 0;
+  return el('div', { klasse: 'balkenzeile' }, [
+    el('div', { klasse: 'wertzeile' }, [
+      el('span', { klasse: 'mit-zeichen' }, [
+        zeichen(gewerkZeichen(eintrag.name), { groesse: 18 }),
+        el('span', { text: eintrag.name }),
+      ]),
+      abweichung(eintrag.differenz),
+    ]),
+    el('div', { klasse: 'mittelbalken' }, [
+      el('div', {
+        klasse: 'mittelbalken-strich' + (drueber ? ' nach-rechts' : ' nach-links'),
+        stil: drueber
+          ? { left: '50%', width: anteil + '%' }
+          : { right: '50%', width: anteil + '%' },
+      }),
+    ]),
+    el('p', {
+      klasse: 'unterzeile',
+      text: `geplant ${eur.format(eintrag.geplant)}, tatsächlich ` +
+        `${eur.format(eintrag.tatsaechlich)}`,
+    }),
+  ]);
+}
+
+/** Dieselben Zahlen zweimal: als Tabelle zum Nachlesen, als Balken zum Sehen. */
+function mehrkostenkarte(titel, eintraege) {
+  const groesste = eintraege.reduce((s, e) => Math.max(s, Math.abs(e.differenz)), 0);
+  const summe = eintraege.reduce((s, e) => ({
+    geplant: s.geplant + e.geplant,
+    tatsaechlich: s.tatsaechlich + e.tatsaechlich,
+    differenz: s.differenz + e.differenz,
+  }), { geplant: 0, tatsaechlich: 0, differenz: 0 });
+
+  return karte([
+    el('h2', { text: titel }),
+    el('div', { klasse: 'tabelle-rolle' }, [
+      el('table', {}, [
+        el('thead', {}, [
+          el('tr', {}, ['Bereich', 'Geplant', 'Tatsächlich', 'Abweichung'].map((n) =>
+            el('th', { text: n })
+          )),
+        ]),
+        el('tbody', {}, eintraege.map((e) =>
+          el('tr', {}, [
+            el('td', { text: e.name }),
+            el('td', { text: e.geplant ? eur.format(e.geplant) : '–' }),
+            el('td', { text: e.tatsaechlich ? eur.format(e.tatsaechlich) : '–' }),
+            el('td', {}, [abweichung(e.differenz)]),
+          ])
+        )),
+        el('tfoot', {}, [
+          el('tr', { klasse: 'bindung' }, [
+            el('td', { text: 'Zusammen' }),
+            el('td', { text: eur.format(summe.geplant) }),
+            el('td', { text: eur.format(summe.tatsaechlich) }),
+            el('td', {}, [abweichung(summe.differenz)]),
+          ]),
+        ]),
+      ]),
+    ]),
+    groesste > 0
+      ? el('div', { klasse: 'mehrkostenbild' },
+          eintraege.filter((e) => e.differenz).map((e) => abweichungsbalken(e, groesste)))
+      : nochNichts('Plan und Wirklichkeit stimmen bisher überein. Das kommt vor, ' +
+          'meistens am Anfang.'),
+  ]);
+}
+
+/** Beide Blickwinkel in einer Datei, damit man sie nebeneinanderlegen kann. */
+async function mehrkostenPdf(gerechnet, art) {
+  const { Blatt, pdfTeilen } = await import('../pdf.js');
+  const projekt = (await einstellung('projektname')) || '';
+  const blatt = new Blatt({ titel: 'Mehrkosten', untertitel: projekt, fusszeile: 'Mehrkosten' });
+
+  const zeilen = (liste) => liste.map((e) => [
+    e.name, eur.format(e.geplant), eur.format(e.tatsaechlich),
+    (e.differenz > 0 ? '+' : '') + eur.format(e.differenz),
+  ]);
+
+  const jeGewerk = zusammenziehen(gerechnet, (p) => p.gewerk || 'Sonstiges');
+  blatt.ueberschrift('Je Gewerk');
+  blatt.tabelle(['Gewerk', 'Geplant', 'Tatsächlich', 'Abweichung'],
+    zeilen(jeGewerk), [2.4, 1.2, 1.3, 1.3], [1, 2, 3]);
+  blatt.wertzeile('Zusammen',
+    (jeGewerk.reduce((s, e) => s + e.differenz, 0) > 0 ? '+' : '') +
+    eur.format(jeGewerk.reduce((s, e) => s + e.differenz, 0)), true);
+
+  if (art.zeigtKostengruppen) {
+    const jeGruppe = zusammenziehen(gerechnet, (p) => (p.kostengruppe
+      ? hauptgruppe(p.kostengruppe) + ' ' + kostengruppeName(hauptgruppe(p.kostengruppe))
+      : 'Ohne Kostengruppe'));
+    blatt.ueberschrift('Je Kostengruppe');
+    blatt.tabelle(['Kostengruppe', 'Geplant', 'Tatsächlich', 'Abweichung'],
+      zeilen(jeGruppe), [2.4, 1.2, 1.3, 1.3], [1, 2, 3]);
+  }
+
+  try {
+    await pdfTeilen(blatt.blob(), 'mehrkosten.pdf', 'Mehrkosten');
+  } catch (fehler) {
+    melde('PDF konnte nicht geteilt werden.');
+    console.error(fehler);
+  }
+}
+
+/** Dieselben zwei Aufstellungen als CSV, untereinander mit einer Kennspalte. */
+async function mehrkostenTabelle(gerechnet, art) {
+  try {
+    const kopf = ['Blickwinkel', 'Bereich', 'Geplant', 'Tatsaechlich', 'Abweichung'];
+    const zeilen = zusammenziehen(gerechnet, (p) => p.gewerk || 'Sonstiges')
+      .map((e) => ['Gewerk', e.name, e.geplant, e.tatsaechlich, e.differenz]);
+    if (art.zeigtKostengruppen) {
+      for (const e of zusammenziehen(gerechnet, (p) => (p.kostengruppe
+        ? hauptgruppe(p.kostengruppe) + ' ' + kostengruppeName(hauptgruppe(p.kostengruppe))
+        : 'Ohne Kostengruppe'))) {
+        zeilen.push(['Kostengruppe', e.name, e.geplant, e.tatsaechlich, e.differenz]);
+      }
+    }
+    await csvTeilen(kopf, zeilen, 'mehrkosten.csv', 'Mehrkosten');
+  } catch (fehler) {
+    melde('Die Datei konnte nicht geteilt werden.');
+    console.error(fehler);
+  }
+}
 
 // ------------------------------------------------------------- Kostengruppen
 

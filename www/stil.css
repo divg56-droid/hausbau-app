@@ -942,6 +942,22 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
    Kein Gelb fuer die Sonne: Die Form aus Kreis und Strahlen ist eindeutig
    genug, und ein Goldton passt weder zur Marke noch zum Rest. */
 
+/* Abweichung als Balken von der Mitte: rechts drueber, links drunter. Ein
+   Balken, der immer von links waechst, kann kein Vorzeichen zeigen -- und
+   genau darum geht es bei Mehrkosten. */
+.mehrkostenbild { margin-top: 14px; }
+.mittelbalken {
+  position: relative; height: 10px; border-radius: 5px;
+  background: var(--band); margin: 4px 0 2px;
+}
+.mittelbalken::before {
+  content: ''; position: absolute; left: 50%; top: -2px; bottom: -2px;
+  width: 1px; background: var(--linie);
+}
+.mittelbalken-strich { position: absolute; top: 0; bottom: 0; border-radius: 5px; }
+.mittelbalken-strich.nach-rechts { background: var(--warn); }
+.mittelbalken-strich.nach-links { background: var(--gut-schrift); }
+
 .wetterkarte { border-left: 5px solid var(--wetterfarbe, var(--linie)); }
 .wetterkopf {
   display: flex; align-items: center; gap: 16px; margin-bottom: 12px;
