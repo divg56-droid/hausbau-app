@@ -22,7 +22,6 @@ export const VORLAGEN = [
       'Nachweis Wärmeschutz nach GEG',
       'Entwässerungsplan',
       'Nachweis der Stellplätze',
-      'Standsicherheitsnachweis der Zufahrt für die Feuerwehr',
     ],
   },
   {
