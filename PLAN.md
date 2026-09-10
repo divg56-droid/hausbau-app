@@ -65,11 +65,15 @@ Schritt 10.
 - [x] Dokumentenablage mit Verknuepfung zu Mangel, Position oder Firma
 - [x] Offene To-Dos auf der Projektuebersicht (der offene Punkt aus Schritt 1)
 
-## 7. Dokumentation ergaenzen
+## 7. Dokumentation ergaenzen — erledigt
 
-- [ ] Baudokumentation: Fotos nach Bauabschnitt, getrennt vom Tagebuch
-- [ ] Unterschrift beim Bauhelfertagebuch, fuer die Berufsgenossenschaft
-- [ ] Aufrufzaehler des oeffentlichen Bautagebuchs
+- [x] Baudokumentation: Fotos nach Bauabschnitt, getrennt vom Tagebuch
+- [x] Unterschrift beim Bauhelfertagebuch, fuer die Berufsgenossenschaft,
+      auch im PDF
+- [x] Aufrufzaehler des oeffentlichen Bautagebuchs
+
+Der Zaehler braucht zwei neue Spalten. Dafuer muss einrichten.php einmal
+gelaufen sein; bis dahin wird nicht gezaehlt, kaputt geht nichts.
 
 ## 8. Weitere Rechner
 
