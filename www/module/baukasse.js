@@ -1,13 +1,14 @@
-// Baukasse: alles zum Geld an einer Stelle.
+// Die Baukosten, in vier Sichten. Jede steht einzeln in der Seitenleiste und
+// kommt als Unterweg hier an: "#/baukasse/statistik" laedt diese Datei.
 //
-// Drei Ansichten, weil es drei Fragen sind:
-//   Übersicht    Wie viel habe ich, wie viel kostet es, was bleibt?
-//   Positionen   Was war geplant, was wurde es wirklich?
-//   Rechnungen   Was ist tatsaechlich abgeflossen?
+//   Budgetplanung       Wie viel habe ich, woher kommt es, was bleibt?
+//   Kostenaufstellung   Was war geplant, was wurde es wirklich?
+//   Statistiken         Wo steckt das Geld: Status, Gewerk, Kostengruppe?
+//   Rechnungen          Was ist tatsaechlich abgeflossen?
 //
-// Die mittlere ist der Kern. Bauprojekte werden selten teurer, weil eine
-// Rechnung falsch war, sondern weil zwischen Planung und Auftrag eine Luecke
-// klafft, die niemand zusammenrechnet.
+// Die Kostenaufstellung ist der Kern. Bauprojekte werden selten teurer, weil
+// eine Rechnung falsch war, sondern weil zwischen Planung und Auftrag eine
+// Luecke klafft, die niemand zusammenrechnet.
 
 import {
   el, eur, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile,
@@ -892,6 +893,10 @@ function postenBearbeiten(posten, kontakte, raeume, nachher) {
     ],
     async () => {
       const wert = {
+        // Die Leistungsliste des Angebotsvergleichs haengt an der Position.
+        // Sie wird hier nicht bearbeitet, muss aber mitgeschrieben werden,
+        // sonst ist sie nach jeder Aenderung weg.
+        ...(posten.leistungen ? { leistungen: posten.leistungen } : {}),
         name: name.value.trim(),
         gewerk: gewerk.value,
         kostengruppe: kostengruppe.value || null,

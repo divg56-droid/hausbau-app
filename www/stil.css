@@ -292,6 +292,16 @@ tr.bindung td { background: var(--band); font-weight: 700; }
 .sortknopf:hover { color: var(--akzent); }
 tbody tr:hover td { background: var(--band); }
 .filterleiste { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+
+/* Die Leistungsliste steht in der Angebotskarte und teilt sich das
+   Aufklappen mit den Phasen des Leitfadens. */
+.leistungsblock { margin-top: 12px; border-top: 1px solid var(--linie); padding-top: 12px; }
+.leistungsblock td, .leistungsblock th { text-align: center; }
+.leistungsblock td:first-child, .leistungsblock th:first-child {
+  text-align: left; white-space: normal; min-width: 150px;
+}
+.leistungsblock .filterleiste { margin: 12px 0 0; }
+.leistungsblock .filterleiste input { flex: 1 1 180px; }
 .filterleiste select { flex: 1 1 160px; }
 
 /* ------------------------------------------------------------------- Meldungen */

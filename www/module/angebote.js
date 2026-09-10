@@ -13,7 +13,7 @@ import {
   el, eur, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile,
   hinweisKasten, leerzustand, zuZahl, melde, datumLang, heute, zahl,
 } from '../hilfen.js';
-import { daten, bildUrl, bildLoeschen, einstellung } from '../daten.js';
+import { daten, bildUrl, bildLoeschen, einstellung, neueKennung } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
 import { fotofeld } from '../fotos.js';
 import { Blatt, pdfTeilen } from '../pdf.js';
@@ -67,6 +67,51 @@ export function angeboteRechnen(angebote) {
     // Was der Vergleich gebracht hat, sobald beauftragt wurde.
     ersparnis: beauftragt ? teuerstes.betrag - beauftragt.betrag : spanne,
   };
+}
+
+/**
+ * Leistungsvergleich einer Position.
+ *
+ * Der Preis allein sagt nichts, solange nicht feststeht, was drinsteckt. Das
+ * guenstigste Angebot ist in der Praxis oft nur deshalb das guenstigste, weil
+ * Geruest, Entsorgung oder Anschluesse fehlen. Deshalb je Position eine Liste
+ * von Taetigkeiten, und je Angebot ein Haken dahinter.
+ *
+ * Abgelehnte Angebote zaehlen nicht mit, genauso wie beim Preisvergleich.
+ *
+ * @returns {{ zeilen: Array, spalten: Array, luecke: object|null }}
+ */
+export function leistungsvergleich(leistungen, angebote) {
+  const zaehlend = angebote.filter((a) => a.status !== 'abgelehnt');
+
+  // Guenstigstes zuerst, wie in der Liste darunter: So steht die Spalte,
+  // auf die man schaut, links.
+  const spalten = [...zaehlend].sort((a, b) => (a.betrag || 0) - (b.betrag || 0)).map((a) => {
+    const drin = leistungen.filter((l) => (a.enthalten || []).includes(l.id));
+    return {
+      angebot: a,
+      drin: drin.length,
+      fehlt: leistungen.filter((l) => !(a.enthalten || []).includes(l.id)),
+    };
+  });
+
+  // Aus den Spalten und nicht aus zaehlend: Sonst stuende die Reihenfolge in
+  // der Zeile anders als darueber.
+  const zeilen = leistungen.map((l) => ({
+    ...l,
+    von: spalten
+      .filter((s) => (s.angebot.enthalten || []).includes(l.id))
+      .map((s) => s.angebot.id),
+  }));
+
+  // Die eine Warnung, auf die es ankommt: Das billigste Angebot deckt weniger
+  // ab als ein teureres. Ohne sie vergleicht man Aepfel mit Birnen.
+  const guenstigste = spalten.find((s) => s.angebot.betrag > 0);
+  const meiste = spalten.reduce((a, b) => (b.drin > (a ? a.drin : -1) ? b : a), null);
+  const luecke =
+    guenstigste && meiste && guenstigste.drin < meiste.drin ? guenstigste : null;
+
+  return { zeilen, spalten, luecke };
 }
 
 export async function zeige(rahmen) {
@@ -267,6 +312,8 @@ function gruppenkarte(gruppe, posten, kontakte, neu) {
       ]);
     })),
 
+    leistungsblock(gruppe, kontakte, neu),
+
     beauftragt
       ? el('p', {
           klasse: 'unterzeile',
@@ -384,6 +431,161 @@ function angebotBearbeiten(angebot, posten, kontakte, nachher) {
 
 // -------------------------------------------------------------------- Ausgabe
 
+// Merkt sich, welche Leistungslisten aufgeklappt sind. Jeder Haken zeichnet
+// den Bildschirm neu; ohne das klappte die Liste bei jedem Klick wieder zu.
+const aufgeklappt = new Set();
+
+const firmenname = (angebot, kontakte) => {
+  const kontakt = kontakte.find((k) => k.id === angebot.kontaktId);
+  return angebot.firma || (kontakt ? kontakt.firma || kontakt.name : 'Angebot');
+};
+
+function leistungsblock(gruppe, kontakte, neu) {
+  const { posten: p, angebote } = gruppe;
+  const leistungen = p.leistungen || [];
+  const { zeilen, spalten, luecke } = leistungsvergleich(leistungen, angebote);
+
+  const eingabefeld = eingabe({ placeholder: 'z. B. Gerüst stellen und vorhalten' });
+  const hinzu = async () => {
+    const titel = eingabefeld.value.trim();
+    if (!titel) return;
+    aufgeklappt.add(p.id);
+    await daten.sichern('posten', {
+      ...postenRein(p),
+      leistungen: [...leistungen, { id: neueKennung(), titel }],
+    });
+    await neu();
+  };
+  eingabefeld.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); hinzu(); }
+  });
+
+  return el('details', {
+    klasse: 'leistungsblock',
+    open: aufgeklappt.has(p.id),
+    ontoggle: (e) => {
+      if (e.target.open) aufgeklappt.add(p.id);
+      else aufgeklappt.delete(p.id);
+    },
+  }, [
+    el('summary', {}, [
+      el('span', { text: 'Leistungsumfang' }),
+      el('span', {
+        klasse: 'phasen-zahl',
+        text: leistungen.length
+          ? spalten.map((s) => s.drin + '/' + leistungen.length).join(' · ')
+          : 'noch keine Positionen',
+      }),
+    ]),
+
+    leistungen.length
+      ? el('div', { klasse: 'tabelle-rolle' }, [
+          el('table', {}, [
+            el('thead', {}, [
+              el('tr', {}, [
+                el('th', { text: 'Leistung' }),
+                ...spalten.map((s) =>
+                  el('th', { text: firmenname(s.angebot, kontakte) })
+                ),
+                el('th', { text: '' }),
+              ]),
+            ]),
+            el('tbody', {}, zeilen.map((z) =>
+              el('tr', {}, [
+                el('td', { text: z.titel }),
+                ...spalten.map((s) =>
+                  el('td', {}, [
+                    el('input', {
+                      type: 'checkbox',
+                      checked: z.von.includes(s.angebot.id),
+                      'aria-label': z.titel + ' bei ' + firmenname(s.angebot, kontakte),
+                      onchange: (e) => hakenSetzen(s.angebot, z.id, e.target.checked, p.id, neu),
+                    }),
+                  ])
+                ),
+                el('td', {}, [
+                  el('button', {
+                    type: 'button', klasse: 'sortknopf', text: '✕',
+                    'aria-label': z.titel + ' entfernen',
+                    onclick: () => leistungLoeschen(p, z, angebote, neu),
+                  }),
+                ]),
+              ])
+            )),
+          ]),
+        ])
+      : el('p', {
+          klasse: 'unterzeile',
+          text: 'Trage die Tätigkeiten ein, die zu dieser Position gehören, und hake ' +
+            'ab, wer sie angeboten hat. Erst dann sind die Summen vergleichbar.',
+        }),
+
+    el('div', { klasse: 'filterleiste' }, [
+      eingabefeld,
+      knopf('Leistung hinzufügen', hinzu, 'knopf-leise'),
+    ]),
+
+    luecke
+      ? hinweisKasten(
+          'Das günstigste Angebot von ' + firmenname(luecke.angebot, kontakte) +
+            ' deckt ' + luecke.drin + ' von ' + leistungen.length + ' Leistungen ab. Es fehlt: ' +
+            luecke.fehlt.map((l) => l.titel).join(', ') +
+            '. Frag nach, bevor du vergleichst.',
+          'warn'
+        )
+      : null,
+  ]);
+}
+
+/**
+ * Setzt oder entfernt den Haken einer Leistung bei einem Angebot.
+ *
+ * Gespeichert wird die Kennung der Leistung, nicht ihr Text. So bleibt der
+ * Haken stehen, wenn die Bezeichnung spaeter geaendert wird.
+ */
+async function hakenSetzen(angebot, leistungId, an, postenId, nachher) {
+  const drin = new Set(angebot.enthalten || []);
+  if (an) drin.add(leistungId);
+  else drin.delete(leistungId);
+  aufgeklappt.add(postenId);
+  await daten.sichern('angebote', { ...angebot, enthalten: [...drin] });
+  await nachher();
+}
+
+/** Entfernt eine Leistung samt aller Haken, die daran hingen. */
+async function leistungLoeschen(posten, leistung, angebote, nachher) {
+  if (!window.confirm('Leistung "' + leistung.titel + '" entfernen?')) return;
+
+  await daten.sichern('posten', {
+    ...postenRein(posten),
+    leistungen: (posten.leistungen || []).filter((l) => l.id !== leistung.id),
+  });
+  // Sonst blieben in den Angeboten Haken auf eine Leistung stehen, die es
+  // nicht mehr gibt, und taeuchten beim naechsten Anlegen wieder auf.
+  for (const a of angebote) {
+    if (!(a.enthalten || []).includes(leistung.id)) continue;
+    await daten.sichern('angebote', {
+      ...a, enthalten: a.enthalten.filter((x) => x !== leistung.id),
+    });
+  }
+  aufgeklappt.add(posten.id);
+  await nachher();
+}
+
+/**
+ * Nur die gespeicherten Felder einer Position.
+ *
+ * Die Angebotsansicht bekommt Positionen so, wie sie in der Datenbank
+ * stehen. Sicherheitshalber trotzdem filtern: Kaeme die Position einmal aus
+ * postenRechnen, landeten ausgerechnete Werte in der Datenbank.
+ */
+function postenRein(posten) {
+  const {
+    differenz, gezahlt, massgeblich, offen, statusName, marke, ...rein
+  } = posten;
+  return rein;
+}
+
 async function pdfErzeugen(jePosten, kontakte) {
   melde('PDF wird erstellt …');
   const projekt = (await einstellung('projektname')) || '';
@@ -428,6 +630,23 @@ async function pdfErzeugen(jePosten, kontakte) {
       [2.6, 1.2, 1.2, 1.2, 1.4],
       [4]
     );
+
+    const leistungen = g.posten.leistungen || [];
+    if (leistungen.length) {
+      // Mehr als drei Spalten passen nicht auf die Seite. Wer mehr Angebote
+      // vergleicht, sieht den Rest in der App; hier stehen die drei
+      // guenstigsten, das sind die, zwischen denen entschieden wird.
+      const spalten = leistungsvergleich(leistungen, g.angebote).spalten.slice(0, 3);
+      blatt.tabelle(
+        ['Leistung', ...spalten.map((s) => firmenname(s.angebot, kontakte))],
+        leistungen.map((l) => [
+          l.titel,
+          ...spalten.map((s) => ((s.angebot.enthalten || []).includes(l.id) ? 'ja' : '–')),
+        ]),
+        [3.4, 1.3, 1.3, 1.3].slice(0, spalten.length + 1),
+        spalten.map((_, i) => i + 1)
+      );
+    }
   }
 
   blatt.absatz(

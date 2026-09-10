@@ -41,12 +41,15 @@ und das ist die bessere Ordnung.
 Die Ausgabe fuer Excel laeuft ueber CSV. Eine echte xlsx-Datei steht in
 Schritt 10.
 
-## 4. Angebote vertiefen
+## 4. Angebote vertiefen — erledigt
 
-- [ ] Positionsvergleich: je Taetigkeit eine Position, ankreuzen welcher
+- [x] Positionsvergleich: je Taetigkeit eine Leistung, ankreuzen welcher
       Anbieter sie angeboten hat. Genau daran scheitern Vergleiche in der
       Praxis.
-- [ ] Angebot in die Kostenaufstellung uebernehmen (steht schon)
+- [x] Warnung, wenn das guenstigste Angebot weniger abdeckt als ein teureres,
+      samt Liste dessen, was fehlt
+- [x] Leistungsumfang steht auch im Vergleichs-PDF
+- [x] Angebot in die Kostenaufstellung uebernehmen (stand schon)
 
 ## 5. Kontakte aufteilen
 

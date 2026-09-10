@@ -15,7 +15,7 @@ import { join, relative, sep } from 'node:path';
 import { neueKennung, umschreiben } from './www/daten.js';
 import { postenRechnen } from './www/module/baukasse.js';
 import { helferVon, stundenJeHelfer } from './www/module/tagebuch.js';
-import { angeboteRechnen } from './www/module/angebote.js';
+import { angeboteRechnen, leistungsvergleich } from './www/module/angebote.js';
 import { BEREICHE, MODULE } from './www/bereiche.js';
 import { PHASEN, ALLE_PUNKTE, leitfadenStand } from './www/leitfaden-daten.js';
 import { csvText, zelle } from './www/csv.js';
@@ -859,6 +859,51 @@ console.log('Baukosten in drei Sichten');
   // sich Budgetplanung und Baukostenrechner.
   pruef('Die Wohnflaeche kommt aus dem Baukostenrechner',
     baukasse.includes("einstellung('baukosten_eingabe')"));
+}
+
+console.log('Leistungsvergleich');
+{
+  const L = [
+    { id: 'l1', titel: 'Gerüst' },
+    { id: 'l2', titel: 'Entsorgung' },
+    { id: 'l3', titel: 'Anschlüsse' },
+  ];
+  const billig = { id: 'a', betrag: 10000, enthalten: ['l1'] };
+  const mittel = { id: 'b', betrag: 12000, enthalten: ['l1', 'l2', 'l3'] };
+  const teuer = { id: 'c', betrag: 15000, enthalten: ['l1', 'l2'] };
+
+  const v = leistungsvergleich(L, [teuer, billig, mittel]);
+  // Guenstigstes links: In der Liste darunter steht es auch oben.
+  pruef('Die Spalten stehen nach Preis',
+    v.spalten.map((x) => x.angebot.id).join('') === 'abc',
+    v.spalten.map((x) => x.angebot.id).join(''));
+  pruef('Je Angebot wird gezaehlt, was drinsteckt',
+    v.spalten.map((x) => x.drin).join(',') === '1,3,2');
+  pruef('Eine Zeile weiss, wer sie angeboten hat',
+    v.zeilen[1].von.join(',') === 'b,c', v.zeilen[1].von.join(','));
+
+  // Der ganze Zweck: Das billigste Angebot ist billig, weil etwas fehlt.
+  pruef('Die Luecke im guenstigsten Angebot faellt auf', v.luecke && v.luecke.angebot.id === 'a');
+  pruef('Und sie sagt, was fehlt',
+    v.luecke.fehlt.map((l) => l.id).join(',') === 'l2,l3');
+
+  const ohneLuecke = leistungsvergleich(L, [{ ...billig, enthalten: ['l1', 'l2', 'l3'] }, teuer]);
+  pruef('Deckt das guenstigste alles ab, gibt es keine Warnung', ohneLuecke.luecke === null);
+
+  // Abgelehnte zaehlen beim Umfang so wenig mit wie beim Preis.
+  const mitAbgelehnt = leistungsvergleich(L, [billig, { ...mittel, status: 'abgelehnt' }]);
+  pruef('Abgelehnte Angebote bekommen keine Spalte', mitAbgelehnt.spalten.length === 1);
+  pruef('Und zaehlen auch in der Zeile nicht mit',
+    mitAbgelehnt.zeilen[1].von.length === 0);
+
+  pruef('Ohne Leistungen gibt es nichts zu warnen',
+    leistungsvergleich([], [billig, teuer]).luecke === null);
+
+  // Die Liste haengt an der Position. Wird sie beim Bearbeiten nicht
+  // mitgeschrieben, ist sie nach jeder Aenderung weg.
+  pruef('Die Position behaelt ihre Leistungen beim Bearbeiten',
+    readFileSync('./www/module/baukasse.js', 'utf8')
+      .includes('...(posten.leistungen ? { leistungen: posten.leistungen } : {})'));
 }
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');
