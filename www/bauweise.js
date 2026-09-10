@@ -1,80 +1,106 @@
-// Wie gebaut wird: alles aus einer Hand oder Gewerk für Gewerk.
+// Wie gebaut wird. Die Entscheidung faellt vor dem ersten Spatenstich und
+// praegt den Rest der App staerker als jede andere.
 //
-// Das ist die Entscheidung, die den Rest der App am staerksten praegt, und
-// sie faellt vor dem ersten Spatenstich:
+// Zur Begrifflichkeit, weil sie gern durcheinandergeht:
 //
-//   Einzelvergabe   Der Bauherr vergibt jedes Gewerk selbst. Dann zaehlt
-//                   alles, was mit Gewerken zu tun hat: Angebote vergleichen,
-//                   Reihenfolge planen, Kosten nach DIN 276 gliedern.
-//   Bauträger       Ein Vertrag, ein Preis, eine Firma. Dann gibt es nichts
-//                   je Gewerk zu vergleichen und keine Kostengruppen zu
-//                   pflegen -- die Gliederung macht der Bautraeger, nicht der
-//                   Bauherr.
+//   Generalunternehmer (GU)   Uebernimmt die gesamte Bauausfuehrung und
+//                             vergibt die Gewerke an Nachunternehmer. Der
+//                             Bauherr bleibt Eigentuemer des Grundstuecks,
+//                             es ist ein Werkvertrag.
+//   Generaluebernehmer (GUe)  Wie der GU, fuehrt aber selbst keine
+//                             Bauleistung aus, sondern vergibt alles weiter.
+//   Bautraeger                Baut auf eigenem Grundstueck und verkauft
+//                             Grundstueck und Haus zusammen. Das ist ein
+//                             Kaufvertrag beim Notar, und die Zahlungen
+//                             folgen dem Ratenplan der MaBV.
+//
+// Fuer die App verhalten sich alle drei gleich: ein Vertrag, ein Preis, eine
+// Firma, die die Gewerke steuert. Deshalb stehen sie unter einem Punkt, und
+// der heisst "Schluesselfertig" -- der Oberbegriff, unter dem sie auch
+// verkauft werden.
 //
 // Ausgeblendet wird nur die Anzeige. Die Daten bleiben stehen: Wer umstellt
 // und zurueckstellt, findet alles wieder. Auch die Wege bleiben erreichbar,
 // wenn man sie von Hand aufruft -- verschwinden soll nur, was im Weg steht,
 // nicht, was jemand noch braucht.
-//
-// Eigenleistungen sind der Grund, warum "Bauträger" nicht alles wegraeumt.
-// Fast jeder, der so baut, macht doch etwas selbst: Maler, Bodenbelaege,
-// Aussenanlagen. Fuer diese Gewerke holt er weiterhin Angebote ein, und
-// dafuer bleiben die Bereiche stehen.
 
 import { einstellung } from './daten.js';
 
 export const EINZELVERGABE = 'einzelvergabe';
-export const TRAEGER = 'traeger';
+export const SCHLUESSELFERTIG = 'schluesselfertig';
+export const SANIERUNG = 'sanierung';
 
 export const BAUWEISEN = [
   {
     id: EINZELVERGABE,
     name: 'Einzelvergabe',
-    kurz: 'Ich vergebe die Gewerke selbst',
-    text: 'Du holst je Gewerk Angebote ein, beauftragst einzeln und steuerst die ' +
-      'Reihenfolge. Die App zeigt dann alles dazu: Angebotsvergleich, Bauablauf, ' +
-      'Gewerkeliste und die Gliederung nach DIN 276.',
+    klammer: 'Architektenhaus: du vergibst Gewerk für Gewerk',
+    text: 'Ein Architekt oder Planer entwirft, du holst je Gewerk Angebote ein, ' +
+      'beauftragst einzeln und steuerst die Reihenfolge. Das ist die aufwendigste ' +
+      'Bauweise und die mit dem größten Einfluss auf Preis und Ausführung. Die App ' +
+      'zeigt dafür alles: Angebotsvergleich, Bauablauf, Gewerkeliste und die ' +
+      'Gliederung nach DIN 276.',
   },
   {
-    id: TRAEGER,
-    name: 'Bauträger oder Generalunternehmer',
-    kurz: 'Eine Firma baut schlüsselfertig',
-    text: 'Ein Vertrag, ein Preis, eine Firma. Die Gewerke steuert sie, nicht du. ' +
-      'Die App räumt dann weg, was du dafür nicht brauchst, und lässt Platz für ' +
-      'das, was bei dieser Bauweise zählt: Zahlungsplan, Sonderwünsche, ' +
-      'Bemusterung und Abnahme.',
+    id: SCHLUESSELFERTIG,
+    name: 'Schlüsselfertig',
+    klammer: 'Generalunternehmer, Generalübernehmer, Fertighaus oder Bauträger',
+    text: 'Ein Vertrag, ein Preis, eine Firma: Sie steuert die Gewerke, nicht du. ' +
+      'Beim Generalunternehmer bleibt dir das Grundstück und es ist ein Werkvertrag; ' +
+      'beim Bauträger kaufst du Grundstück und Haus zusammen, beim Notar, und die ' +
+      'Raten folgen der MaBV. Für die App ist das dasselbe. Sie räumt weg, was du ' +
+      'dafür nicht brauchst, und lässt Platz für das, was hier zählt: Zahlungsplan, ' +
+      'Sonderwünsche, Bemusterung und Abnahme.',
+  },
+  {
+    id: SANIERUNG,
+    name: 'Sanierung',
+    klammer: 'Umbau, Modernisierung oder Anbau im Bestand',
+    text: 'Du baust an einem Haus, das schon steht. Vergeben wird meist einzeln, ' +
+      'oft in Abschnitten, und die Überraschungen stecken im Bestand statt im ' +
+      'Bauplan. Deshalb bleibt hier alles sichtbar — und die Baudokumentation ' +
+      'zählt doppelt: Was vor dem Verschließen nicht fotografiert ist, findet ' +
+      'später niemand wieder.',
   },
 ];
+
+// Der frueher gespeicherte Wert. "Bautraeger" war als Bezeichnung zu eng: Er
+// meint einen bestimmten Vertragstyp, gemeint war die ganze Gruppe.
+const ALTNAMEN = { traeger: SCHLUESSELFERTIG };
 
 /**
  * Die Bauweise dieses Projekts samt allem, was daraus folgt.
  *
  * @returns {Promise<{
- *   id: string, istTraeger: boolean, eigenleistungen: string[],
- *   zeigtKostengruppen: boolean, versteckt: Set<string>
+ *   id: string, name: string, istSchluesselfertig: boolean,
+ *   eigenleistungen: string[], zeigtKostengruppen: boolean, versteckt: Set<string>
  * }>}
  */
 export async function bauweise() {
   const [gesetzt, eigen] = await Promise.all([
     einstellung('bauweise'), einstellung('eigenleistungen'),
   ]);
-  const id = gesetzt === TRAEGER ? TRAEGER : EINZELVERGABE;
+  const roh = ALTNAMEN[gesetzt] || gesetzt;
+  const gewaehlt = BAUWEISEN.find((b) => b.id === roh) || BAUWEISEN[0];
   const eigenleistungen = Array.isArray(eigen) ? eigen : [];
 
   return {
-    id,
-    istTraeger: id === TRAEGER,
+    id: gewaehlt.id,
+    name: gewaehlt.name,
+    istSchluesselfertig: gewaehlt.id === SCHLUESSELFERTIG,
     eigenleistungen,
     // Die Kostengruppen sind die Sprache der Planer und Banken bei einem
-    // Bauvorhaben, das man selbst gliedert. Beim Bautraeger steht im Vertrag
-    // eine Summe, und die gliedert niemand mehr nach DIN.
-    zeigtKostengruppen: id !== TRAEGER,
-    versteckt: verstecken(id, eigenleistungen),
+    // Vorhaben, das man selbst gliedert. Steht im Vertrag eine Summe,
+    // gliedert sie niemand mehr nach DIN. In der Sanierung dagegen schon:
+    // Foerderungen und Nachweise fragen genau danach.
+    zeigtKostengruppen: gewaehlt.id !== SCHLUESSELFERTIG,
+    versteckt: verstecken(gewaehlt.id, eigenleistungen),
   };
 }
 
 export async function bauweiseSetzen(id) {
-  await einstellung('bauweise', id === TRAEGER ? TRAEGER : EINZELVERGABE);
+  const gueltig = BAUWEISEN.some((b) => b.id === id) ? id : EINZELVERGABE;
+  await einstellung('bauweise', gueltig);
 }
 
 export async function eigenleistungenSetzen(liste) {
@@ -84,15 +110,18 @@ export async function eigenleistungenSetzen(liste) {
 /**
  * Welche Bereiche bei dieser Bauweise nicht in der Leiste stehen.
  *
- * Der Bauablauf faellt immer weg: Die Reihenfolge der Gewerke steuert der
- * Bautraeger, und ein Balkenplan, den man nicht beeinflusst, ist bestenfalls
- * Beschaeftigung.
+ * Nur beim schluesselfertigen Bauen faellt etwas weg. Der Bauablauf immer:
+ * Die Reihenfolge der Gewerke steuert die Firma, und ein Balkenplan, den man
+ * nicht beeinflusst, ist bestenfalls Beschaeftigung.
  *
  * Angebote und Gewerkeliste fallen nur weg, solange es keine Eigenleistungen
  * gibt. Sobald der Bauherr selbst etwas uebernimmt, braucht er beides wieder.
+ *
+ * In der Sanierung bleibt alles stehen: Dort wird einzeln vergeben wie beim
+ * Architektenhaus, nur im Bestand.
  */
 function verstecken(id, eigenleistungen) {
-  if (id !== TRAEGER) return new Set();
+  if (id !== SCHLUESSELFERTIG) return new Set();
   const weg = ['ablauf'];
   if (!eigenleistungen.length) weg.push('angebote', 'kontakte/gewerke');
   return new Set(weg);

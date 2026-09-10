@@ -949,7 +949,7 @@ console.log('Gewerke');
   // Positionen, Maengeln und Kontakten -- also muessen beim Umbenennen alle
   // drei mitgezogen werden, sonst fallen sie aus jeder Gruppierung.
   pruef('Beim Umbenennen ziehen alle drei Speicher mit',
-    /const TRAEGER = \['posten', 'maengel', 'kontakte'\]/.test(gewerke));
+    /const MIT_GEWERK = \['posten', 'maengel', 'kontakte'\]/.test(gewerke));
   pruef('Die Liste liegt in den Einstellungen und wandert damit im Abgleich mit',
     gewerke.includes("einstellung('gewerke')"));
 
@@ -1323,17 +1323,34 @@ console.log('Bauweise');
   const b = readFileSync('./www/bauweise.js', 'utf8');
   // Beim Bautraeger steht im Vertrag eine Summe. Die gliedert niemand mehr
   // nach DIN 276, also hat die Gliederung dort nichts zu suchen.
-  pruef('Der Bautraeger kennt keine Kostengruppen',
-    b.includes("zeigtKostengruppen: id !== TRAEGER"));
+  pruef('Drei Bauweisen', /BAUWEISEN = \[/.test(b) &&
+    b.includes("id: EINZELVERGABE") && b.includes('id: SCHLUESSELFERTIG') &&
+    b.includes('id: SANIERUNG'));
+  // Der Name allein sagt nicht, was gemeint ist: "Schluesselfertig" kann
+  // Generalunternehmer oder Bautraeger heissen, und das ist rechtlich ein
+  // Unterschied.
+  pruef('Jede Bauweise erklaert sich in Klammern',
+    (b.match(/klammer:/g) || []).length === 3);
+  pruef('Der Generalunternehmer steht im Text',
+    b.includes('Generalunternehmer') && b.includes('Bauträger') && b.includes('MaBV'));
+  // Der frueher gespeicherte Wert darf nicht ins Leere laufen.
+  pruef('Der alte Wert "traeger" wird weitergefuehrt',
+    b.includes('const ALTNAMEN = { traeger: SCHLUESSELFERTIG };'));
+  pruef('Nur schluesselfertig kennt keine Kostengruppen',
+    b.includes("zeigtKostengruppen: gewaehlt.id !== SCHLUESSELFERTIG"));
   // Die Reihenfolge der Gewerke steuert die Firma. Ein Balkenplan, den man
   // nicht beeinflusst, ist bestenfalls Beschaeftigung.
-  pruef('Der Bauablauf faellt beim Bautraeger immer weg',
+  pruef('Der Bauablauf faellt beim schluesselfertigen Bauen immer weg',
     b.includes("const weg = ['ablauf'];"));
   // Wer selbst etwas uebernimmt, braucht Angebote und Gewerke wieder.
   pruef('Eigenleistungen holen Angebote und Gewerke zurueck',
     b.includes("if (!eigenleistungen.length) weg.push('angebote', 'kontakte/gewerke');"));
-  pruef('Bei Einzelvergabe wird nichts versteckt',
-    b.includes("if (id !== TRAEGER) return new Set();"));
+  pruef('Sonst wird nichts versteckt',
+    b.includes("if (id !== SCHLUESSELFERTIG) return new Set();"));
+  // In der Sanierung fragen Foerderungen und Nachweise genau nach den
+  // Kostengruppen.
+  pruef('Die Sanierung behaelt ihre Kostengruppen',
+    !b.includes('SANIERUNG'.toLowerCase() + "'") || b.includes('gewaehlt.id !== SCHLUESSELFERTIG'));
   // Sie gehoert zum Projekt: Wer zwei Haeuser baut, baut sie selten gleich.
   pruef('Die Bauweise haengt am Projekt',
     readFileSync('./www/daten.js', 'utf8').includes("'bauweise', 'eigenleistungen'"));
@@ -1347,8 +1364,12 @@ console.log('Bauweise');
     k.includes("art.zeigtKostengruppen ? 'Kostenaufstellung nach DIN 276' : 'Kostenaufstellung'"));
   // Wer schluesselfertig kauft, braucht keine Liste der Gewerke, sondern
   // die der Posten neben dem Kaufpreis.
-  pruef('Es gibt eine eigene Vorlage fuer den Bautraeger',
-    k.includes('const VORLAGE_TRAEGER = [') && k.includes('Kaufpreis laut Bauvertrag'));
+  pruef('Es gibt je Bauweise eine Vorlage',
+    k.includes('const VORLAGE_SCHLUESSELFERTIG = [') &&
+    k.includes('const VORLAGE_SANIERUNG = [') && k.includes('const VORLAGE = ['));
+  // Im Bestand liegt das Geld an anderen Stellen als im Neubau.
+  pruef('Die Sanierung faengt mit der Bestandsaufnahme an',
+    k.includes('Bestandsaufnahme und Aufmaß') && k.includes('Schadstoffuntersuchung'));
   // Ausgeblendet heisst nicht geloescht.
   pruef('Ein vorhandener Kostengruppenwert bleibt stehen',
     k.includes(': posten.kostengruppe || null,'));

@@ -268,7 +268,7 @@ function formatwahl() {
  */
 async function bauweisekarte() {
   const {
-    BAUWEISEN, TRAEGER, bauweise, bauweiseSetzen, eigenleistungenSetzen,
+    BAUWEISEN, SCHLUESSELFERTIG, bauweise, bauweiseSetzen, eigenleistungenSetzen,
   } = await import('../bauweise.js');
   const { gewerkeListe } = await import('../gewerke.js');
 
@@ -285,12 +285,18 @@ async function bauweisekarte() {
   const gewaehlt = BAUWEISEN.find((b) => b.id === art.id) || BAUWEISEN[0];
 
   inhalt.append(
-    el('div', { klasse: 'geschossleiste' }, BAUWEISEN.map((b) =>
+    // Der Name allein sagt nicht, was gemeint ist: "Schluesselfertig" kann
+    // Generalunternehmer oder Bautraeger heissen, und das ist rechtlich ein
+    // Unterschied. Deshalb steht die Erklaerung gleich daneben.
+    el('div', { klasse: 'bauweisewahl' }, BAUWEISEN.map((b) =>
       el('button', {
-        type: 'button', text: b.name,
-        klasse: b.id === art.id ? 'aktiv' : null,
+        type: 'button',
+        klasse: 'bauweise' + (b.id === art.id ? ' aktiv' : ''),
         onclick: () => umstellen(b.id),
-      })
+      }, [
+        el('span', { klasse: 'bauweise-name', text: b.name }),
+        el('span', { klasse: 'bauweise-klammer', text: b.klammer }),
+      ])
     )),
     el('p', { klasse: 'unterzeile', text: gewaehlt.text })
   );
@@ -309,7 +315,7 @@ async function bauweisekarte() {
           else gesetzt.delete(g);
           await eigenleistungenSetzen([...gesetzt]);
           // Beim Bautraeger haengt an der Auswahl, was in der Leiste steht.
-          if (art.id === TRAEGER) location.reload();
+          if (art.id === SCHLUESSELFERTIG) location.reload();
         },
       }),
       el('span', { text: g }),
@@ -321,10 +327,11 @@ async function bauweisekarte() {
     el('p', {
       klasse: 'unterzeile',
       text: 'Was du selbst machst: Maler, Bodenbeläge, Außenanlagen. Diese Gewerke ' +
-        'bleiben wichtig, auch wenn den Rest eine Firma übernimmt.',
+        'bleiben wichtig, auch wenn den Rest eine Firma übernimmt — und sie ' +
+        'gehören in den Vertrag, damit später niemand darüber streitet.',
     }),
     haken,
-    art.id === TRAEGER
+    art.id === SCHLUESSELFERTIG
       ? hinweisKasten(
           art.eigenleistungen.length
             ? 'Weil du Eigenleistungen eingetragen hast, bleiben Angebote und ' +

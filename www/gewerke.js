@@ -33,7 +33,7 @@ export async function gewerkeSetzen(liste) {
 }
 
 /** Die Speicher, in denen ein Gewerk am Datensatz haengt. */
-const TRAEGER = ['posten', 'maengel', 'kontakte'];
+const MIT_GEWERK = ['posten', 'maengel', 'kontakte'];
 
 /**
  * Zaehlt, wo ein Gewerk benutzt wird.
@@ -42,7 +42,7 @@ const TRAEGER = ['posten', 'maengel', 'kontakte'];
  */
 export async function gewerkVerwendung(name) {
   const zahlen = { gesamt: 0 };
-  for (const speicher of TRAEGER) {
+  for (const speicher of MIT_GEWERK) {
     const treffer = (await daten.alle(speicher)).filter((s) => s.gewerk === name).length;
     zahlen[speicher] = treffer;
     zahlen.gesamt += treffer;
@@ -61,7 +61,7 @@ export async function gewerkUmbenennen(alt, neu) {
   const liste = await gewerkeListe();
   await gewerkeSetzen(liste.map((g) => (g === alt ? neu : g)));
 
-  for (const speicher of TRAEGER) {
+  for (const speicher of MIT_GEWERK) {
     for (const satz of await daten.alle(speicher)) {
       if (satz.gewerk !== alt) continue;
       await daten.sichern(speicher, { ...satz, gewerk: neu });

@@ -332,6 +332,29 @@ tr.bindung td { background: var(--band); font-weight: 700; }
 }
 .sortknopf:hover { color: var(--akzent); }
 tbody tr:hover td { background: var(--band); }
+/* Die Bauweise ist eine Entscheidung, keine Auswahl aus einer Liste. Also
+   ganze Felder mit Erklaerung statt Reiter, die nur ein Wort tragen. */
+.bauweisewahl { display: grid; gap: 8px; margin-bottom: 12px; }
+@media (min-width: 760px) {
+  .bauweisewahl { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+}
+button.bauweise {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  padding: 11px 13px; border-radius: 10px;
+  border: 1px solid var(--linie); background: var(--karte); color: var(--tinte);
+  font: inherit;
+}
+button.bauweise:hover { border-color: var(--akzent-hell); }
+button.bauweise.aktiv {
+  border-color: var(--akzent); background: var(--akzent); color: var(--auf-akzent);
+}
+.bauweise-name { display: block; font-weight: 700; font-size: 15px; }
+.bauweise-klammer {
+  display: block; font-size: 12.5px; line-height: 1.35; margin-top: 2px;
+  color: var(--tinte-leise);
+}
+button.bauweise.aktiv .bauweise-klammer { color: var(--auf-akzent); opacity: .85; }
+
 /* Eigenleistungen: viele kurze Haken, in Spalten statt in einer langen
    Schlange. */
 .gewerkewahl {

@@ -899,10 +899,10 @@ async function kostenTabelle(gerechnet, art) {
 }
 
 // Wer schluesselfertig kauft, hat keine sechsundzwanzig Gewerke, sondern
-// einen Kaufpreis und das, was der Vertrag nicht enthaelt. Genau das ist die
-// Liste, an der solche Bauvorhaben teurer werden als gedacht.
-const VORLAGE_TRAEGER = [
-  ['Kaufpreis laut Bauvertrag', 'Sonstiges'],
+// einen Vertragspreis und das, was der Vertrag nicht enthaelt. Genau das ist
+// die Liste, an der solche Bauvorhaben teurer werden als gedacht.
+const VORLAGE_SCHLUESSELFERTIG = [
+  ['Vertragspreis laut Bau- oder Kaufvertrag', 'Sonstiges'],
   ['Grundstück', 'Sonstiges'],
   ['Grunderwerbsteuer', 'Sonstiges'],
   ['Notar und Grundbuch', 'Sonstiges'],
@@ -924,6 +924,36 @@ const VORLAGE_TRAEGER = [
   ['Malerarbeiten, soweit nicht enthalten', 'Maler'],
   ['Umzug und Einrichtung', 'Sonstiges'],
   ['Puffer für Unvorhergesehenes', 'Sonstiges'],
+];
+
+// Im Bestand liegt das Geld an anderen Stellen als im Neubau. Was hier oben
+// steht, entscheidet ueber alles Weitere: Wer ohne Bestandsaufnahme und ohne
+// Schadstoffprobe anfaengt, rechnet spaeter noch einmal von vorn.
+const VORLAGE_SANIERUNG = [
+  ['Bestandsaufnahme und Aufmaß', 'Sonstiges'],
+  ['Statische Prüfung des Bestands', 'Sonstiges'],
+  ['Schadstoffuntersuchung (Asbest, KMF, PAK)', 'Sonstiges'],
+  ['Energieberatung und Sanierungsfahrplan', 'Sonstiges'],
+  ['Baugenehmigung oder Bauanzeige', 'Sonstiges'],
+  ['Gerüst', 'Sonstiges'],
+  ['Entkernung und Entsorgung', 'Rohbau'],
+  ['Trockenlegung und Abdichtung', 'Rohbau'],
+  ['Mauerwerk, Durchbrüche, Stürze', 'Rohbau'],
+  ['Dach: Eindeckung und Dämmung', 'Dach'],
+  ['Fenster und Außentüren', 'Fenster und Türen'],
+  ['Fassadendämmung und Putz', 'Putz und Trockenbau'],
+  ['Elektroinstallation erneuern', 'Elektro'],
+  ['Sanitärinstallation erneuern', 'Sanitär'],
+  ['Heizungstausch', 'Heizung'],
+  ['Innenputz und Trockenbau', 'Putz und Trockenbau'],
+  ['Estrich', 'Estrich'],
+  ['Bäder', 'Fliesen'],
+  ['Innentüren', 'Fenster und Türen'],
+  ['Bodenbeläge', 'Bodenbelag'],
+  ['Malerarbeiten', 'Maler'],
+  ['Außenanlagen', 'Außenanlagen'],
+  ['Zwischenmiete oder Auslagerung', 'Sonstiges'],
+  ['Puffer für Überraschungen im Bestand', 'Sonstiges'],
 ];
 
 // Die Posten, die bei fast jedem Neubau in Einzelvergabe vorkommen. Betraege
@@ -958,10 +988,13 @@ const VORLAGE = [
 ];
 
 async function vorlageLaden(art, nachher) {
-  // Zwei Vorlagen, weil es zwei Bauvorhaben sind. Wer schluesselfertig
-  // kauft, braucht keine Liste der Gewerke, sondern die der Posten neben dem
-  // Kaufpreis.
-  const liste = art.istTraeger ? VORLAGE_TRAEGER : VORLAGE;
+  // Je Bauweise eine Vorlage, weil es drei verschiedene Vorhaben sind. Wer
+  // schluesselfertig kauft, braucht keine Liste der Gewerke, sondern die der
+  // Posten neben dem Vertragspreis; wer saniert, eine dritte.
+  const liste = {
+    schluesselfertig: VORLAGE_SCHLUESSELFERTIG,
+    sanierung: VORLAGE_SANIERUNG,
+  }[art.id] || VORLAGE;
   if (!window.confirm(`${liste.length} übliche Positionen anlegen? Beträge bleiben leer.`)) return;
   const vorhanden = new Set((await daten.alle('posten')).map((p) => p.name));
   let angelegt = 0;
