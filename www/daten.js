@@ -16,12 +16,16 @@
 //              Abgleich vom anderen Geraet zurueck, weil der ihn noch kennt.
 
 const DB_NAME = 'hausbau';
-const DB_VERSION = 9;
+const DB_VERSION = 10;
 
 // Wo Eintraege zu einem Elternobjekt gehoeren (Pins zu einem Geschoss), steht
 // dessen Kennung als Feld drin und bekommt einen Index.
 const SPEICHER = {
   einstellungen: { schluessel: 'name' },
+  // Die Bauprojekte selbst. Der einzige Speicher neben den Einstellungen und
+  // den Bildern, der nicht nach Projekt gefiltert wird -- er ist die Liste,
+  // aus der gefiltert wird.
+  projekte: { indizes: [] },
   darlehen: { indizes: [] },
   // Bauleitfaden: nur der Haken je Punkt. Der Text steht im Programm, und
   // die Kennung des Punktes ist zugleich die des Satzes. So gibt es je Punkt
@@ -107,7 +111,7 @@ function db() {
       // Ab hier reicht Anlegen: anlegen() ueberspringt, was es schon gibt.
       // Die Wanderung auf Fassung 2 legt neue Speicher bereits mit an, ein
       // zweiter Aufruf schadet deshalb nicht.
-      if (ereignis.oldVersion < 9) {
+      if (ereignis.oldVersion < 10) {
         anlegen(d);
       }
     };
@@ -242,8 +246,57 @@ function lauf(speicher, modus, arbeit) {
 
 const lebendig = (liste) => (liste || []).filter((s) => s && !s.geloescht);
 
+/*
+ * Mehrere Bauprojekte.
+ *
+ * Getrennt wird ueber ein Feld am Satz, nicht ueber getrennte Datenbanken:
+ * Der Abgleich mit dem Server bleibt damit unveraendert, das Feld faehrt in
+ * der JSON einfach mit.
+ *
+ * Das erste Projekt hat die feste Kennung "projekt-1", auf jedem Geraet
+ * dieselbe. Ein Satz ohne projektId gehoert dorthin. Damit brauchen die
+ * vorhandenen Daten keine Wanderung: Sie bleiben, wie sie sind, und liegen
+ * trotzdem richtig -- auch auf einem zweiten Geraet, das sie ueber den
+ * Abgleich bekommt.
+ */
+export const ERSTES_PROJEKT = 'projekt-1';
+
+// Was nicht nach Projekt getrennt wird. Bilder haengen an ihrer Kennung und
+// werden nur ueber sie geholt; sie zu filtern wuerde jeden Verweis brechen.
+const OHNE_PROJEKT = new Set(['einstellungen', 'projekte', 'bilder']);
+
+// Einstellungen, die zum Projekt gehoeren und nicht zum Geraet. Beim ersten
+// Projekt behalten sie ihren blanken Namen, damit die vorhandenen Werte
+// stehen bleiben.
+const PROJEKTSACHEN = new Set(['projektname', 'baustelle']);
+
+let aktivesProjekt = null;
+
+/** Die Kennung des Projekts, in dem gerade gearbeitet wird. */
+export async function projektAktiv() {
+  if (aktivesProjekt) return aktivesProjekt;
+  const eintrag = await daten.holen('einstellungen', 'projekt_aktiv');
+  aktivesProjekt = (eintrag && eintrag.wert) || ERSTES_PROJEKT;
+  return aktivesProjekt;
+}
+
+/** Wechselt das Projekt. Der Aufrufer zeichnet danach neu. */
+export async function projektWechseln(id) {
+  await daten.sichern('einstellungen', { name: 'projekt_aktiv', wert: id });
+  aktivesProjekt = id;
+}
+
+const gehoertHierher = (speicher, satz, projekt) =>
+  OHNE_PROJEKT.has(speicher) || (satz.projektId || ERSTES_PROJEKT) === projekt;
+
 export const daten = {
-  alle: (speicher) => lauf(speicher, 'readonly', (s) => s.getAll()).then(lebendig),
+  alle: async (speicher) => {
+    const [liste, projekt] = await Promise.all([
+      lauf(speicher, 'readonly', (s) => s.getAll()).then(lebendig),
+      projektAktiv(),
+    ]);
+    return liste.filter((satz) => gehoertHierher(speicher, satz, projekt));
+  },
 
   holen: (speicher, id) =>
     lauf(speicher, 'readonly', (s) => s.get(id)).then((satz) =>
@@ -251,8 +304,13 @@ export const daten = {
     ),
 
   // Nach Index filtern, z. B. alle Pins eines Geschosses.
-  nach: (speicher, feld, wert) =>
-    lauf(speicher, 'readonly', (s) => s.index(feld).getAll(wert)).then(lebendig),
+  nach: async (speicher, feld, wert) => {
+    const [liste, projekt] = await Promise.all([
+      lauf(speicher, 'readonly', (s) => s.index(feld).getAll(wert)).then(lebendig),
+      projektAktiv(),
+    ]);
+    return liste.filter((satz) => gehoertHierher(speicher, satz, projekt));
+  },
 
   /**
    * Ohne Kennung wird angelegt, mit Kennung ueberschrieben.
@@ -269,6 +327,12 @@ export const daten = {
     }
     if (!satz.id) satz.id = neueKennung();
     if (satz.geloescht === undefined) satz.geloescht = false;
+    // Ein neuer Satz gehoert in das Projekt, in dem gerade gearbeitet wird.
+    // Ein vorhandener behaelt sein Projekt, auch wenn gerade ein anderes
+    // offen ist -- sonst wanderte er beim Bearbeiten herueber.
+    if (!OHNE_PROJEKT.has(speicher) && !satz.projektId) {
+      satz.projektId = await projektAktiv();
+    }
     satz.geaendert = optionen.zeitBehalten && satz.geaendert ? satz.geaendert : jetzt();
     await lauf(speicher, 'readwrite', (s) => s.put(satz));
     return satz.id;
@@ -291,6 +355,15 @@ export const daten = {
   /** Wirklich alles weg, ohne Grabsteine. Fuer "alle Daten loeschen". */
   leeren: (speicher) => lauf(speicher, 'readwrite', (s) => s.clear()),
 
+  /**
+   * Alles Lebendige, ueber alle Projekte hinweg.
+   *
+   * Fuer die Sicherung: Sie ersetzt beim Einlesen den ganzen Bestand, also
+   * muss sie auch den ganzen Bestand enthalten. Eine Sicherung, die still
+   * nur das offene Projekt mitnimmt, loescht beim Einlesen die uebrigen.
+   */
+  alleRoh: (speicher) => lauf(speicher, 'readonly', (s) => s.getAll()).then(lebendig),
+
   /** Auch die Grabsteine, fuer den spaeteren Abgleich mit dem Server. */
   alleMitGrabsteinen: (speicher) => lauf(speicher, 'readonly', (s) => s.getAll()),
 };
@@ -298,12 +371,24 @@ export const daten = {
 // --------------------------------------------------------------- Einstellungen
 
 export async function einstellung(name, wert) {
+  const schluessel = PROJEKTSACHEN.has(name) ? await projektschluessel(name) : name;
   if (wert === undefined) {
-    const eintrag = await daten.holen('einstellungen', name);
+    const eintrag = await daten.holen('einstellungen', schluessel);
     return eintrag ? eintrag.wert : undefined;
   }
-  await daten.sichern('einstellungen', { name, wert });
+  await daten.sichern('einstellungen', { name: schluessel, wert });
   return wert;
+}
+
+/**
+ * Der Name der Einstellung im aktuellen Projekt.
+ *
+ * Beim ersten Projekt bleibt der blanke Name stehen. So finden die
+ * vorhandenen Werte sich wieder, ohne dass etwas umgeschrieben werden muss.
+ */
+async function projektschluessel(name) {
+  const projekt = await projektAktiv();
+  return projekt === ERSTES_PROJEKT ? name : name + '@' + projekt;
 }
 
 // ---------------------------------------------------------------------- Bilder

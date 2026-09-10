@@ -82,10 +82,12 @@ gelaufen sein; bis dahin wird nicht gezaehlt, kaputt geht nichts.
 - [x] Kreditvergleich: drei Angebote nebeneinander, verglichen ueber die
       Zinskosten der Bindung
 
-## 9. Mehrere Bauprojekte
+## 9. Mehrere Bauprojekte — erledigt
 
-- [ ] Projektwahl oben in der Seitenleiste
-- [ ] Alle Daten je Projekt getrennt
+- [x] Projektwahl oben in der Seitenleiste, ab dem zweiten Projekt sichtbar
+- [x] Alle Daten je Projekt getrennt, ueber ein Feld am Satz
+- [x] Projektverwaltung: anlegen, umbenennen, loeschen mit Grabsteinen
+- [x] Die Sicherung nimmt alle Projekte mit, nicht nur das offene
 
 ## 10. Rest
 

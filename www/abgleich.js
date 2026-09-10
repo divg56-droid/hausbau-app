@@ -19,7 +19,7 @@ import {
 
 // Reihenfolge ist egal, der Server nimmt alles in einem Rutsch.
 const SPEICHER = [
-  'einstellungen', 'darlehen', 'leitfaden', 'posten', 'angebote', 'belege',
+  'einstellungen', 'projekte', 'darlehen', 'leitfaden', 'posten', 'angebote', 'belege',
   'geschosse', 'raeume', 'pins', 'maengel', 'aufgaben', 'todos', 'tagebuch',
   'dokumente', 'baudoku', 'kontakte', 'bilder',
 ];

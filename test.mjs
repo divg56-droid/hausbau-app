@@ -1142,5 +1142,49 @@ console.log('GRZ und GFZ');
     nichts.grundflaeche === 0 && nichts.geschossflaeche === 0);
 }
 
+console.log('Mehrere Bauprojekte');
+{
+  const daten_quelle = readFileSync('./www/daten.js', 'utf8');
+
+  // Das erste Projekt hat auf jedem Geraet dieselbe Kennung. Nur deshalb
+  // gehoert ein Satz ohne projektId ueberall dorthin, auch auf dem zweiten
+  // Geraet, das ihn ueber den Abgleich bekommt.
+  pruef('Das erste Projekt hat eine feste Kennung',
+    daten_quelle.includes("export const ERSTES_PROJEKT = 'projekt-1';"));
+  pruef('Ein Satz ohne Projekt gehoert zum ersten',
+    daten_quelle.includes('(satz.projektId || ERSTES_PROJEKT) === projekt'));
+
+  // Bilder haengen an ihrer Kennung und werden nur ueber sie geholt. Sie zu
+  // filtern wuerde jeden Verweis aus einem anderen Projekt brechen.
+  pruef('Bilder, Einstellungen und die Projektliste werden nicht gefiltert',
+    /const OHNE_PROJEKT = new Set\(\['einstellungen', 'projekte', 'bilder'\]\)/
+      .test(daten_quelle));
+
+  // Ein vorhandener Satz behaelt sein Projekt, auch wenn gerade ein anderes
+  // offen ist. Sonst wanderte er beim blossen Bearbeiten herueber.
+  pruef('Nur neue Saetze bekommen das offene Projekt',
+    daten_quelle.includes('if (!OHNE_PROJEKT.has(speicher) && !satz.projektId)'));
+
+  // Die Sicherung ersetzt beim Einlesen den ganzen Bestand. Nimmt sie nur
+  // das offene Projekt mit, loescht ihr Einlesen die uebrigen.
+  const sicherung = readFileSync('./www/module/einstellungen.js', 'utf8');
+  const stelle = sicherung.indexOf('async function sicherungErstellen');
+  const block = sicherung.slice(stelle, stelle + 1200);
+  pruef('Die Sicherung liest ueber alle Projekte hinweg',
+    block.includes('alleRoh') && !/await daten\.alle\(/.test(block),
+    block.includes('alleRoh') ? 'daten.alle noch drin' : 'alleRoh fehlt');
+
+  const projekte = readFileSync('./www/projekte.js', 'utf8');
+  // Ein stilles Wegwerfen nur hier waere beim naechsten Abgleich wieder da.
+  pruef('Geloeschte Projekte hinterlassen Grabsteine',
+    projekte.includes("await daten.loeschen(speicher, satz.id)"));
+  pruef('Das letzte Projekt bleibt stehen',
+    projekte.includes("Das letzte Projekt lässt sich nicht löschen."));
+  pruef('Die Projektliste steht im Abgleich',
+    readFileSync('./www/abgleich.js', 'utf8').includes("'projekte'"));
+  pruef('Die Projektverwaltung steht in der Leiste',
+    MODULE.some((m) => m.weg === 'projekte'));
+}
+
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');
 process.exit(fehler ? 1 : 0);

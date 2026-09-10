@@ -11,7 +11,7 @@ import { daten, einstellung } from '../daten.js';
 // bleibt beim Loeschen stehen. Sie steht deshalb in derselben Reihenfolge wie
 // SPEICHER in daten.js, damit ein neuer Speicher beim Vergleich auffaellt.
 const SPEICHER = [
-  'darlehen', 'leitfaden', 'posten', 'angebote', 'belege', 'geschosse',
+  'projekte', 'darlehen', 'leitfaden', 'posten', 'angebote', 'belege', 'geschosse',
   'raeume', 'pins', 'maengel', 'aufgaben', 'todos', 'tagebuch', 'dokumente',
   'baudoku', 'kontakte',
 ];
@@ -351,12 +351,14 @@ async function sicherungErstellen() {
   melde('Sicherung wird erstellt …');
   const inhalt = { version: 1, erstellt: heute(), einstellungen: {}, speicher: {}, bilder: [] };
 
-  for (const eintrag of await daten.alle('einstellungen')) {
+  // alleRoh und nicht alle: Die Sicherung nimmt alle Bauprojekte mit, nicht
+  // nur das gerade offene. Sonst loescht ihr Einlesen die uebrigen.
+  for (const eintrag of await daten.alleRoh('einstellungen')) {
     inhalt.einstellungen[eintrag.name] = eintrag.wert;
   }
-  for (const name of SPEICHER) inhalt.speicher[name] = await daten.alle(name);
+  for (const name of SPEICHER) inhalt.speicher[name] = await daten.alleRoh(name);
 
-  for (const bild of await daten.alle('bilder')) {
+  for (const bild of await daten.alleRoh('bilder')) {
     inhalt.bilder.push({
       id: bild.id,
       typ: bild.typ,
