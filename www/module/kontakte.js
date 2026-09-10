@@ -139,7 +139,7 @@ async function bearbeiten(kontakt, nachher) {
     kontakt.id ? 'Kontakt bearbeiten' : 'Kontakt anlegen',
     [
       feld('Art', art),
-      feld('Name', name, 'Name oder Firma genügt, beides ist besser.'),
+      feld('Name', name, 'Name oder Firma genügt.'),
       feld('Firma', firma),
       feld('Gewerk', gewerk),
       feld('Straße und Hausnummer', strasse),
