@@ -48,6 +48,27 @@ if (!$freigabe) {
 
 $nutzerId = (int)$freigabe['nutzer_id'];
 
+// Aufruf mitzaehlen. Erst hier, nach der Pruefung der Marke: Ein falscher
+// Verweis soll nichts hochzaehlen.
+//
+// Gezaehlt wird jeder Seitenaufruf, auch der eigene und auch ein Neuladen.
+// Genauer zu zaehlen hiesse, den Leser wiederzuerkennen, und dafuer
+// braeuchte es ein Merkmal in seinem Browser. Fuer eine Zahl, die niemand
+// abrechnet, ist das den Preis nicht wert.
+//
+// Der Bildabruf laeuft ueber dieselbe Datei und muss draussen bleiben, sonst
+// zaehlte jedes Foto einer Seite als eigener Aufruf.
+if (!isset($_GET['bild'])) {
+    try {
+        db()->prepare(
+            'UPDATE freigaben SET aufrufe = aufrufe + 1, zuletzt = NOW() WHERE marke = ?'
+        )->execute([hash('sha256', $marke)]);
+    } catch (PDOException $e) {
+        // Solange einrichten.php die Spalten noch nicht angelegt hat, wird
+        // eben nicht gezaehlt. Eine leere Seite waere der schlechtere Preis.
+    }
+}
+
 // ------------------------------------------------------------------- Eintraege
 
 /** Liest die lebenden Tagebucheintraege des Nutzers, aeltester zuerst. */

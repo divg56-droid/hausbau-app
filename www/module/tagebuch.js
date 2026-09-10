@@ -221,6 +221,7 @@ function freigabekarte() {
   const stand = el('p', { klasse: 'unterzeile', text: 'Wird geprüft …' });
   const knoepfe = el('div', { klasse: 'knopf-reihe' });
   const verweiszeile = el('p', { klasse: 'unterzeile', hidden: true });
+  const zaehlerzeile = el('p', { klasse: 'unterzeile', hidden: true });
 
   const karteInhalt = karte([
     el('h2', { text: 'Öffentlich mitlesen lassen' }),
@@ -234,15 +235,27 @@ function freigabekarte() {
     }),
     stand,
     verweiszeile,
+    zaehlerzeile,
     knoepfe,
   ]);
 
   // Wird im Anlauf unten gesetzt und danach von den Schaltflaechen benutzt.
   let konto = null;
 
-  const zeigen = (frei, verweis) => {
+  const zeigen = (frei, verweis, zahlen = null) => {
     knoepfe.replaceChildren();
     verweiszeile.hidden = !(frei && verweis);
+
+    // Die Zahl steht nur, wenn die Seite offen ist. Ein Zaehler auf einer
+    // abgeschalteten Seite waere eine Zahl ohne Gegenstand.
+    zaehlerzeile.hidden = !(frei && zahlen);
+    if (frei && zahlen) {
+      const wie = zahlen.aufrufe === 1 ? 'Ein Aufruf' : zahlen.aufrufe + ' Aufrufe';
+      zaehlerzeile.textContent = zahlen.aufrufe
+        ? wie + (zahlen.zuletzt ? ', zuletzt ' + datumLang(String(zahlen.zuletzt).slice(0, 10)) : '') +
+          '. Gezählt wird jeder Seitenaufruf, auch dein eigener.'
+        : 'Noch kein Aufruf. Gezählt wird ab dem Tag, an dem du freigeschaltet hast.';
+    }
 
     if (!frei) {
       stand.textContent = 'Das Tagebuch ist derzeit nicht öffentlich.';
@@ -275,7 +288,7 @@ function freigabekarte() {
     try {
       const antwort = await konto.freigabeAnlegen(titel.trim());
       melde('Öffentlich geschaltet.');
-      zeigen(true, antwort.verweis);
+      zeigen(true, antwort.verweis, { aufrufe: 0, zuletzt: null });
       // Ohne Abgleich stünde die Seite leer da: Sie liest vom Server.
       const { abgleichen } = await import('../abgleich.js');
       await abgleichen(() => {}).catch(() => {});
@@ -318,7 +331,10 @@ function freigabekarte() {
     }
     try {
       const antwort = await konto.freigabeStand();
-      zeigen(Boolean(antwort.frei), konto.freigabeLesen());
+      zeigen(Boolean(antwort.frei), konto.freigabeLesen(), {
+        aufrufe: Number(antwort.aufrufe) || 0,
+        zuletzt: antwort.zuletzt || null,
+      });
     } catch {
       stand.textContent = 'Der Stand ließ sich nicht abfragen. Ohne Netz ist das normal.';
     }

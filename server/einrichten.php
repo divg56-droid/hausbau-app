@@ -137,6 +137,8 @@ CREATE TABLE freigaben (
     art VARCHAR(32) NOT NULL,
     titel VARCHAR(190) NOT NULL,
     angelegt DATETIME NOT NULL,
+    aufrufe INT UNSIGNED NOT NULL DEFAULT 0,
+    zuletzt DATETIME NULL,
     PRIMARY KEY (marke),
     UNIQUE KEY je_nutzer (nutzer_id, art),
     CONSTRAINT freigabe_nutzer FOREIGN KEY (nutzer_id) REFERENCES nutzer (id) ON DELETE CASCADE
@@ -166,6 +168,28 @@ foreach ($tabellen as $name => $sql) {
     }
     db()->exec($sql);
     $meldungen[] = "$name: angelegt";
+}
+
+// Nachtraeglich hinzugekommene Spalten. Die Tabellen oben werden nur
+// angelegt, wenn sie fehlen; auf einem Server, der schon laeuft, muss die
+// Spalte einzeln nachgezogen werden. Ohne "IF NOT EXISTS", das kennt MariaDB
+// erst ab 10.0 zuverlaessig und nicht jeder Anbieter ist dort.
+$nachtrag = [
+    ['freigaben', 'aufrufe', 'INT UNSIGNED NOT NULL DEFAULT 0'],
+    ['freigaben', 'zuletzt', 'DATETIME NULL'],
+];
+foreach ($nachtrag as [$tabelle, $spalte, $art]) {
+    if (!isset($vorhanden[$tabelle])) {
+        continue;
+    }
+    $da = db()->prepare('SHOW COLUMNS FROM `' . $tabelle . '` LIKE ?');
+    $da->execute([$spalte]);
+    if ($da->fetch()) {
+        $meldungen[] = "$tabelle.$spalte: vorhanden";
+        continue;
+    }
+    db()->exec('ALTER TABLE `' . $tabelle . '` ADD `' . $spalte . '` ' . $art);
+    $meldungen[] = "$tabelle.$spalte: ergaenzt";
 }
 
 // Ablage fuer die Bilddateien. Liegt unter daten/, das per .htaccess gesperrt

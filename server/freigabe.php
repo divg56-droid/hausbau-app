@@ -38,8 +38,10 @@ function verweisAuf(string $marke): string
 
 function vorhandene(int $nutzerId): ?array
 {
+    // "*" und nicht die Spaltenliste: Der Zaehler kommt erst mit
+    // einrichten.php dazu, und bis dahin soll die Abfrage trotzdem laufen.
     $s = db()->prepare(
-        'SELECT titel, angelegt FROM freigaben WHERE nutzer_id = ? AND art = ?'
+        'SELECT * FROM freigaben WHERE nutzer_id = ? AND art = ?'
     );
     $s->execute([$nutzerId, ART]);
     $zeile = $s->fetch();
@@ -54,6 +56,12 @@ if ($tun === 'stand') {
         'frei' => $da !== null,
         'titel' => $da['titel'] ?? '',
         'angelegt' => $da['angelegt'] ?? null,
+        // Gezaehlt wird jeder Seitenaufruf, auch der eigene. Wer genauer
+        // zaehlen wollte, muesste die Besucher wiedererkennen, und dafuer
+        // braeuchte es ein Merkmal im Browser des Lesers. Das ist es nicht
+        // wert.
+        'aufrufe' => (int)($da['aufrufe'] ?? 0),
+        'zuletzt' => $da['zuletzt'] ?? null,
     ]);
 }
 
