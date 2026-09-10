@@ -18,7 +18,8 @@ import {
   el, feld, auswahl, knopf, karte, kopfzeile, hinweisKasten, melde, datumLang, heute, zahl,
 } from '../hilfen.js';
 import { daten, einstellung } from '../daten.js';
-import { PHASEN, leitfadenStand } from '../leitfaden-daten.js';
+import { leitfadenStand } from '../leitfaden-daten.js';
+import { bauweise } from '../bauweise.js';
 
 export async function zeige(rahmen) {
   await zeichne(rahmen);
@@ -30,16 +31,22 @@ async function ansichtLesen() {
 
 async function zeichne(rahmen) {
   rahmen.replaceChildren();
-  const [gespeichert, ansicht, stelle] = await Promise.all([
-    daten.alle('leitfaden'), ansichtLesen(), einstellung('leitfaden_punkt'),
+  const [gespeichert, ansicht, stelle, art] = await Promise.all([
+    daten.alle('leitfaden'), ansichtLesen(), einstellung('leitfaden_punkt'), bauweise(),
   ]);
-  const stand = leitfadenStand(gespeichert);
+  // Der Leitfaden zeigt nur, was zur Bauweise passt. Haken zu Punkten, die
+  // hier nicht gelten, bleiben gespeichert und zaehlen nur nicht mit.
+  const stand = leitfadenStand(gespeichert, art.id);
   const neu = () => zeichne(rahmen);
 
   const anteil = stand.gesamt ? Math.round((stand.erledigt / stand.gesamt) * 100) : 0;
 
   rahmen.append(
-    kopfzeile('Bauleitfaden', 'Die Reihenfolge ist der Inhalt: Fast jeder teure Fehler kommt zu spät.'),
+    kopfzeile(
+      'Bauleitfaden',
+      'Die Reihenfolge ist der Inhalt: Fast jeder teure Fehler kommt zu spät. ' +
+        'Zugeschnitten auf: ' + art.name + '.'
+    ),
     el('div', { klasse: 'geschossleiste' }, [
       ['wizard', 'Schritt für Schritt'],
       ['alle', 'Alle Phasen'],
@@ -81,6 +88,9 @@ const stelleMerken = (id) => einstellung('leitfaden_punkt', id);
 
 function zeigeWizard(rahmen, stand, gemerkt, neu) {
   const flach = flachLegen(stand);
+  // Eine Phase, aus der die Bauweise alles herausgefiltert hat, taucht nicht
+  // auf. Sonst stuende sie in der Wahl und fuehrte beim Anklicken ins Leere.
+  const phasen = stand.phasen.filter((p) => p.gesamt > 0);
 
   // Wo man zuletzt war. Ist der Punkt aus der Vorlage verschwunden oder war
   // man noch nie hier, faengt man beim naechsten offenen an.
@@ -102,14 +112,14 @@ function zeigeWizard(rahmen, stand, gemerkt, neu) {
 
   // ---------------------------------------------------------- Linke Spalte
   const phasenwahl = auswahl(
-    stand.phasen.map((p, i) => [
+    phasen.map((p, i) => [
       p.id,
       `Phase ${i + 1}: ${p.titel}`,
     ]),
     phase.id
   );
   phasenwahl.addEventListener('change', async () => {
-    const ziel = stand.phasen.find((p) => p.id === phasenwahl.value);
+    const ziel = phasen.find((p) => p.id === phasenwahl.value);
     // In eine Phase springt man auf ihren ersten offenen Punkt: Das ist das,
     // was dort ansteht.
     const offen = ziel.punkte.find((p) => !p.erledigt) || ziel.punkte[0];
@@ -165,7 +175,7 @@ function zeigeWizard(rahmen, stand, gemerkt, neu) {
   // ---------------------------------------------------------- Rechte Spalte
   const uebersicht = karte([
     el('h2', { text: 'Phasen-Übersicht' }),
-    el('ul', { klasse: 'liste phasenliste' }, stand.phasen.map((p, i) => {
+    el('ul', { klasse: 'liste phasenliste' }, phasen.map((p, i) => {
       const fertig = p.fertig === p.gesamt;
       return el('li', {}, [
         el('button', {

@@ -21,7 +21,9 @@ import { angeboteRechnen, leistungsvergleich } from './www/module/angebote.js';
 import { todoStand, todosSortieren } from './www/module/todos.js';
 import { VORLAGEN } from './www/checklisten-daten.js';
 import { BEREICHE, MODULE } from './www/bereiche.js';
-import { PHASEN, ALLE_PUNKTE, leitfadenStand } from './www/leitfaden-daten.js';
+import {
+  PHASEN, ALLE_PUNKTE, leitfadenStand, punkteFuer, giltFuer,
+} from './www/leitfaden-daten.js';
 import { csvText, zelle } from './www/csv.js';
 import { xlsxBytes, spalte } from './www/xlsx.js';
 import {
@@ -1384,6 +1386,74 @@ console.log('Bauweise');
   for (const w of ['ablauf', 'angebote', 'kontakte/gewerke']) {
     pruef('Der versteckbare Weg ' + w + ' existiert', wege.has(w));
   }
+}
+
+console.log('Leitfaden je Bauweise');
+{
+  const WEISEN = ['einzelvergabe', 'schluesselfertig', 'sanierung'];
+
+  // Ohne Angabe gilt der ganze Leitfaden. Das ist der Normalfall und muss
+  // der Normalfall bleiben.
+  pruef('Ohne Bauweise gilt alles', punkteFuer().length === ALLE_PUNKTE.length);
+  pruef('Ein Punkt ohne Angabe gilt ueberall',
+    WEISEN.every((w) => giltFuer({ id: 'x' }, w)));
+
+  for (const w of WEISEN) {
+    const drin = punkteFuer(w);
+    pruef(w + ' hat einen eigenen Zuschnitt', drin.length >= 55 && drin.length <= 80,
+      String(drin.length));
+    pruef(w + ': jeder Punkt gehoert dorthin', drin.every((p) => giltFuer(p, w)));
+  }
+
+  // Die Zuschnitte muessen sich unterscheiden, sonst filtert nichts.
+  const groessen = WEISEN.map((w) => punkteFuer(w).length);
+  pruef('Die drei Zuschnitte sind verschieden', new Set(groessen).size === 3,
+    groessen.join(', '));
+
+  // Jeder Punkt muss in mindestens einer Bauweise vorkommen. Ein Punkt, den
+  // niemand sieht, ist toter Text.
+  const nirgends = ALLE_PUNKTE.filter((p) => !WEISEN.some((w) => giltFuer(p, w)));
+  pruef('Kein Punkt faellt ueberall heraus', nirgends.length === 0,
+    nirgends.map((p) => p.id).join(', '));
+
+  // Und jede eingeschraenkte Bauweise muss es geben.
+  const genannt = new Set(ALLE_PUNKTE.flatMap((p) => p.bauweisen || []));
+  pruef('Nur bekannte Bauweisen werden genannt',
+    [...genannt].every((w) => WEISEN.includes(w)), [...genannt].join(', '));
+
+  // Der Stand rechnet je Bauweise, und die Haken bleiben dieselben.
+  const alleHaken = ALLE_PUNKTE.map((p) => ({ id: p.id, erledigt: true }));
+  for (const w of WEISEN) {
+    const st = leitfadenStand(alleHaken, w);
+    pruef(w + ': alles abgehakt ist alles', st.erledigt === st.gesamt && st.naechster === null);
+    pruef(w + ': die Gesamtzahl folgt dem Zuschnitt', st.gesamt === punkteFuer(w).length);
+  }
+
+  // Ein Haken auf einen Punkt, den diese Bauweise nicht kennt, zaehlt nicht
+  // mit -- er bleibt aber gespeichert und kommt beim Zurueckstellen wieder.
+  const nurEinzel = ALLE_PUNKTE.find((p) => p.bauweisen && !p.bauweisen.includes('schluesselfertig'));
+  pruef('Es gibt Punkte, die dem Schluesselfertigen fehlen', Boolean(nurEinzel));
+  const fremd = leitfadenStand([{ id: nurEinzel.id, erledigt: true }], 'schluesselfertig');
+  pruef('Ein fremder Haken zaehlt dort nicht mit', fremd.erledigt === 0);
+  pruef('In seiner eigenen Bauweise zaehlt er',
+    leitfadenStand([{ id: nurEinzel.id, erledigt: true }], nurEinzel.bauweisen[0]).erledigt === 1,
+    nurEinzel.id + ' gilt fuer ' + nurEinzel.bauweisen.join(', '));
+
+  // Eine leere Phase darf weder die laufende sein noch als fertig gelten.
+  for (const w of WEISEN) {
+    pruef(w + ': keine Phase ist leer',
+      leitfadenStand([], w).phasen.every((p) => p.gesamt > 0));
+  }
+
+  const modul = readFileSync('./www/module/leitfaden.js', 'utf8');
+  pruef('Der Bildschirm reicht die Bauweise durch',
+    modul.includes('leitfadenStand(gespeichert, art.id)'));
+  pruef('Und die Uebersicht ebenso',
+    readFileSync('./www/module/uebersicht.js', 'utf8').includes('leitfadenStand(haken, art.id)'));
+  // Eine Phase, aus der alles herausgefiltert wurde, fuehrt beim Anklicken
+  // sonst ins Leere.
+  pruef('Leere Phasen stehen nicht in der Wahl',
+    modul.includes('stand.phasen.filter((p) => p.gesamt > 0)'));
 }
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');

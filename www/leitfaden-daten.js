@@ -14,6 +14,18 @@
 // "ziel" verweist auf den Bereich der App, in dem der Punkt erledigt wird.
 // Ohne diesen Verweis waere der Leitfaden eine Liste zum Abhaken statt ein
 // Wegweiser.
+//
+// "bauweisen" schraenkt einen Punkt auf bestimmte Bauweisen ein. Fehlt das
+// Feld, gilt der Punkt fuer alle -- das ist der Normalfall und soll es
+// bleiben. Aufgezaehlt wird nur, wo ein Punkt sicher nicht zutrifft: Wer
+// schluesselfertig kauft, beauftragt keine Statik und vergleicht keine
+// Gewerkeangebote; wer im Bestand saniert, faengt mit Dingen an, die es beim
+// Neubau nicht gibt.
+//
+// Ein Haken bleibt gespeichert, auch wenn sein Punkt in der gewaehlten
+// Bauweise nicht gilt. Er zaehlt dann nur nicht mit und taucht beim
+// Zurueckstellen wieder auf -- ausgeblendet heisst auch hier nicht
+// geloescht.
 
 export const PHASEN = [
   {
@@ -55,6 +67,24 @@ export const PHASEN = [
     titel: 'Grundstück und Verträge',
     text: 'Hier werden die teuersten Fehler gemacht, weil alles unterschrieben wird, bevor es geprüft ist.',
     punkte: [
+      { id: 'bestandsaufnahme', titel: 'Bestand aufmessen und dokumentieren',
+        text: 'Pläne aus den Sechzigern stimmen selten. Vor jeder Planung ein eigenes Aufmaß, sonst passt später nichts.',
+        ziel: '#/baudoku', bauweisen: ['sanierung'] },
+      { id: 'schadstoffe', titel: 'Schadstoffe untersuchen lassen',
+        text: 'Asbest in Kleber und Platten, KMF in der Dämmung, PAK im Parkettkleber. Wer das erst beim Abriss merkt, zahlt den Stillstand mit.',
+        bauweisen: ['sanierung'] },
+      { id: 'statik-bestand', titel: 'Statik des Bestands prüfen lassen',
+        text: 'Vor jedem Durchbruch und jeder neuen Last. Auch der Dachausbau ist eine Laständerung.',
+        bauweisen: ['sanierung'] },
+      { id: 'energieberater', titel: 'Energieberater einschalten, vor dem ersten Auftrag',
+        text: 'Der individuelle Sanierungsfahrplan ist Voraussetzung für die meisten Zuschüsse — und die gibt es nur vorher, nie rückwirkend.',
+        ziel: '#/finanzierung', bauweisen: ['sanierung'] },
+      { id: 'reihenfolge-sanierung', titel: 'Reihenfolge festlegen: Hülle vor Technik',
+        text: 'Erst dämmen, dann die Heizung auslegen. Umgekehrt kauft man eine Anlage, die zu groß ist und dauerhaft schlechter läuft.',
+        baushinweis: true, bauweisen: ['sanierung'] },
+      { id: 'wohnen-waehrend', titel: 'Klären, ob während der Arbeiten gewohnt wird',
+        text: 'Zwischenmiete, Küche, Bad und Staubschutz kosten Geld und Nerven. Beides gehört vorher ins Budget.',
+        bauweisen: ['sanierung'] },
       { id: 'lage', titel: 'Lage und Anbindung prüfen',
         text: 'Zu verschiedenen Tageszeiten hinfahren. Lärm, Verkehr und Sonnenstand sieht man nicht im Exposé.' },
       { id: 'bebauungsplan', titel: 'Bebauungsplan einsehen',
@@ -81,6 +111,18 @@ export const PHASEN = [
         text: 'Ein paar hundert Euro gegen ein Risiko im sechsstelligen Bereich. Der beste Euro am ganzen Bau.' },
       { id: 'leistungsbeschreibung', titel: 'Bau- und Leistungsbeschreibung Position für Position prüfen',
         text: 'Was nicht drinsteht, ist nicht dabei. Genau daraus entstehen später die Nachträge.' },
+      { id: 'mabv-raten', titel: 'Ratenplan gegen die MaBV prüfen',
+        text: 'Beim Bauträger sind die Raten gesetzlich gedeckelt und an Bauabschnitte gebunden. Wer im Voraus zahlt, verliert sein Druckmittel.',
+        bauweisen: ['schluesselfertig'] },
+      { id: 'fertigstellungssicherheit', titel: 'Fertigstellungssicherheit von fünf Prozent sichern',
+        text: 'Nach § 650m BGB steht sie dir zu. Sie ist das Einzige, was hilft, wenn die Firma in der Schlussphase stehenbleibt.',
+        bauweisen: ['schluesselfertig'] },
+      { id: 'bausoll', titel: 'Bau-Soll gegen die Werbeprospekte abgleichen',
+        text: 'Was im Prospekt steht, ist nicht geschuldet. Geschuldet ist, was in der Bau- und Leistungsbeschreibung steht, Position für Position.',
+        bauweisen: ['schluesselfertig'] },
+      { id: 'eigenleistung-vertrag', titel: 'Eigenleistungen im Vertrag festhalten',
+        text: 'Was du selbst machst, muss aus dem Leistungsumfang heraus und im Preis abgezogen sein. Sonst zahlst du es zweimal.',
+        bauweisen: ['schluesselfertig'] },
       { id: 'zahlungsplan', titel: 'Zahlungsplan an den Baufortschritt koppeln',
         text: 'Niemals Vorkasse. Immer erst die Leistung, dann das Geld.' },
     ],
@@ -93,11 +135,17 @@ export const PHASEN = [
       { id: 'bauantrag', titel: 'Bauantrag oder Bauanzeige einreichen',
         text: 'Je nach Bundesland und Bebauungsplan. Rechne mit zwei bis sechs Monaten Bearbeitung.' },
       { id: 'statik', titel: 'Statik beauftragen',
-        text: 'Gehört zum Antrag und bestimmt Wandstärken, Decken und Fundamente.' },
+        text: 'Gehört zum Antrag und bestimmt Wandstärken, Decken und Fundamente.',
+        // Beim schluesselfertigen Bauen liefert die Firma die Statik.
+        bauweisen: ['einzelvergabe', 'sanierung'] },
       { id: 'geg', titel: 'GEG-Nachweis erstellen lassen',
-        text: 'Der Energienachweis. Er entscheidet auch darüber, welche Förderung möglich ist.' },
+        text: 'Der Energienachweis. Er entscheidet auch darüber, welche Förderung möglich ist.',
+        // Der Nachweis gehoert zum Genehmigungspaket der Firma.
+        bauweisen: ['einzelvergabe', 'sanierung'] },
       { id: 'entwaesserung', titel: 'Entwässerungsantrag stellen',
-        text: 'Regen- und Schmutzwasser getrennt. Versickerung braucht oft eine eigene Erlaubnis.' },
+        text: 'Regen- und Schmutzwasser getrennt. Versickerung braucht oft eine eigene Erlaubnis.',
+        // Stellt die Firma mit dem Bauantrag.
+        bauweisen: ['einzelvergabe', 'sanierung'] },
       { id: 'hausanschluesse', titel: 'Hausanschlüsse beantragen',
         text: 'Strom, Wasser, Abwasser, gegebenenfalls Gas und Telekommunikation. Vorlaufzeiten von Monaten sind normal.' },
       { id: 'baustrom', titel: 'Baustrom und Bauwasser anmelden',
@@ -108,7 +156,9 @@ export const PHASEN = [
         text: 'Amtlich. Ein falsch gesetztes Haus ist nicht heilbar.' },
       { id: 'bg-bau', titel: 'Bauvorhaben bei der Berufsgenossenschaft anmelden',
         text: 'Pflicht, sobald Helfer mitarbeiten. Sie sind darüber unfallversichert, und gefragt wird nach den geleisteten Stunden.',
-        ziel: '#/tagebuch' },
+        ziel: '#/tagebuch',
+        // Ohne eigene Helfer keine Anmeldung.
+        bauweisen: ['einzelvergabe', 'sanierung'] },
     ],
   },
   {
@@ -130,10 +180,14 @@ export const PHASEN = [
         ziel: '#/baukasse/kosten' },
       { id: 'angebote-vergleichen', titel: 'Je Gewerk mindestens drei Angebote vergleichen',
         text: 'Die Spanne liegt am Bau regelmäßig im zweistelligen Prozentbereich.',
-        ziel: '#/angebote' },
+        ziel: '#/angebote',
+        // Es gibt nur einen Vertrag, keine Gewerkeangebote.
+        bauweisen: ['einzelvergabe', 'sanierung'] },
       { id: 'bauzeitenplan', titel: 'Bauzeitenplan aufstellen',
         text: 'Die Reihenfolge zählt: Elektro vor Putz, Estrich vor Fliesen. Wer das plant, zahlt keinen Rückbau.',
-        ziel: '#/ablauf' },
+        ziel: '#/ablauf',
+        // Die Reihenfolge steuert die Firma.
+        bauweisen: ['einzelvergabe', 'sanierung'] },
     ],
   },
   {
@@ -142,13 +196,17 @@ export const PHASEN = [
     text: 'Ab hier zählt die Dokumentation. Was am selben Tag festgehalten wurde, gilt später als Beweis.',
     punkte: [
       { id: 'baustelle', titel: 'Baustelleneinrichtung und Zufahrt klären',
-        text: 'Platz für Kran, Container und Anlieferung. Auch Nachbargrundstücke rechtzeitig ansprechen.' },
+        text: 'Platz für Kran, Container und Anlieferung. Auch Nachbargrundstücke rechtzeitig ansprechen.',
+        // Baustelleneinrichtung ist Sache der Firma.
+        bauweisen: ['einzelvergabe', 'sanierung'] },
       { id: 'tagebuch-fuehren', titel: 'Bautagebuch täglich führen',
         text: 'Wetter, Anwesende, Fortschritt. Bei Streit hat das Tagebuch die höchste Beweiskraft.',
         ziel: '#/tagebuch' },
       { id: 'helferstunden', titel: 'Helferstunden erfassen',
         text: 'Je Person und Tag. Genau danach fragt die Berufsgenossenschaft.',
-        ziel: '#/tagebuch' },
+        ziel: '#/tagebuch',
+        // Ohne eigene Helfer keine Stunden.
+        bauweisen: ['einzelvergabe', 'sanierung'] },
       { id: 'gruendung', titel: 'Baugrube und Gründung prüfen',
         text: 'Sohle, Dämmung und Bewehrung vor dem Betonieren ansehen und fotografieren.' },
       { id: 'rohbau-masse', titel: 'Rohbaumaße und Öffnungen kontrollieren',
@@ -208,17 +266,29 @@ export const ALLE_PUNKTE = PHASEN.flatMap((p) =>
   p.punkte.map((punkt) => ({ ...punkt, phaseId: p.id, phase: p.titel }))
 );
 
+/** Gilt der Punkt bei dieser Bauweise? Ohne Angabe gilt er ueberall. */
+export const giltFuer = (punkt, bauweise) =>
+  !punkt.bauweisen || !bauweise || punkt.bauweisen.includes(bauweise);
+
+/** Die Punkte einer Bauweise, in der Reihenfolge des Leitfadens. */
+export const punkteFuer = (bauweise) => ALLE_PUNKTE.filter((p) => giltFuer(p, bauweise));
+
 /**
  * Rechnet den Stand aus.
  *
+ * Punkte, die zur Bauweise nicht passen, fallen heraus. Ihre Haken bleiben
+ * gespeichert und zaehlen nur nicht mit: Wer die Bauweise zurueckstellt,
+ * findet sie wieder.
+ *
  * @param {Array<{id: string, erledigt?: boolean}>} stand  gespeicherte Haken
+ * @param {string} [bauweise]  ohne Angabe gilt der ganze Leitfaden
  * @returns {{phasen: Array, erledigt: number, gesamt: number, naechster: object|null}}
  */
-export function leitfadenStand(stand) {
+export function leitfadenStand(stand, bauweise) {
   const haken = new Map((stand || []).map((s) => [s.id, s]));
 
   const phasen = PHASEN.map((phase) => {
-    const punkte = phase.punkte.map((punkt) => ({
+    const punkte = phase.punkte.filter((punkt) => giltFuer(punkt, bauweise)).map((punkt) => ({
       ...punkt,
       phaseId: phase.id,
       erledigt: Boolean(haken.get(punkt.id)?.erledigt),
@@ -235,7 +305,9 @@ export function leitfadenStand(stand) {
   // Die laufende Phase ist die erste, die noch nicht fertig ist. Sie bleibt
   // es auch, wenn in einer spaeteren schon etwas abgehakt wurde: Am Bau
   // arbeitet man vor, aber der Fortschritt bemisst sich am Rueckstand.
-  const laufend = phasen.find((p) => p.fertig < p.gesamt) || phasen[phasen.length - 1];
+  const laufend = phasen.find((p) => p.gesamt > 0 && p.fertig < p.gesamt)
+    || phasen.filter((p) => p.gesamt > 0).pop()
+    || phasen[phasen.length - 1];
   const naechster = laufend.punkte.find((p) => !p.erledigt) || null;
 
   return { phasen, erledigt, gesamt, laufend, naechster };

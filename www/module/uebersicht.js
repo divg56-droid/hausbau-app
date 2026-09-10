@@ -17,10 +17,11 @@ import { postenRechnen } from './baukasse.js';
 import { terminePlanen } from './ablauf.js';
 import { STATUS } from './maengel.js';
 import { leitfadenStand } from '../leitfaden-daten.js';
+import { bauweise } from '../bauweise.js';
 import { todoStand, todosSortieren } from './todos.js';
 
 export async function zeige(rahmen) {
-  const [projekt, stand, posten, belege, aufgaben, maengel, tagebuch, haken, todos] =
+  const [projekt, stand, posten, belege, aufgaben, maengel, tagebuch, haken, todos, art] =
     await Promise.all([
     einstellung('projektname'),
     finanzierungsstand(),
@@ -31,8 +32,9 @@ export async function zeige(rahmen) {
     daten.alle('tagebuch'),
     daten.alle('leitfaden'),
     daten.alle('todos'),
+    bauweise(),
   ]);
-  const leitfaden = leitfadenStand(haken);
+  const leitfaden = leitfadenStand(haken, art.id);
 
   const gerechnet = posten.map((p) => ({ ...p, ...postenRechnen(p, belege) }));
   const geplant = gerechnet.reduce((s, p) => s + p.geplant, 0);
