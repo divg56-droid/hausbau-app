@@ -18,6 +18,7 @@ import {
   el, feld, eingabe, auswahl, knopf, karte, kopfzeile, hinweisKasten,
   leerzustand, melde, datumLang, heute,
   anhaengen,
+  kartengitter,
 } from '../hilfen.js';
 import { daten, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -127,6 +128,9 @@ async function zeichne(rahmen) {
     );
   }
 
+  const gitter = kartengitter([]);
+  anhaengen(rahmen, gitter);
+
   for (const art of ARTEN) {
     const drin = gefiltert
       .filter((d) => (d.art || 'Sonstiges') === art)
@@ -134,7 +138,7 @@ async function zeichne(rahmen) {
     if (!drin.length) continue;
 
     anhaengen(
-      rahmen,
+      gitter,
       karte([
         el('h2', { klasse: 'mit-zeichen' }, [
           zeichen(dokumentZeichen(art), { groesse: 20 }),

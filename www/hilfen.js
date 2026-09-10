@@ -117,6 +117,18 @@ export function kopfzeile(titel, untertitel) {
   ]);
 }
 
+/**
+ * Ein Gitter fuer gleichrangige Karten.
+ *
+ * Sechs Karten untereinander sind auf einem Bildschirm eine Kolonne mit viel
+ * Luft daneben. Das Gitter richtet sich nach seinem Behaelter, nicht nach dem
+ * Fenster: In einer schmalen Spalte bleibt es einspaltig, und wer das Fenster
+ * schmaler zieht, sieht die Karten von allein zusammenrutschen.
+ */
+export function kartengitter(karten) {
+  return el('div', { klasse: 'kartengitter' }, karten);
+}
+
 export function karte(kinder, klasse = '') {
   return el('section', { klasse: ('karte ' + klasse).trim() }, kinder);
 }

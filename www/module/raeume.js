@@ -11,6 +11,7 @@ import {
   el, eur, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile,
   wertzeile, hinweisKasten, leerzustand, zuZahl, melde, datumLang, zahl,
   anhaengen,
+  kartengitter,
 } from '../hilfen.js';
 import { daten, bildUrl, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -129,6 +130,9 @@ async function zeichne(rahmen) {
     ? [...geschosse, { id: null, name: 'Ohne Geschoss' }]
     : [{ id: null, name: null }];
 
+  const gitter = kartengitter([]);
+  anhaengen(rahmen, gitter);
+
   for (const g of gruppen) {
     const drin = raeume.filter((r) => (r.geschossId || null) === g.id);
     if (!drin.length) continue;
@@ -186,7 +190,7 @@ async function zeichne(rahmen) {
       })
     );
 
-    anhaengen(rahmen, karte([
+    anhaengen(gitter, karte([
       g.name ? el('h2', { text: g.name }) : null,
       el('ul', { klasse: 'liste' }, zeilen),
     ].filter(Boolean)));

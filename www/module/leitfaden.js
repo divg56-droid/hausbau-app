@@ -15,8 +15,8 @@
 // leitfaden-daten.js; waechst sie, taucht ein neuer Punkt einfach auf.
 
 import {
-  el, feld, auswahl, knopf, karte, kopfzeile, hinweisKasten, melde, datumLang, heute, zahl,
-  anhaengen,
+  el, feld, auswahl, knopf, karte, kartengitter, kopfzeile, hinweisKasten, melde,
+  datumLang, heute, zahl, anhaengen,
 } from '../hilfen.js';
 import { daten, einstellung } from '../daten.js';
 import { leitfadenStand } from '../leitfaden-daten.js';
@@ -221,7 +221,7 @@ function zeigeWizard(rahmen, stand, gemerkt, neu) {
 function zeigeAllePhasen(rahmen, stand, neu) {
   // Sechs Bloecke untereinander sind auf einem Bildschirm eine Kolonne mit
   // viel Luft daneben. In zwei Spalten sieht man den ganzen Bau auf einmal.
-  const gitter = el('div', { klasse: 'phasengitter' });
+  const gitter = kartengitter([]);
   anhaengen(rahmen, gitter);
 
   for (const phase of stand.phasen) {

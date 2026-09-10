@@ -9,6 +9,7 @@ import {
   el, feld, eingabe, auswahl, knopf, karte, kopfzeile, hinweisKasten,
   leerzustand, melde, datumLang, heute,
   anhaengen,
+  kartengitter,
 } from '../hilfen.js';
 import { daten, bildUrl, bildLoeschen } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -97,10 +98,13 @@ async function zeichne(rahmen, filter = 'alle') {
     anhaengen(rahmen, karte([el('p', { klasse: 'unterzeile', text: 'In dieser Ansicht ist nichts.' })]));
   }
 
+  const gitter = kartengitter([]);
+  anhaengen(rahmen, gitter);
+
   for (const raum of raeume) {
     const drin = sichtbar.filter((m) => (m.raum || 'Ohne Raum') === raum);
     anhaengen(
-      rahmen,
+      gitter,
       karte([
         el('h2', { text: raum }),
         el('ul', { klasse: 'liste' }, await Promise.all(drin.map(async (m) => {

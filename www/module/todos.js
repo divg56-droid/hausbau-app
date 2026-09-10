@@ -15,6 +15,7 @@ import {
   el, feld, eingabe, knopf, karte, kopfzeile, hinweisKasten,
   leerzustand, melde, datumLang, heute,
   anhaengen,
+  kartengitter,
 } from '../hilfen.js';
 import { daten } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -182,13 +183,16 @@ function zeigeChecklisten(rahmen, todos, neu) {
     );
   }
 
+  const gitter = kartengitter([]);
+  anhaengen(rahmen, gitter);
+
   for (const name of listen) {
     const drin = todos.filter((t) => t.liste === name);
     const fertig = drin.filter((t) => t.erledigt).length;
     const anteil = Math.round((fertig / drin.length) * 100);
 
     anhaengen(
-      rahmen,
+      gitter,
       el('details', {
         klasse: 'karte phasenblock',
         // Fertige Listen zugeklappt: Sie sind erledigt, sie sollen nur noch

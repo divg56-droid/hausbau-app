@@ -1622,9 +1622,17 @@ console.log('Anhaengen und Anordnung');
     css.includes('.karte > *, .blatt > * { flex: 1 1 100%; min-width: 0; }'));
   pruef('Erst ab einem Bildschirm, nicht auf dem Telefon',
     css.includes('@media (min-width: 760px)'));
-  pruef('Die Phasen des Leitfadens stehen in einem Gitter',
-    css.includes('.phasengitter') &&
-    readFileSync('./www/module/leitfaden.js', 'utf8').includes("klasse: 'phasengitter'"));
+  // Gleichrangige Karten gehoeren nebeneinander, sobald der Behaelter es
+  // hergibt -- sechs untereinander sind eine Kolonne mit Luft daneben.
+  pruef('Es gibt ein Gitter fuer gleichrangige Karten',
+    css.includes('.kartengitter') &&
+    readFileSync('./www/hilfen.js', 'utf8').includes('export function kartengitter'));
+  pruef('Der Leitfaden benutzt es',
+    readFileSync('./www/module/leitfaden.js', 'utf8').includes('kartengitter(['));
+  // Das Gitter richtet sich nach seinem Behaelter, nicht nach dem Fenster:
+  // In einer schmalen Spalte bleibt es einspaltig.
+  pruef('Die Spaltenzahl richtet sich nach dem Platz',
+    css.includes('repeat(auto-fit, minmax(340px, 1fr))'));
 }
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');

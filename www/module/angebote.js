@@ -13,6 +13,7 @@ import {
   el, eur, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile,
   hinweisKasten, leerzustand, zuZahl, melde, datumLang, heute, zahl,
   anhaengen,
+  kartengitter,
 } from '../hilfen.js';
 import { daten, bildUrl, bildLoeschen, einstellung, neueKennung } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -216,9 +217,11 @@ async function zeichne(rahmen) {
     );
   }
 
-  for (const gruppe of jePosten) {
-    anhaengen(rahmen, gruppenkarte(gruppe, posten, kontakte, neu));
-  }
+  // Je Position eine Karte, nebeneinander sobald der Platz reicht.
+  anhaengen(
+    rahmen,
+    kartengitter(jePosten.map((gruppe) => gruppenkarte(gruppe, posten, kontakte, neu)))
+  );
 
   if (ohneZuordnung.length) {
     anhaengen(

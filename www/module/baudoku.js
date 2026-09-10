@@ -16,6 +16,7 @@ import {
   el, feld, eingabe, auswahl, knopf, karte, kopfzeile, hinweisKasten,
   leerzustand, melde, datumLang, heute,
   anhaengen,
+  kartengitter,
 } from '../hilfen.js';
 import { daten, bildUrl, bildLoeschen, einstellung } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -82,12 +83,15 @@ async function zeichne(rahmen) {
     gruppen.get(phase).push(e);
   }
 
+  const gitter = kartengitter([]);
+  anhaengen(rahmen, gitter);
+
   for (const [phase, drin] of gruppen) {
     if (!drin.length) continue;
     drin.sort((a, b) => String(b.datum || '').localeCompare(String(a.datum || '')));
 
     anhaengen(
-      rahmen,
+      gitter,
       el('details', { klasse: 'karte phasenblock', open: true }, [
         el('summary', {}, [
           el('span', { klasse: 'phasen-titel', text: phase }),

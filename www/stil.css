@@ -96,8 +96,18 @@ a { color: var(--akzent-dunkel); }
   flex: 1 1 auto; min-width: 0;
   padding: 16px;
   padding-bottom: calc(32px + env(safe-area-inset-bottom));
-  max-width: 720px; margin: 0 auto;
+  /* Frueher 720 Pixel, die Lesebreite eines Fliesstextes. Das war fuer eine
+     App die falsche Vorgabe: Es ist der Deckel, unter dem keine zweite Spalte
+     entstehen kann, egal wie breit der Bildschirm ist. Kacheln, Listen und
+     Tabellen wollen die Breite; der Fliesstext bekommt sie unten einzeln
+     wieder abgenommen. */
+  max-width: 1180px; margin: 0 auto;
 }
+
+/* Lange Saetze bleiben lesbar: Ueber etwa siebzig Zeichen je Zeile verliert
+   das Auge beim Ruecksprung die naechste Zeile. Das betrifft nur den
+   Fliesstext, nicht die Zahlen daneben. */
+.wizard-text, .seitenkopf .unterzeile, .leer p { max-width: 68ch; }
 
 .seitenkopf { margin-bottom: 16px; }
 .unterzeile { color: var(--tinte-leise); font-size: 14px; margin: 0; }
@@ -786,13 +796,24 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
   .karte > .balkenzeile { flex: 1 1 300px; }
   .karte > .wertzeile { flex: 1 1 280px; }
 
-  /* Die Phasen des Leitfadens in zwei Spalten, statt sechs Bloecke
-     untereinander. */
-  .phasengitter {
+  /* Listen: Raeume, Maengel, Kontakte, Dokumente, Aufgaben. Sie richten sich
+     nach ihrem Behaelter, nicht nach dem Fenster -- eine Liste in einer
+     schmalen Spalte bleibt einspaltig, dieselbe Liste in einer breiten Karte
+     bekommt zwei. Deshalb "auto-fit" und keine feste Spaltenzahl: Wer das
+     Fenster schmaler zieht, sieht sie von allein zusammenrutschen. */
+  .liste {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    column-gap: 20px; align-items: start;
+  }
+
+  /* Gleichrangige Karten nebeneinander statt untereinander: Phasen des
+     Leitfadens, Raeume je Geschoss, Maengel je Raum, Angebote je Position,
+     Dokumente je Art, Checklisten. */
+  .kartengitter {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
     gap: 12px; align-items: start;
   }
-  .phasengitter > .karte { margin-bottom: 0; }
+  .kartengitter > .karte { margin-bottom: 0; }
 }
 
 /* Wetterkarte: Zeichen und Grad nebeneinander, gross genug fuer einen Blick
