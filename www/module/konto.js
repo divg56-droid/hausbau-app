@@ -8,18 +8,49 @@ import {
   el, feld, eingabe, knopf, karte, kopfzeile, wertzeile,
   hinweisKasten, melde, datumLang,
   anhaengen,
+  geheZu,
 } from '../hilfen.js';
 import { zeichen } from '../zeichen.js';
 import { daten } from '../daten.js';
 import {
   angemeldet, epost, anmelden, registrieren, abmelden, wer,
   passwortAendern, kontoLoeschen, standLesen,
+  anmeldelinkAnfordern, linkEinloesen, codeEinloesen,
 } from '../konto.js';
 import { abgleichen } from '../abgleich.js';
 import { blattOeffnen } from '../blatt.js';
 
-export async function zeige(rahmen) {
+export async function zeige(rahmen, unterweg) {
+  // "#/konto/<token>" ist der Anmeldelink aus der E-Mail. Er kommt als
+  // Unterweg an und wird sofort eingeloest -- niemand soll ihn abtippen
+  // oder irgendwo einfuegen muessen.
+  if (/^[0-9a-f]{64}$/.test(String(unterweg || ''))) {
+    await zeichneLink(rahmen, unterweg);
+    return;
+  }
   await zeichne(rahmen);
+}
+
+/** Der Bildschirm zwischen Klick und Konto: einloesen, dann weiter. */
+async function zeichneLink(rahmen, token) {
+  rahmen.replaceChildren();
+  const meldung = el('p', { klasse: 'anmeldung-unter', text: 'Einen Moment, du wirst angemeldet …' });
+  anhaengen(rahmen, el('div', { klasse: 'anmeldung' }, [
+    karte([el('h1', { klasse: 'anmeldung-titel', text: 'Anmeldung' }), meldung], 'anmeldekarte'),
+  ]));
+
+  try {
+    await linkEinloesen(token);
+    melde('Angemeldet.');
+    // Weg von der Kennung in der Adresszeile: Sie ist verbraucht, und der
+    // Router zeichnet den Kontobildschirm dann von selbst.
+    geheZu('#/konto');
+  } catch (fehler) {
+    meldung.classList.add('anmeldung-meldung');
+    meldung.textContent = fehler.message;
+    anhaengen(rahmen.querySelector('.anmeldekarte'),
+      knopf('Zur Anmeldung', () => { geheZu('#/konto'); }, 'knopf-haupt'));
+  }
 }
 
 async function zeichne(rahmen, art = 'anmelden') {
@@ -97,7 +128,7 @@ async function zeichne(rahmen, art = 'anmelden') {
 
     karte([
       el('h2', { text: 'Anmeldung' }),
-      knopf('Passwort ändern', () => passwortBlatt()),
+      knopf('Passwort ändern oder festlegen', () => passwortBlatt()),
       knopf('Abmelden', async () => {
         if (!window.confirm(
           'Abmelden? Die Daten bleiben auf diesem Gerät liegen. ' +
@@ -123,26 +154,30 @@ async function zeichne(rahmen, art = 'anmelden') {
   function passwortBlatt() {
     const alt = el('input', { type: 'password', autocomplete: 'current-password' });
     const neuesWort = el('input', { type: 'password', autocomplete: 'new-password' });
-    blattOeffnen('Passwort ändern', [
-      feld('Bisheriges Passwort', alt),
+    blattOeffnen('Passwort ändern oder festlegen', [
+      feld('Bisheriges Passwort', alt,
+        'Leer lassen, wenn du dich bisher nur per Anmeldelink angemeldet hast.'),
       feld('Neues Passwort', neuesWort, 'Mindestens 10 Zeichen.'),
     ], async () => {
       await passwortAendern(alt.value, neuesWort.value);
-      melde('Passwort geändert. Andere Geräte sind abgemeldet.');
+      melde('Passwort gesetzt. Andere Geräte sind abgemeldet.');
     });
   }
 
   function loeschBlatt(nachher) {
     const passwort = el('input', { type: 'password', autocomplete: 'current-password' });
+    const adresse = eingabe({ value: '', placeholder: epost() || 'name@beispiel.de' });
     blattOeffnen('Konto wirklich löschen?', [
       el('p', {
         klasse: 'kasten kasten-warn',
         text: 'Alles auf dem Server wird gelöscht. Das lässt sich nicht rückgängig machen. ' +
               'Die Daten auf diesem Gerät bleiben.',
       }),
-      feld('Zur Bestätigung dein Passwort', passwort),
+      feld('Zur Bestätigung dein Passwort', passwort,
+        'Ohne Passwort angemeldet? Dann trage stattdessen unten deine Adresse ein.'),
+      feld('Oder deine E-Mail-Adresse', adresse),
     ], async () => {
-      await kontoLoeschen(passwort.value);
+      await kontoLoeschen(passwort.value, adresse.value.trim());
       melde('Konto gelöscht.');
       await nachher();
     }, { sicherText: 'Endgültig löschen' });
@@ -219,6 +254,18 @@ function zeigeAnmeldung(rahmen, art, nachher) {
           neuesKonto ? 'Mindestens 10 Zeichen.' : null),
         senden,
         meldung,
+
+        // Der zweite Weg. Er steht bewusst unter dem ersten und nicht
+        // daneben: Wer ein Passwort hat, benutzt es; wer keins mehr weiss,
+        // findet hier heraus, ohne "Passwort vergessen" zu suchen.
+        el('p', { klasse: 'anmeldung-oder' }, ['oder']),
+        knopf('Anmeldelink per E-Mail', () => linkAnfordern(), 'knopf-leise'),
+        el('p', {
+          klasse: 'unterzeile',
+          text: 'Ohne Passwort: Wir schicken dir einen Link und einen Code an die ' +
+            'Adresse oben. Beides gilt 15 Minuten.',
+        }),
+
         el('p', { klasse: 'anmeldung-fuss' }, [
           neuesKonto ? 'Schon ein Konto? ' : 'Noch kein Konto? ',
           el('button', {
@@ -254,4 +301,88 @@ function zeigeAnmeldung(rahmen, art, nachher) {
       'info'
     )
   );
+
+  /** Schickt Link und Code und schaltet auf die Code-Eingabe um. */
+  async function linkAnfordern() {
+    const wert = adresse.value.trim();
+    if (!wert) {
+      meldung.textContent = 'Bitte zuerst deine E-Mail-Adresse eintragen.';
+      adresse.focus();
+      return;
+    }
+    meldung.textContent = 'Wird gesendet …';
+    try {
+      await anmeldelinkAnfordern(wert);
+      zeigeCode(rahmen, wert, nachher);
+    } catch (fehler) {
+      meldung.textContent = fehler.message;
+    }
+  }
+}
+
+/**
+ * Der Bildschirm nach dem Absenden: Code eintippen oder Link anklicken.
+ *
+ * Der Code ist der Weg auf dem Telefon. Dort oeffnet der Link den Browser
+ * und nicht die installierte App -- die Sitzung entstuende an der falschen
+ * Stelle, und man waere ueberall angemeldet ausser da, wo man arbeitet.
+ */
+function zeigeCode(rahmen, adresse, nachher) {
+  rahmen.replaceChildren();
+
+  const code = eingabe({
+    inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: '6',
+    placeholder: '123456', klasse: 'codefeld',
+  });
+  const meldung = el('p', { klasse: 'anmeldung-meldung' });
+
+  const senden = knopf('Anmelden', async () => {
+    senden.disabled = true;
+    meldung.textContent = 'Einen Moment …';
+    try {
+      await codeEinloesen(adresse, code.value.trim());
+      melde('Angemeldet.');
+      await nachher();
+    } catch (fehler) {
+      meldung.textContent = fehler.message;
+      senden.disabled = false;
+    }
+  }, 'knopf-haupt knopf-gross');
+
+  code.addEventListener('keydown', (e) => { if (e.key === 'Enter') senden.click(); });
+
+  anhaengen(
+    rahmen,
+    el('div', { klasse: 'anmeldung' }, [
+      karte([
+        el('h1', { klasse: 'anmeldung-titel', text: 'Sieh in dein Postfach' }),
+        el('p', {
+          klasse: 'anmeldung-unter',
+          text: `Wir haben eine E-Mail an ${adresse} geschickt. Klick den Link darin – ` +
+            'oder tipp hier den sechsstelligen Code ein, wenn du am Telefon bist.',
+        }),
+        feld('Code aus der E-Mail', code),
+        senden,
+        meldung,
+        el('p', { klasse: 'anmeldung-fuss' }, [
+          'Nichts angekommen? ',
+          el('button', {
+            klasse: 'textknopf', type: 'button', text: 'Noch einmal senden',
+            onclick: async () => {
+              meldung.textContent = 'Wird gesendet …';
+              try {
+                await anmeldelinkAnfordern(adresse);
+                meldung.textContent = 'Neue E-Mail unterwegs. Der alte Code gilt nicht mehr.';
+              } catch (fehler) {
+                meldung.textContent = fehler.message;
+              }
+            },
+          }),
+        ]),
+      ], 'anmeldekarte'),
+    ]),
+    knopf('Zurück zur Anmeldung', () => zeichne(rahmen), 'knopf-leise')
+  );
+
+  code.focus();
 }

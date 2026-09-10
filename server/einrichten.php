@@ -145,7 +145,20 @@ CREATE TABLE freigaben (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
 
 'bremse' => "
-CREATE TABLE bremse (
+CREATE TABLE anmeldelinks (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    epost VARCHAR(190) NOT NULL,
+    token_hash CHAR(64) NOT NULL,
+    code_hash CHAR(64) NOT NULL,
+    angelegt DATETIME NOT NULL,
+    gueltig_bis DATETIME NOT NULL,
+    versuche TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    UNIQUE KEY token_hash (token_hash),
+    KEY epost (epost)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+
+"CREATE TABLE bremse (
     kennung VARCHAR(190) NOT NULL,
     versuche INT UNSIGNED NOT NULL DEFAULT 0,
     bis DATETIME NOT NULL,

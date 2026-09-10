@@ -1854,5 +1854,45 @@ console.log('Die Anmeldung')
   pruef('Alles auf Deutsch', !/Sign In|Welcome|Password|Email Address/.test(k));
 }
 
+console.log('Anmeldung per Link')
+{
+  const php = readFileSync('./server/konto.php', 'utf8');
+  const kj = readFileSync('./www/konto.js', 'utf8');
+  const km = readFileSync('./www/module/konto.js', 'utf8');
+
+  pruef('Der Server kennt die drei Schritte',
+    ['anmeldelink', 'link_einloesen', 'code_einloesen']
+      .every((a) => php.includes("case '" + a + "':")));
+  // Der Klartext darf nirgends liegen bleiben -- weder Token noch Code.
+  pruef('Nur Abdruecke in der Datenbank',
+    php.includes("hash('sha256', $token)") && php.includes("hash('sha256', $code)"));
+  pruef('Der Vergleich ist zeitkonstant', php.includes('hash_equals('));
+  pruef('Der Token kommt aus dem Zufallsgeber', php.includes('bin2hex(random_bytes(32))'));
+  // Sechs Ziffern sind schnell durchprobiert: Nach fuenf Fehlgriffen ist
+  // der Code weg, nicht nur gebremst.
+  pruef('Der Code verbrennt nach fuenf Versuchen',
+    php.includes('CODE_VERSUCHE') && php.includes('DELETE FROM anmeldelinks WHERE id = ?'));
+  pruef('Ein neuer Link raeumt den alten weg',
+    php.includes('DELETE FROM anmeldelinks WHERE epost = ?'));
+  pruef('Alles laeuft nach einer Viertelstunde ab', php.includes('const LINK_MINUTEN = 15;'));
+  pruef('Zwei Bremsen: Adresse und Absender',
+    php.includes("'link:' . $epost") && php.includes("'linkip:'"));
+
+  // Wer per Link kommt, hat kein Passwort. Er muss trotzdem eins setzen
+  // und sein Konto loeschen koennen.
+  pruef('Ohne Passwort laesst sich eins festlegen',
+    php.includes("if ($hash !== '' && !password_verify($alt, $hash))"));
+  pruef('Und das Konto trotzdem loeschen', php.includes("if ($hash === '') {"));
+
+  pruef('Die App fordert an und loest ein',
+    kj.includes('anmeldelinkAnfordern') && kj.includes('linkEinloesen') &&
+    kj.includes('codeEinloesen'));
+  // Der Link aus der Mail landet als Unterweg im Router.
+  pruef('Der Link aus der Mail wird sofort eingeloest',
+    km.includes('/^[0-9a-f]{64}$/.test(String(unterweg'));
+  pruef('Und der Code hat ein eigenes Feld', km.includes("klasse: 'codefeld'") &&
+    readFileSync('./www/stil.css', 'utf8').includes('.codefeld {'));
+}
+
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');
 process.exit(fehler ? 1 : 0);

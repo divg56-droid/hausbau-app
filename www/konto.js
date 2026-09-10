@@ -164,13 +164,38 @@ export async function abmelden() {
   vergessen();
 }
 
+/**
+ * Anmeldung ohne Passwort.
+ *
+ * Der Server antwortet immer gleich, auch wenn es zu der Adresse noch kein
+ * Konto gibt: Der Link legt dann eines an. Wer eine Mail an dieser Adresse
+ * lesen kann, ist der Inhaber -- dieselbe Annahme, auf der jedes "Passwort
+ * vergessen" beruht.
+ */
+export const anmeldelinkAnfordern = (adresse) =>
+  ruf('/konto.php', { tun: 'anmeldelink', epost: adresse });
+
+export async function linkEinloesen(token) {
+  return merken(await ruf('/konto.php', { tun: 'link_einloesen', token }));
+}
+
+export async function codeEinloesen(adresse, code) {
+  return merken(await ruf('/konto.php', { tun: 'code_einloesen', epost: adresse, code }));
+}
+
 export const wer = () => ruf('/konto.php', { tun: 'wer' });
 
 export const passwortAendern = (alt, neu) =>
   ruf('/konto.php', { tun: 'passwort_aendern', alt, neu });
 
-export async function kontoLoeschen(passwort) {
-  const ergebnis = await ruf('/konto.php', { tun: 'konto_loeschen', passwort });
+/**
+ * @param {string} passwort  Leer, wenn das Konto keins hat.
+ * @param {string} adresse   Statt des Passworts zur Bestaetigung.
+ */
+export async function kontoLoeschen(passwort, adresse = '') {
+  const ergebnis = await ruf('/konto.php', {
+    tun: 'konto_loeschen', passwort, epost: adresse,
+  });
   vergessen();
   return ergebnis;
 }

@@ -632,6 +632,23 @@ html[data-thema="dunkel"] {
   margin: 8px 0 0; font-size: 14px; line-height: 1.45; color: var(--warn);
   min-height: 1.2em;
 }
+/* "oder": eine Linie mit einem Wort darin. Zwei Wege, kein Nebeneinander --
+   der zweite steht unter dem ersten und nicht daneben. */
+.anmeldung-oder {
+  display: flex; align-items: center; gap: 12px;
+  margin: 18px 0 12px; font-size: 13px; color: var(--tinte-leise);
+}
+.anmeldung-oder::before, .anmeldung-oder::after {
+  content: ''; flex: 1; height: 1px; background: var(--linie);
+}
+
+/* Sechs Ziffern, gross und weit: Man tippt sie von einem zweiten Bildschirm
+   ab und will beim Blick zurueck sofort sehen, wo man war. */
+.codefeld {
+  font-size: 24px; font-weight: 700; letter-spacing: 0.35em;
+  text-align: center; font-variant-numeric: tabular-nums;
+}
+
 .anmeldung-fuss {
   margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--linie);
   font-size: 14px; text-align: center; color: var(--tinte-leise);
