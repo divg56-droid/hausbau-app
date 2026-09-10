@@ -264,6 +264,21 @@ tr.bindung td { background: var(--band); font-weight: 700; }
   border: 1px solid var(--linie);
 }
 
+/* Helferzeile im Tageseintrag: Name, Stunden, Unterschrift. */
+.helferzeile { display: flex; gap: 8px; align-items: center; min-height: 48px; }
+.helferzeile .helfername {
+  flex: 1; min-width: 0; display: flex; gap: 10px; align-items: center;
+}
+.helferzeile .helfername span { overflow-wrap: anywhere; }
+.helferzeile .knopf-schmal { flex: none; }
+
+/* Unterschriftenfeld: weisses Blatt mit Linie, so breit wie das Blatt. */
+.unterschriftsfeld {
+  width: 100%; height: auto; aspect-ratio: 3 / 1; touch-action: none;
+  background: #fff; border: 1px solid var(--linie); border-radius: 8px;
+  margin-bottom: 6px; cursor: crosshair;
+}
+
 .dateikachel {
   width: 84px; height: 84px; border-radius: 8px; border: 1px solid var(--linie);
   background: var(--band); display: flex; flex-direction: column; gap: 4px;

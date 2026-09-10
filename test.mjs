@@ -1044,5 +1044,49 @@ console.log('To-Dos und Checklisten');
       !readFileSync('./www/module/einstellungen.js', 'utf8').includes("'" + n + "'")).join(', '));
 }
 
+console.log('Unterschrift');
+{
+  // Alte Eintraege haben nur helferIds. Sie muessen lesbar bleiben, sonst
+  // verliert eine Sicherung von frueher ihre Helferstunden.
+  const alt = helferVon({ helferIds: ['a', 'b'] });
+  pruef('Alte Eintraege bleiben lesbar', alt.length === 2 && alt[0].stunden === 0);
+  pruef('Und haben keine Unterschrift', alt.every((h) => h.unterschriftId === null));
+
+  const neu_ = helferVon({
+    helfer: [
+      { id: 'a', stunden: 8, unterschriftId: 'u1' },
+      { id: 'b', stunden: 4.5 },
+    ],
+  });
+  pruef('Die Unterschrift wandert mit', neu_[0].unterschriftId === 'u1');
+  pruef('Ohne Unterschrift steht dort null', neu_[1].unterschriftId === null);
+  pruef('Die Stunden bleiben unberuehrt', neu_[1].stunden === 4.5);
+  // Die Stundensumme darf sich durch die Unterschrift nicht aendern.
+  pruef('Die Stundenrechnung zaehlt weiter richtig',
+    stundenJeHelfer([{ helfer: neu_ }], []).reduce((s, h) => s + h.stunden, 0) === 12.5);
+
+  const quelle = readFileSync('./www/unterschrift.js', 'utf8');
+  pruef('Die Unterschrift wird als PNG abgelegt', quelle.includes("'image/png'"));
+  // Ohne touch-action rollt die Seite mit, statt dass ein Strich entsteht.
+  pruef('Das Feld faengt die Fingerbewegung ab',
+    readFileSync('./www/stil.css', 'utf8').includes('touch-action: none'));
+  // Escape darf nur das Unterschriftenfeld schliessen, nicht den halb
+  // ausgefuellten Tageseintrag darunter.
+  pruef('Escape faellt nicht auf das Blatt darunter durch',
+    quelle.includes('stopImmediatePropagation') && quelle.includes("'keydown', beiTaste, true"));
+
+  const tagebuch = readFileSync('./www/module/tagebuch.js', 'utf8');
+  pruef('Ausgehaktes verliert seine Unterschrift',
+    tagebuch.includes('unterschriften.delete(k.id)'));
+  pruef('Die Unterschrift steht im PDF',
+    tagebuch.includes("blatt.bilderreihe([bild], { hoehe: 44 })"));
+
+  // Das oeffentliche Tagebuch zeigt nur Bilder, die am Eintrag haengen.
+  // Unterschriften haengen am Helfer und duerfen dort nie auftauchen.
+  pruef('Das oeffentliche Tagebuch liefert nur Tagesfotos aus',
+    readFileSync('./server/oeffentlich.php', 'utf8')
+      .includes("in_array($kennung, (array)($e['bildIds'] ?? []), true)"));
+}
+
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');
 process.exit(fehler ? 1 : 0);

@@ -17,6 +17,7 @@ import { blattOeffnen } from '../blatt.js';
 import { fotofeld } from '../fotos.js';
 import { Blatt, pdfTeilen, bildLaden } from '../pdf.js';
 import { csvTeilen } from '../csv.js';
+import { unterschriftAufnehmen } from '../unterschrift.js';
 
 export const WETTER = {
   sonnig: 'Sonnig', bewoelkt: 'Bewölkt', regen: 'Regen',
@@ -38,9 +39,13 @@ const REGELSTUNDEN = 8;
  */
 export function helferVon(eintrag) {
   if (Array.isArray(eintrag.helfer)) {
-    return eintrag.helfer.map((h) => ({ id: h.id, stunden: Number(h.stunden) || 0 }));
+    return eintrag.helfer.map((h) => ({
+      id: h.id,
+      stunden: Number(h.stunden) || 0,
+      unterschriftId: h.unterschriftId || null,
+    }));
   }
-  return (eintrag.helferIds || []).map((id) => ({ id, stunden: 0 }));
+  return (eintrag.helferIds || []).map((id) => ({ id, stunden: 0, unterschriftId: null }));
 }
 
 /** Summiert die Stunden je Person ueber alle Tage. */
@@ -396,6 +401,12 @@ function eintragBearbeiten(eintrag, helfer, alleEintraege, nachher) {
 
   // Stand des Eintrags als Karte: id -> Stunden, nur fuer die Angehakten.
   const stand = new Map(helferVon(eintrag).map((h) => [h.id, h.stunden]));
+  // Getrennt vom Stundenstand, damit das Anhaken unveraendert bleibt: Wer
+  // abgehakt und wieder angehakt wird, verliert seine Unterschrift, und das
+  // ist richtig so -- sie galt fuer die alten Stunden.
+  const unterschriften = new Map(
+    helferVon(eintrag).filter((h) => h.unterschriftId).map((h) => [h.id, h.unterschriftId])
+  );
 
   const regel = el('input', {
     type: 'text', inputmode: 'decimal',
@@ -424,10 +435,29 @@ function eintragBearbeiten(eintrag, helfer, alleEintraege, nachher) {
           },
         });
 
+        const zeichnen = el('button', {
+          type: 'button', klasse: 'knopf knopf-schmal',
+          text: unterschriften.has(k.id) ? '\u2713 Unterschrieben' : 'Unterschrift',
+          disabled: !stand.has(k.id),
+          onclick: async () => {
+            const id = await unterschriftAufnehmen(k.name);
+            if (!id) return;
+            unterschriften.set(k.id, id);
+            zeichnen.textContent = '\u2713 Unterschrieben';
+          },
+        });
+
         const haken = el('input', {
           type: 'checkbox',
           checked: stand.has(k.id),
           onchange: (ereignis) => {
+            zeichnen.disabled = !ereignis.target.checked;
+            // Eine Unterschrift gilt fuer die Stunden, die daneben standen.
+            // Wer ausgehakt wird, hat sie nicht mehr bestaetigt.
+            if (!ereignis.target.checked) {
+              unterschriften.delete(k.id);
+              zeichnen.textContent = 'Unterschrift';
+            }
             if (ereignis.target.checked) {
               // Wer angehakt wird, bekommt die Regelarbeitszeit des Tages;
               // abweichende Zeiten werden daneben ueberschrieben.
@@ -444,12 +474,13 @@ function eintragBearbeiten(eintrag, helfer, alleEintraege, nachher) {
           },
         });
 
-        return el('label', {
-          stil: { display: 'flex', gap: '10px', alignItems: 'center', minHeight: '48px' },
-        }, [
-          haken,
-          el('span', { stil: { flex: '1' }, text: k.name }),
+        return el('div', { klasse: 'helferzeile' }, [
+          el('label', { klasse: 'helfername' }, [
+            haken,
+            el('span', { text: k.name }),
+          ]),
           stundenfeld,
+          zeichnen,
         ]);
       }))
     : el('p', { klasse: 'unterzeile', text: 'Noch keine Helfer in den Kontakten angelegt.' });
@@ -484,7 +515,9 @@ function eintragBearbeiten(eintrag, helfer, alleEintraege, nachher) {
       const doppelt = alleEintraege.find((e) => e.datum === tag && e.id !== eintrag.id);
       if (doppelt) throw new Error('Für diesen Tag gibt es schon einen Eintrag.');
 
-      const helferstand = [...stand.entries()].map(([id, stunden]) => ({ id, stunden }));
+      const helferstand = [...stand.entries()].map(([id, stunden]) => ({
+        id, stunden, unterschriftId: unterschriften.get(id) || null,
+      }));
       if (helferstand.some((h) => h.stunden < 0 || h.stunden > 24)) {
         throw new Error('Die Stunden je Person müssen zwischen 0 und 24 liegen.');
       }
@@ -548,6 +581,18 @@ async function pdfErzeugen(eintraege, kontakte) {
     fotos.set(e.id, geladen);
   }
 
+  // Die Unterschriften einmal einlesen. Sie sind kleine PNG-Dateien und
+  // gehen denselben Weg ins PDF wie die Fotos.
+  const unterschriften = new Map();
+  for (const e of chronologisch) {
+    for (const h of helferVon(e)) {
+      if (!h.unterschriftId || unterschriften.has(h.unterschriftId)) continue;
+      const eintrag = await daten.holen('bilder', h.unterschriftId);
+      const bild = eintrag ? await bildLaden(eintrag.blob) : null;
+      if (bild) unterschriften.set(h.unterschriftId, bild);
+    }
+  }
+
   const jeHelfer = stundenJeHelfer(chronologisch, kontakte);
   const gesamt = jeHelfer.reduce((s, h) => s + h.stunden, 0);
   const zeitraum = chronologisch.length
@@ -601,6 +646,21 @@ async function pdfErzeugen(eintraege, kontakte) {
     if (tagesstunden) {
       blatt.wertzeile('Helferstunden am Tag', zahl(tagesstunden, tagesstunden % 1 ? 1 : 0), true);
     }
+    // Der eigentliche Zweck des Tagebuchs: Was der Bauherr allein
+    // aufgeschrieben hat, ist seine Behauptung. Was der Helfer am selben Tag
+    // unterschrieben hat, ist ein Beleg.
+    const unterschrieben = drin.filter((h) => h.unterschriftId);
+    if (unterschrieben.length) {
+      blatt.absatz(
+        'Die eingetragenen Stunden wurden am selben Tag bestätigt:', 9.5
+      );
+      for (const h of unterschrieben) {
+        blatt.wertzeile(h.name, zahl(h.stunden, h.stunden % 1 ? 1 : 0) + ' Stunden');
+        const bild = unterschriften.get(h.unterschriftId);
+        if (bild) blatt.bilderreihe([bild], { hoehe: 44 });
+      }
+    }
+
     if (e.gemacht) blatt.absatz('Ausgeführt: ' + e.gemacht, 9.5);
     if (e.offen) blatt.absatz('Liegengeblieben: ' + e.offen, 9.5);
 
