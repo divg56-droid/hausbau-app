@@ -56,6 +56,10 @@ export const BEREICHE = [
     punkte: [
       { weg: 'ablauf', titel: 'Bauablauf',
         text: 'Reihenfolge der Gewerke planen, mit Terminen und Balkenplan.' },
+      { weg: 'todos', titel: 'To-Dos',
+        text: 'Was offen ist, nach Fälligkeit. Mit Frist und Notiz.' },
+      { weg: 'todos/checklisten', titel: 'Checklisten',
+        text: 'Listen für einen Termin: Bauantrag, Estrich, Abnahme, Einzug.' },
       { weg: 'anschlussplan', titel: 'Anschlussplan',
         text: 'Steckdosen, Schalter und Leitungen auf dem Grundriss markieren.' },
     ],

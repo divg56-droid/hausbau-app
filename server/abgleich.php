@@ -23,7 +23,7 @@ require __DIR__ . '/_start.php';
 // beliebige Namen anlegen und die Tabelle vollschreiben.
 const SPEICHER = [
     'einstellungen', 'darlehen', 'leitfaden', 'posten', 'angebote', 'belege',
-    'geschosse', 'raeume', 'pins', 'maengel', 'aufgaben', 'tagebuch',
+    'geschosse', 'raeume', 'pins', 'maengel', 'aufgaben', 'todos', 'tagebuch',
     'kontakte', 'bilder',
 ];
 

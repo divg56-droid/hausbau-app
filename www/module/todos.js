@@ -1,0 +1,354 @@
+// To-Dos und Checklisten. Zwei Sichten auf denselben Speicher:
+//
+//   To-Dos        Was ist offen, was ist faellig? Eine Liste, nach Datum.
+//   Checklisten   Wo stehe ich? Nach Liste gruppiert, mit Fortschritt.
+//
+// Beides sind Aufgaben mit einem Haken. Der Unterschied ist nur das Feld
+// "liste": Steht dort nichts, ist es eine freie Aufgabe; steht dort ein Name,
+// gehoert sie zu einer Checkliste. Zwei Speicher dafuer waeren zwei Wege,
+// dieselbe Zahl auszurechnen, und einer davon waere irgendwann falsch.
+//
+// Nicht zu verwechseln mit dem Bauablauf: Dort geht es um Termine und
+// Reihenfolgen ganzer Gewerke, hier um einzelne Handgriffe.
+
+import {
+  el, feld, eingabe, knopf, karte, kopfzeile, hinweisKasten,
+  leerzustand, melde, datumLang, heute,
+} from '../hilfen.js';
+import { daten } from '../daten.js';
+import { blattOeffnen } from '../blatt.js';
+import { VORLAGEN } from '../checklisten-daten.js';
+
+/**
+ * Sortiert Aufgaben so, wie man sie abarbeitet.
+ *
+ * Faelliges zuerst und darin das aelteste, dann alles ohne Frist. Ohne Frist
+ * ans Ende, weil eine Aufgabe ohne Datum nie draengt: Wer sie zuerst sehen
+ * wollte, haette ihr eines gegeben.
+ */
+export function todosSortieren(todos) {
+  return [...todos].sort((a, b) => {
+    if (!a.faellig && !b.faellig) return String(a.titel).localeCompare(String(b.titel), 'de');
+    if (!a.faellig) return 1;
+    if (!b.faellig) return -1;
+    return a.faellig.localeCompare(b.faellig);
+  });
+}
+
+/** Zaehlt, was offen, faellig und erledigt ist. */
+export function todoStand(todos, stichtag) {
+  const offen = todos.filter((t) => !t.erledigt);
+  return {
+    gesamt: todos.length,
+    offen: offen.length,
+    erledigt: todos.length - offen.length,
+    ueberfaellig: offen.filter((t) => t.faellig && t.faellig < stichtag).length,
+    heute: offen.filter((t) => t.faellig === stichtag).length,
+  };
+}
+
+export async function zeige(rahmen, unterweg) {
+  await zeichne(rahmen, unterweg === 'checklisten' ? 'checklisten' : 'todos');
+}
+
+async function zeichne(rahmen, ansicht) {
+  rahmen.replaceChildren();
+  const todos = await daten.alle('todos');
+  const neu = () => zeichne(rahmen, ansicht);
+
+  if (ansicht === 'checklisten') return zeigeChecklisten(rahmen, todos, neu);
+  return zeigeTodos(rahmen, todos, neu);
+}
+
+// ------------------------------------------------------------------- To-Dos
+
+function zeigeTodos(rahmen, todos, neu) {
+  const stand = todoStand(todos, heute());
+  const offen = todosSortieren(todos.filter((t) => !t.erledigt));
+  const erledigt = todos
+    .filter((t) => t.erledigt)
+    .sort((a, b) => String(b.am || '').localeCompare(String(a.am || '')));
+
+  rahmen.append(kopfzeile('To-Dos', 'Alles, was offen ist, nach Fälligkeit.'));
+
+  // Schnelleingabe steht oben: Eine Aufgabe schreibt man auf, waehrend man
+  // noch auf der Baustelle steht, nicht in einem Formular mit acht Feldern.
+  const feldNeu = eingabe({ placeholder: 'Was ist zu tun?' });
+  const anlegen = async () => {
+    const titel = feldNeu.value.trim();
+    if (!titel) return;
+    await daten.sichern('todos', {
+      titel, notiz: '', liste: '', erledigt: false, am: null, faellig: null,
+    });
+    await neu();
+  };
+  feldNeu.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); anlegen(); }
+  });
+
+  rahmen.append(
+    karte([
+      el('div', { klasse: 'filterleiste' }, [
+        feldNeu,
+        knopf('Hinzufügen', anlegen, 'knopf-leise'),
+      ]),
+      el('p', {
+        klasse: 'unterzeile',
+        text: 'Frist, Notiz und Zuordnung kannst du danach durch Antippen ergänzen.',
+      }),
+    ])
+  );
+
+  if (!todos.length) {
+    rahmen.append(
+      karte([
+        leerzustand(
+          'Noch nichts offen',
+          'Schreib auf, was zu tun ist: nachfragen, nachmessen, nachbestellen. ' +
+            'Was hier steht, geht auf der Baustelle nicht unter.'
+        ),
+        knopf('Checklisten ansehen', () => { location.hash = '#/todos/checklisten'; }, 'knopf-leise'),
+      ])
+    );
+    return;
+  }
+
+  if (stand.ueberfaellig) {
+    rahmen.append(
+      hinweisKasten(
+        stand.ueberfaellig === 1
+          ? 'Eine Aufgabe ist überfällig.'
+          : `${stand.ueberfaellig} Aufgaben sind überfällig.`,
+        'warn'
+      )
+    );
+  }
+
+  rahmen.append(
+    karte([
+      el('h2', { text: offen.length ? 'Offen (' + offen.length + ')' : 'Alles erledigt' }),
+      offen.length
+        ? el('ul', { klasse: 'liste' }, offen.map((t) => zeile(t, neu, true)))
+        : el('p', {
+            klasse: 'unterzeile',
+            text: 'Kein offener Punkt. Das kommt am Bau selten vor, genieß es.',
+          }),
+    ])
+  );
+
+  if (erledigt.length) {
+    rahmen.append(
+      el('details', { klasse: 'karte phasenblock' }, [
+        el('summary', {}, [
+          el('span', { klasse: 'phasen-titel', text: 'Erledigt' }),
+          el('span', { klasse: 'phasen-zahl', text: String(erledigt.length) }),
+        ]),
+        el('ul', { klasse: 'liste' }, erledigt.slice(0, 50).map((t) => zeile(t, neu, true))),
+      ])
+    );
+  }
+}
+
+// -------------------------------------------------------------- Checklisten
+
+function zeigeChecklisten(rahmen, todos, neu) {
+  const listen = [...new Set(todos.map((t) => t.liste).filter(Boolean))].sort(
+    (a, b) => a.localeCompare(b, 'de')
+  );
+
+  rahmen.append(
+    kopfzeile('Checklisten', 'Listen für einen Termin: abarbeiten, abhaken, weglegen.')
+  );
+
+  if (!listen.length) {
+    rahmen.append(
+      karte([
+        leerzustand(
+          'Noch keine Checkliste',
+          'Fünf Vorlagen stehen bereit, von den Unterlagen für den Bauantrag bis ' +
+            'zu dem, was man zur Abnahme mitnimmt. Geladen gehört die Liste dir: ' +
+            'Punkte streichen, umbenennen und eigene dazuschreiben geht danach.'
+        ),
+      ])
+    );
+  }
+
+  for (const name of listen) {
+    const drin = todos.filter((t) => t.liste === name);
+    const fertig = drin.filter((t) => t.erledigt).length;
+    const anteil = Math.round((fertig / drin.length) * 100);
+
+    rahmen.append(
+      el('details', {
+        klasse: 'karte phasenblock',
+        // Fertige Listen zugeklappt: Sie sind erledigt, sie sollen nur noch
+        // nachweisen, dass sie es sind.
+        open: fertig < drin.length,
+      }, [
+        el('summary', {}, [
+          el('span', { klasse: 'phasen-titel', text: name }),
+          el('span', { klasse: 'phasen-zahl', text: fertig + ' / ' + drin.length }),
+        ]),
+        el('div', { klasse: 'fortschrittsbalken' }, [
+          el('div', { stil: { width: anteil + '%' } }),
+        ]),
+        el('ul', { klasse: 'liste' }, todosSortieren(drin).map((t) => zeile(t, neu, false))),
+        el('div', { klasse: 'filterleiste' }, [
+          knopf('Punkt ergänzen', () =>
+            bearbeiten({ liste: name }, neu), 'knopf-leise'),
+          knopf('Liste löschen', () => listeLoeschen(name, drin, neu), 'knopf-leise'),
+        ]),
+      ])
+    );
+  }
+
+  const offeneVorlagen = VORLAGEN.filter((v) => !listen.includes(v.titel));
+  if (offeneVorlagen.length) {
+    rahmen.append(
+      karte([
+        el('h2', { text: 'Vorlagen' }),
+        el('ul', { klasse: 'liste' }, offeneVorlagen.map((v) =>
+          el('li', {}, [
+            el('button', { klasse: 'listenzeile', onclick: () => vorlageLaden(v, neu) }, [
+              el('span', { klasse: 'zeilen-text' }, [
+                el('span', { klasse: 'zeilen-titel', text: v.titel }),
+                el('span', { klasse: 'zeilen-unter', text: v.text }),
+              ]),
+              el('span', { klasse: 'zeilen-wert', text: v.punkte.length + ' Punkte' }),
+            ]),
+          ])
+        )),
+      ])
+    );
+  }
+
+  rahmen.append(
+    knopf('Eigene Liste anlegen', () => listeAnlegen(listen, neu), 'knopf-haupt')
+  );
+}
+
+async function vorlageLaden(vorlage, nachher) {
+  if (!window.confirm(
+    `Checkliste "${vorlage.titel}" mit ${vorlage.punkte.length} Punkten anlegen?`
+  )) return;
+  for (const titel of vorlage.punkte) {
+    await daten.sichern('todos', {
+      titel, notiz: '', liste: vorlage.titel, erledigt: false, am: null, faellig: null,
+    });
+  }
+  melde(vorlage.punkte.length + ' Punkte angelegt.');
+  await nachher();
+}
+
+function listeAnlegen(listen, nachher) {
+  const name = eingabe({ placeholder: 'z. B. Rohbauabnahme' });
+  const punkte = el('textarea', { placeholder: 'Ein Punkt je Zeile' });
+  blattOeffnen(
+    'Eigene Checkliste',
+    [
+      feld('Name der Liste', name),
+      feld('Punkte', punkte, 'Ein Punkt je Zeile. Leere Zeilen werden übersprungen.'),
+    ],
+    async () => {
+      const titel = name.value.trim();
+      if (!titel) throw new Error('Bitte einen Namen eintragen.');
+      if (listen.includes(titel)) throw new Error('Diese Liste gibt es schon.');
+      const zeilen = punkte.value.split('\n').map((z) => z.trim()).filter(Boolean);
+      if (!zeilen.length) throw new Error('Bitte mindestens einen Punkt eintragen.');
+      for (const z of zeilen) {
+        await daten.sichern('todos', {
+          titel: z, notiz: '', liste: titel, erledigt: false, am: null, faellig: null,
+        });
+      }
+      await nachher();
+    }
+  );
+}
+
+async function listeLoeschen(name, drin, nachher) {
+  if (!window.confirm(
+    `Checkliste "${name}" mit ${drin.length} Punkten löschen? Das lässt sich nicht ` +
+    'rückgängig machen.'
+  )) return;
+  for (const t of drin) await daten.loeschen('todos', t.id);
+  await nachher();
+}
+
+// ---------------------------------------------------------------- Bausteine
+
+function zeile(todo, neu, mitListe) {
+  const spaet = !todo.erledigt && todo.faellig && todo.faellig < heute();
+
+  return el('li', {}, [
+    el('div', { klasse: 'leitfaden-zeile' + (todo.erledigt ? ' erledigt' : '') }, [
+      el('input', {
+        type: 'checkbox',
+        checked: todo.erledigt,
+        'aria-label': todo.titel,
+        onchange: (e) => abhaken(todo, e.target.checked, neu),
+      }),
+      el('div', { klasse: 'zeilen-text' }, [
+        el('span', { klasse: 'zeilen-titel', text: todo.titel }),
+        el('span', {
+          klasse: 'zeilen-unter' + (spaet ? ' mehr' : ''),
+          text: [
+            todo.faellig
+              ? (spaet ? 'überfällig seit ' : 'fällig ') + datumLang(todo.faellig)
+              : null,
+            mitListe && todo.liste ? todo.liste : null,
+            todo.erledigt && todo.am ? 'erledigt am ' + datumLang(todo.am) : null,
+            todo.notiz || null,
+          ].filter(Boolean).join(' · ') || 'ohne Frist',
+        }),
+      ]),
+      el('button', {
+        klasse: 'knopf knopf-schmal', type: 'button', text: 'Ändern',
+        onclick: () => bearbeiten(todo, neu),
+      }),
+    ]),
+  ]);
+}
+
+async function abhaken(todo, erledigt, nachher) {
+  await daten.sichern('todos', { ...todo, erledigt, am: erledigt ? heute() : null });
+  await nachher();
+}
+
+function bearbeiten(todo, nachher) {
+  const titel = eingabe({ value: todo.titel || '', placeholder: 'Was ist zu tun?' });
+  const faellig = el('input', { type: 'date', value: todo.faellig || '' });
+  const notiz = el('textarea', {}, [todo.notiz || '']);
+  const liste = eingabe({ value: todo.liste || '', placeholder: 'leer = freie Aufgabe' });
+
+  blattOeffnen(
+    todo.id ? 'Aufgabe bearbeiten' : 'Aufgabe anlegen',
+    [
+      feld('Aufgabe', titel),
+      feld('Fällig am', faellig, 'Leer lassen, wenn es nicht drängt.'),
+      feld('Checkliste', liste, 'Steht hier ein Name, gehört die Aufgabe zu dieser Liste.'),
+      feld('Notiz', notiz),
+    ],
+    async () => {
+      const wert = {
+        titel: titel.value.trim(),
+        faellig: faellig.value || null,
+        liste: liste.value.trim(),
+        notiz: notiz.value.trim(),
+        erledigt: !!todo.erledigt,
+        am: todo.am || null,
+      };
+      if (!wert.titel) throw new Error('Bitte eine Aufgabe eintragen.');
+      if (todo.id) wert.id = todo.id;
+      await daten.sichern('todos', wert);
+      await nachher();
+    },
+    {
+      loeschen: todo.id
+        ? async () => {
+            await daten.loeschen('todos', todo.id);
+            await nachher();
+          }
+        : null,
+    }
+  );
+}

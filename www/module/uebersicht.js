@@ -17,9 +17,11 @@ import { postenRechnen } from './baukasse.js';
 import { terminePlanen } from './ablauf.js';
 import { STATUS } from './maengel.js';
 import { leitfadenStand } from '../leitfaden-daten.js';
+import { todoStand, todosSortieren } from './todos.js';
 
 export async function zeige(rahmen) {
-  const [projekt, stand, posten, belege, aufgaben, maengel, tagebuch, haken] = await Promise.all([
+  const [projekt, stand, posten, belege, aufgaben, maengel, tagebuch, haken, todos] =
+    await Promise.all([
     einstellung('projektname'),
     finanzierungsstand(),
     daten.alle('posten'),
@@ -28,6 +30,7 @@ export async function zeige(rahmen) {
     daten.alle('maengel'),
     daten.alle('tagebuch'),
     daten.alle('leitfaden'),
+    daten.alle('todos'),
   ]);
   const leitfaden = leitfadenStand(haken);
 
@@ -48,7 +51,8 @@ export async function zeige(rahmen) {
   );
 
   // Erst gar nichts erfasst: Dann hilft keine Kennzahl, sondern ein Weg hinein.
-  if (!stand.posten.length && !posten.length && !aufgaben.length && !maengel.length) {
+  if (!stand.posten.length && !posten.length && !aufgaben.length && !maengel.length &&
+      !todos.length) {
     rahmen.append(
       karte([
         el('h2', { text: 'Fang mit dem Geld an' }),
@@ -124,6 +128,49 @@ export async function zeige(rahmen) {
           text: `Davon bereits bezahlt ${eur.format(gezahlt)}.`,
         }),
         knopf('Zur Budgetplanung', () => { location.hash = '#/baukasse'; }, 'knopf-leise'),
+      ])
+    );
+  }
+
+  // ------------------------------------------------------------------ To-Dos
+  // Vor dem Bauablauf: Ein ueberfaelliger Anruf ist dringender als ein
+  // Gewerk, das erst in drei Wochen anfaengt.
+  const todoZahlen = todoStand(todos, heute());
+  if (todoZahlen.offen) {
+    const naechsteTodos = todosSortieren(todos.filter((t) => !t.erledigt)).slice(0, 4);
+    rahmen.append(
+      karte([
+        el('h2', { text: 'Offene To-Dos' }),
+        el('p', {
+          klasse: 'unterzeile',
+          text: `${todoZahlen.offen} offen, ${todoZahlen.erledigt} erledigt.`,
+        }),
+        ...naechsteTodos.map((t) => {
+          const spaet = t.faellig && t.faellig < heute();
+          return el('div', { klasse: 'listenzeile', stil: { cursor: 'default' } }, [
+            el('span', { klasse: 'zeilen-text' }, [
+              el('span', { klasse: 'zeilen-titel', text: t.titel }),
+              el('span', {
+                klasse: 'zeilen-unter' + (spaet ? ' mehr' : ''),
+                text: [
+                  t.faellig
+                    ? (spaet ? 'überfällig seit ' : 'fällig ') + datumLang(t.faellig)
+                    : 'ohne Frist',
+                  t.liste || null,
+                ].filter(Boolean).join(' · '),
+              }),
+            ]),
+          ]);
+        }),
+        todoZahlen.ueberfaellig
+          ? hinweisKasten(
+              todoZahlen.ueberfaellig === 1
+                ? 'Eine Aufgabe ist überfällig.'
+                : `${todoZahlen.ueberfaellig} Aufgaben sind überfällig.`,
+              'warn'
+            )
+          : null,
+        knopf('Zu den To-Dos', () => { location.hash = '#/todos'; }, 'knopf-leise'),
       ])
     );
   }

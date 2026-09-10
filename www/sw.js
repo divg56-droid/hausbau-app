@@ -45,6 +45,7 @@ const SCHALE = [
   './daten.js',
   './din276.js',
   './gewerke.js',
+  './checklisten-daten.js',
   './leitfaden-daten.js',
   './fotos.js',
   './hilfen.js',
@@ -65,6 +66,7 @@ const SCHALE = [
   './module/maengel.js',
   './module/raeume.js',
   './module/tagebuch.js',
+  './module/todos.js',
   './module/tilgung.js',
   './module/uebersicht.js',
 ];

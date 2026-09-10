@@ -17,6 +17,8 @@ import { neueKennung, umschreiben } from './www/daten.js';
 import { postenRechnen } from './www/module/baukasse.js';
 import { helferVon, stundenJeHelfer } from './www/module/tagebuch.js';
 import { angeboteRechnen, leistungsvergleich } from './www/module/angebote.js';
+import { todoStand, todosSortieren } from './www/module/todos.js';
+import { VORLAGEN } from './www/checklisten-daten.js';
 import { BEREICHE, MODULE } from './www/bereiche.js';
 import { PHASEN, ALLE_PUNKTE, leitfadenStand } from './www/leitfaden-daten.js';
 import { csvText, zelle } from './www/csv.js';
@@ -961,6 +963,58 @@ console.log('Gewerke');
   pruef('Die Kontakte fuehren auf drei Sichten',
     JSON.stringify(wege) === JSON.stringify(
       ['kontakte', 'kontakte/personen', 'kontakte/gewerke']), wege.join(', '));
+}
+
+console.log('To-Dos und Checklisten');
+{
+  const T = [
+    { id: '1', titel: 'Bemusterung bestätigen', faellig: '2026-09-01', erledigt: false },
+    { id: '2', titel: 'Zählerstand ablesen', faellig: '2026-09-20', erledigt: false },
+    { id: '3', titel: 'Angebot anfordern', faellig: null, erledigt: false },
+    { id: '4', titel: 'Fenster nachmessen', faellig: '2026-08-01', erledigt: true, am: '2026-08-01' },
+  ];
+
+  // Faelliges zuerst, Aeltestes oben, alles ohne Frist ans Ende.
+  const sortiert = todosSortieren(T);
+  pruef('Faelliges steht vorn und alphabetisch nur ohne Frist',
+    sortiert.map((t) => t.id).join('') === '4123', sortiert.map((t) => t.id).join(''));
+
+  const stand = todoStand(T, '2026-09-10');
+  pruef('Offene werden gezaehlt', stand.offen === 3, String(stand.offen));
+  pruef('Erledigte werden gezaehlt', stand.erledigt === 1);
+  pruef('Ueberfaellig heisst: Frist vor dem Stichtag und noch offen',
+    stand.ueberfaellig === 1, String(stand.ueberfaellig));
+  // Ein erledigter Punkt mit abgelaufener Frist ist nicht ueberfaellig, er
+  // ist fertig. Sonst stuende die Warnung fuer immer da.
+  pruef('Erledigtes ist nie ueberfaellig',
+    todoStand([T[3]], '2026-09-10').ueberfaellig === 0);
+  pruef('Was heute faellig ist, zaehlt gesondert',
+    todoStand(T, '2026-09-20').heute === 1);
+
+  const leer = todoStand([], '2026-09-10');
+  pruef('Ohne Aufgaben ist alles null', leer.offen === 0 && leer.ueberfaellig === 0);
+
+  // Die Vorlage wird in echte Eintraege kopiert; der Listenname ist der
+  // Schluessel, ueber den sie danach zusammenbleiben.
+  pruef('Fuenf Vorlagen', VORLAGEN.length === 5, String(VORLAGEN.length));
+  const namen = VORLAGEN.map((v) => v.titel);
+  pruef('Kein Vorlagenname kommt doppelt vor', new Set(namen).size === namen.length);
+  pruef('Jede Vorlage hat Titel, Erklaerung und Punkte',
+    VORLAGEN.every((v) => v.titel && v.text && v.punkte.length >= 5));
+  pruef('Kein Punkt kommt in einer Liste doppelt vor',
+    VORLAGEN.every((v) => new Set(v.punkte).size === v.punkte.length));
+
+  for (const [datei, was] of [
+    ['www/daten.js', 'Datenbank'],
+    ['www/abgleich.js', 'Abgleich'],
+    ['server/abgleich.php', 'Server'],
+    ['www/module/einstellungen.js', 'Sicherung'],
+  ]) {
+    pruef(was + ' kennt den Speicher todos',
+      readFileSync('./' + datei, 'utf8').includes('todos'));
+  }
+  pruef('Die Datenbank ist auf Fassung sieben',
+    readFileSync('./www/daten.js', 'utf8').includes('const DB_VERSION = 7;'));
 }
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');

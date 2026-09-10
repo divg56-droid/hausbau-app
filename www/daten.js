@@ -16,7 +16,7 @@
 //              Abgleich vom anderen Geraet zurueck, weil der ihn noch kennt.
 
 const DB_NAME = 'hausbau';
-const DB_VERSION = 6;
+const DB_VERSION = 7;
 
 // Wo Eintraege zu einem Elternobjekt gehoeren (Pins zu einem Geschoss), steht
 // dessen Kennung als Feld drin und bekommt einen Index.
@@ -38,6 +38,9 @@ const SPEICHER = {
   pins: { indizes: ['geschossId'] },
   maengel: { indizes: ['status', 'raum'] },
   aufgaben: { indizes: ['phase'] },
+  // To-Dos und Checklisten: dasselbe mit und ohne Listennamen. Ein einziger
+  // Speicher, sonst gaebe es zwei Wege, dieselbe Zahl auszurechnen.
+  todos: { indizes: ['liste'] },
   tagebuch: { indizes: ['datum'] },
   kontakte: { indizes: [] },
   bilder: { indizes: [] },
@@ -95,7 +98,7 @@ function db() {
       // Ab hier reicht Anlegen: anlegen() ueberspringt, was es schon gibt.
       // Die Wanderung auf Fassung 2 legt neue Speicher bereits mit an, ein
       // zweiter Aufruf schadet deshalb nicht.
-      if (ereignis.oldVersion < 6) {
+      if (ereignis.oldVersion < 7) {
         anlegen(d);
       }
     };

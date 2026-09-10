@@ -12,7 +12,7 @@ import { daten, einstellung } from '../daten.js';
 // SPEICHER in daten.js, damit ein neuer Speicher beim Vergleich auffaellt.
 const SPEICHER = [
   'darlehen', 'leitfaden', 'posten', 'angebote', 'belege', 'geschosse',
-  'raeume', 'pins', 'maengel', 'aufgaben', 'tagebuch', 'kontakte',
+  'raeume', 'pins', 'maengel', 'aufgaben', 'todos', 'tagebuch', 'kontakte',
 ];
 
 export async function zeige(rahmen) {
@@ -120,6 +120,7 @@ async function zeichne(rahmen) {
       el('h2', { text: 'Was gespeichert ist' }),
       wertzeile('Finanzierungsposten', String(bestand.darlehen)),
       wertzeile('Abgehakte Leitfaden-Punkte', String(bestand.leitfaden)),
+      wertzeile('Aufgaben und Checklistenpunkte', String(bestand.todos)),
       wertzeile('Kostenpositionen', String(bestand.posten)),
       wertzeile('Angebote', String(bestand.angebote)),
       wertzeile('Rechnungen', String(bestand.belege)),
