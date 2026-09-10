@@ -6,7 +6,7 @@
 
 import { el, leeren } from './hilfen.js';
 import { BEREICHE, MODULE } from './bereiche.js';
-import { bildUrlsFreigeben } from './daten.js';
+import { bildUrlsFreigeben, datenZustand, DB_WARTET } from './daten.js';
 
 export { BEREICHE, MODULE };
 
@@ -229,34 +229,63 @@ async function zeichne() {
  */
 function notausgang(grund) {
   if (inhalt.querySelector('.notausgang')) return;
+
+  const zustand = datenZustand();
+  // Der haeufigste Fall hat eine eigene Antwort, und es ist nicht die, die
+  // man sonst gibt: Wegraeumen hilft hier nicht, Schliessen hilft.
+  const wartetAufFenster = zustand.startsWith(DB_WARTET);
+
   inhalt.append(
-    el('div', { klasse: 'leer notausgang' }, [
-      el('h2', { text: 'Hier ist gerade nichts' }),
-      el('p', { text: grund }),
-      el('p', {
-        klasse: 'unterzeile',
-        text: 'Meist hilft es, die zwischengespeicherte Fassung wegzuräumen und ' +
-          'neu zu laden. Deine Daten bleiben dabei unberührt.',
-      }),
-      el('button', {
-        klasse: 'knopf knopf-haupt', type: 'button', text: 'Aufräumen und neu laden',
-        onclick: async () => {
-          try {
-            if (window.caches) {
-              for (const name of await caches.keys()) await caches.delete(name);
-            }
-            if (navigator.serviceWorker) {
-              for (const r of await navigator.serviceWorker.getRegistrations()) {
-                await r.unregister();
+    el('div', { klasse: 'leer notausgang' }, wartetAufFenster
+      ? [
+          el('h2', { text: 'BauZeuge ist noch woanders offen' }),
+          el('p', {
+            text: 'Die App wartet auf ein anderes Fenster, in dem sie mit einer ' +
+              'älteren Fassung läuft. Solange das offen ist, kommt hier nichts an.',
+          }),
+          el('p', {
+            klasse: 'unterzeile',
+            text: 'Schließe alle anderen BauZeuge-Fenster und -Reiter, auch die ' +
+              'installierte App, und lade dann hier neu. Deine Daten bleiben ' +
+              'unberührt.',
+          }),
+          el('button', {
+            klasse: 'knopf knopf-haupt', type: 'button', text: 'Neu laden',
+            onclick: () => location.reload(),
+          }),
+        ]
+      : [
+          el('h2', { text: 'Hier ist gerade nichts' }),
+          el('p', { text: grund }),
+          // Woran es liegt, steht fast immer in der Datenbank. Der Satz ist
+          // fuer den Nutzer da: Er kann ihn vorlesen, ohne die Konsole zu
+          // oeffnen.
+          el('p', { klasse: 'unterzeile', text: 'Datenbank: ' + zustand }),
+          el('p', {
+            klasse: 'unterzeile',
+            text: 'Meist hilft es, die zwischengespeicherte Fassung wegzuräumen ' +
+              'und neu zu laden. Deine Daten bleiben dabei unberührt.',
+          }),
+          el('button', {
+            klasse: 'knopf knopf-haupt', type: 'button', text: 'Aufräumen und neu laden',
+            onclick: async () => {
+              try {
+                if (window.caches) {
+                  for (const name of await caches.keys()) await caches.delete(name);
+                }
+                if (navigator.serviceWorker) {
+                  for (const r of await navigator.serviceWorker.getRegistrations()) {
+                    await r.unregister();
+                  }
+                }
+              } catch (fehler) {
+                console.error(fehler);
               }
-            }
-          } catch (fehler) {
-            console.error(fehler);
-          }
-          location.reload();
-        },
-      }),
-    ])
+              location.reload();
+            },
+          }),
+        ]
+    )
   );
 }
 

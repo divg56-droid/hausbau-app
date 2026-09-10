@@ -1260,5 +1260,37 @@ console.log('Kein stummer Bildschirm');
   pruef('Und er kommt nur einmal', app.includes("inhalt.querySelector('.notausgang')"));
 }
 
+console.log('Datenbank haengt nicht stumm');
+{
+  const d = readFileSync('./www/daten.js', 'utf8');
+  // Ohne Wache kommt bei einer blockierten Datenbank weder onsuccess noch
+  // onerror -- der Bildschirm bleibt leer, und niemand weiss, warum.
+  pruef('Eine Wache bricht das Warten ab', d.includes('const GEDULD = 15000;'));
+  pruef('Der Zustand ist von aussen lesbar', d.includes('export const datenZustand'));
+  pruef('Die Wanderung meldet, von wo nach wo',
+    d.includes("'wandert von Fassung ' + ereignis.oldVersion"));
+  // Bricht die Wanderung ab, kommt sonst gar nichts zurueck.
+  pruef('Ein Abbruch der Wanderung wird gemeldet',
+    d.includes('anfrage.transaction.onabort'));
+  // Ein zweites Fenster mit alter Fassung blockiert sonst dauerhaft.
+  pruef('Diese Verbindung weicht einer neueren Fassung',
+    d.includes('onversionchange'));
+  // Ein einmal abgelehntes Versprechen wuerde jeden spaeteren Versuch
+  // scheitern lassen, ohne es je wieder probiert zu haben.
+  pruef('Nach einem Fehler wird wieder versucht',
+    d.includes('dbVersprechen = null;'));
+  const app_js = readFileSync('./www/app.js', 'utf8');
+  pruef('Der leere Bildschirm nennt den Zustand',
+    app_js.includes("'Datenbank: ' + zustand"));
+  // Der haeufigste Fall hat eine eigene Antwort, und es ist nicht die, die
+  // man sonst gibt: Wegraeumen hilft nicht, Schliessen hilft.
+  pruef('Ein blockierendes Fenster bekommt seinen eigenen Text',
+    app_js.includes('zustand.startsWith(DB_WARTET)') &&
+    app_js.includes('BauZeuge ist noch woanders offen'));
+  // Chrome meldet den Fall nicht ueber onblocked, die Anfrage bleibt liegen.
+  pruef('Der Verdacht entsteht an der Zeit, nicht am Ereignis',
+    d.includes('const VERDACHT = 3000;') && d.includes('dbZustand = DB_WARTET'));
+}
+
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');
 process.exit(fehler ? 1 : 0);

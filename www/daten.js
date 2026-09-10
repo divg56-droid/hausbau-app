@@ -95,12 +95,84 @@ const jetzt = () => new Date().toISOString();
 
 let dbVersprechen = null;
 
+/*
+ * Was die Datenbank gerade tut.
+ *
+ * Wenn ein Bildschirm leer bleibt, liegt es fast immer hier: Die Datenbank
+ * antwortet nicht, und jeder Lesevorgang wartet still weiter. Ohne diesen
+ * Zustand sieht man dem leeren Bildschirm nicht an, woran es liegt --
+ * hoechstens, dass er leer ist.
+ */
+let dbZustand = 'noch nicht geöffnet';
+export const datenZustand = () => dbZustand;
+
+// Antwortet die Datenbank nach dieser Zeit nicht, gilt sie als haengend. Der
+// Wert ist grosszuegig: Eine Wanderung ueber mehrere Fassungen mit vielen
+// Fotos darf dauern, nur nicht ewig.
+const GEDULD = 15000;
+
+// Bis hierhin ist eine Datenbank normalerweise offen. Danach wartet sie fast
+// immer auf ein anderes Fenster.
+const VERDACHT = 3000;
+
+/**
+ * Der Grund, warum es haengt, im Klartext.
+ *
+ * Chrome meldet ein blockierendes zweites Fenster nicht zuverlaessig ueber
+ * onblocked: Die Anfrage bleibt einfach liegen, ohne dass irgendein
+ * Ereignis kommt. Firefox meldet es. Deshalb wird der Fall hier an der Zeit
+ * erkannt und nicht am Ereignis.
+ */
+export const DB_WARTET = 'wartet auf ein anderes Fenster mit BauZeuge';
+
 function db() {
   if (dbVersprechen) return dbVersprechen;
+  dbZustand = 'wird geöffnet';
+
   dbVersprechen = new Promise((fertig, fehler) => {
-    const anfrage = indexedDB.open(DB_NAME, DB_VERSION);
+    let erledigt = false;
+    const fertigMelden = (wert) => { erledigt = true; fertig(wert); };
+    const fehlerMelden = (f) => {
+      erledigt = true;
+      dbZustand = 'Fehler: ' + (f && f.message ? f.message : String(f));
+      // Das abgelehnte Versprechen nicht behalten: Sonst scheitert auch jeder
+      // spaetere Versuch, ohne es je wieder probiert zu haben.
+      dbVersprechen = null;
+      fehler(f);
+    };
+
+    let anfrage;
+    try {
+      anfrage = indexedDB.open(DB_NAME, DB_VERSION);
+    } catch (f) {
+      fehlerMelden(f);
+      return;
+    }
+
+    // Zwei Faelle, in denen sonst nie etwas zurueckkommt: ein zweites offenes
+    // Fenster mit aelterer Fassung, und ein Browser, der die Anfrage
+    // stillschweigend liegen laesst.
+    const verdacht = setTimeout(() => {
+      if (!erledigt && dbZustand === 'wird geöffnet') dbZustand = DB_WARTET;
+    }, VERDACHT);
+
+    const wache = setTimeout(() => {
+      if (erledigt) return;
+      fehlerMelden(new Error(
+        'Die Datenbank antwortet nicht (' + dbZustand + ').'
+      ));
+    }, GEDULD);
+    const wachenWeg = () => { clearTimeout(verdacht); clearTimeout(wache); };
+
     anfrage.onupgradeneeded = (ereignis) => {
+      clearTimeout(verdacht);
+      dbZustand = 'wandert von Fassung ' + ereignis.oldVersion + ' auf ' + DB_VERSION;
       const d = anfrage.result;
+      // Bricht die Wanderung ab, kommt sonst weder onsuccess noch onerror.
+      if (anfrage.transaction) {
+        anfrage.transaction.onabort = () =>
+          fehlerMelden(anfrage.transaction.error || new Error('Die Wanderung brach ab.'));
+      }
       if (ereignis.oldVersion < 1) {
         anlegen(d);
         return;
@@ -115,10 +187,30 @@ function db() {
         anlegen(d);
       }
     };
-    anfrage.onsuccess = () => fertig(anfrage.result);
-    anfrage.onerror = () => fehler(anfrage.error);
-    anfrage.onblocked = () =>
-      fehler(new Error('Die App ist in einem anderen Fenster offen. Bitte dort schließen.'));
+    anfrage.onsuccess = () => {
+      wachenWeg();
+      dbZustand = 'offen, Fassung ' + anfrage.result.version;
+      // Fordert ein anderes Fenster eine neuere Fassung an, muss diese
+      // Verbindung weichen. Sonst haengt dort die Wanderung fest.
+      anfrage.result.onversionchange = () => {
+        anfrage.result.close();
+        dbVersprechen = null;
+        dbZustand = 'geschlossen, ein anderes Fenster braucht eine neuere Fassung';
+      };
+      fertigMelden(anfrage.result);
+    };
+    anfrage.onerror = () => {
+      wachenWeg();
+      fehlerMelden(anfrage.error);
+    };
+    anfrage.onblocked = () => {
+      dbZustand = DB_WARTET;
+      wachenWeg();
+      fehlerMelden(new Error(
+        'Die App ist in einem anderen Fenster oder Reiter offen. Bitte dort ' +
+        'schließen, dann hier neu laden.'
+      ));
+    };
   });
   return dbVersprechen;
 }
