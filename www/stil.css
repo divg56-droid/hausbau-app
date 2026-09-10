@@ -591,23 +591,29 @@ html[data-thema="dunkel"] {
    einer weissen Kugel, die von links nach rechts wandert und Sonne oder Mond
    traegt. Die Spur ist im Dunkeln anthrazit, im Hellen gruen. */
 
+/* Drei Stellungen nebeneinander: Geraet, hell, dunkel. Die gewaehlte
+   bekommt eine eigene Flaeche, die beiden anderen bleiben ruhig -- so
+   steht da, was gilt, und daneben, was es sonst gibt. */
 .thema-schalter {
-  flex: none; width: 46px; height: 26px; padding: 3px; margin: 0 2px;
-  display: inline-flex; align-items: center;
+  flex: none; display: inline-flex; align-items: center; gap: 2px;
+  margin: 0 2px; padding: 2px;
+  border-radius: 999px; background: var(--band);
+  border: 1px solid var(--linie);
+}
+.thema-taste {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 26px; padding: 0;
   border: none; border-radius: 999px; cursor: pointer;
-  background: #1c1f26;
-  transition: background 0.2s;
+  background: none; color: var(--tinte-leise);
+  transition: background 0.15s, color 0.15s;
 }
-.thema-schalter[data-modus="hell"] { background: #34c759; }
-.thema-schalter .kugel {
-  width: 20px; height: 20px; border-radius: 50%; background: #fff;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px; line-height: 1;
-  transform: translateX(0); transition: transform 0.2s;
+.thema-taste:hover { color: var(--tinte); }
+.thema-taste.aktiv {
+  background: var(--karte); color: var(--akzent-dunkel);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
 }
-.thema-schalter[data-modus="hell"] .kugel { transform: translateX(20px); }
 @media (prefers-reduced-motion: reduce) {
-  .thema-schalter, .thema-schalter .kugel { transition: none; }
+  .thema-taste { transition: none; }
 }
 
 /* ------------------------------------------------------------- Wortmarke

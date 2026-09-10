@@ -74,6 +74,10 @@ const ZEICHEN = {
   klemmbrett: ['M8 4h8v3H8z', 'M6 5h2', 'M16 5h2v16H6V5', 'M9 11h6', 'M9 15h6'],
   euro: ['M6 3h8l4 4v14H6z', 'M14 3v4h4', 'M14 11a3 3 0 1 0 0 5', 'M9 12h4', 'M9 14h4'],
   buch: ['M4 4h7v16H4z', 'M13 4h7v16h-7z', 'M11 4v16', 'M13 4v16'],
+
+  // Design: Geraet, Sonne, Mond. Die Sonne steht schon oben beim Wetter.
+  bildschirm: ['M3 5h18v11H3z', 'M9 20h6', 'M12 16v4'],
+  mond: ['M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z'],
 };
 
 // ------------------------------------------------------------- Die Zuordnung

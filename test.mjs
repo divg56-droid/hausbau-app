@@ -663,13 +663,15 @@ console.log('Helles und dunkles Design');
   pruef('Weiss auf Akzentflaeche kommt aus einer Variablen',
     !/\.knopf-haupt \{[^}]*color: #fff/.test(css));
 
-  // Der Schalter sieht aus wie das Vorbild auf karten.360welt.de.
-  pruef('Schalter ist eine Pille mit 46 auf 26',
-    /\.thema-schalter \{[^}]*width: 46px;[^}]*height: 26px/.test(css));
-  pruef('Die Kugel wandert bei hell nach rechts',
-    /\.thema-schalter\[data-modus="hell"\] \.kugel \{ transform: translateX\(20px\)/.test(css));
-  pruef('Spur ist im Hellen gruen',
-    /\.thema-schalter\[data-modus="hell"\] \{ background: #34c759/.test(css));
+  // Drei Stellungen nebeneinander statt eines Kippschalters: Ein Schalter
+  // mit zwei Stellungen kann "automatisch" nicht darstellen.
+  pruef('Der Schalter hat drei Tasten', js.includes('export const THEMEN = ['),
+    ['auto', 'hell', 'dunkel'].filter((id) => !js.includes("id: '" + id + "'")).join(', '));
+  pruef('Jede traegt ihr Zeichen',
+    js.includes("zeichen: 'bildschirm'") && js.includes("zeichen: 'sonnig'") &&
+    js.includes("zeichen: 'mond'"));
+  pruef('Die gewaehlte Taste ist hervorgehoben', css.includes('.thema-taste.aktiv {'));
+  pruef('Und sagt es auch dem Vorleser', js.includes("setAttribute('aria-pressed'"));
 
   pruef('Der Schalter steht im Kopf', html.includes('class="thema-schalter" id="themaschalter"'));
   pruef('Das Design wird vor app.js gesetzt',
@@ -682,8 +684,6 @@ console.log('Helles und dunkles Design');
   pruef('Auf den Wechsel der Geraeteeinstellung wird gehorcht',
     js.includes("addEventListener('change'") && js.includes("lies() === 'auto'"));
   pruef('Die Farbe der Statusleiste wandert mit', js.includes('meta[name="theme-color"]'));
-  pruef('Sonne und Mond wie im Vorbild',
-    js.includes('\\u{1F319}') && js.includes('☀️'));
 
   const sw = readFileSync('./www/sw.js', 'utf8');
   pruef('thema.js liegt in der Offline-Schale', sw.includes("'./thema.js'"));
@@ -1560,6 +1560,8 @@ console.log('Zeichen');
     ...Object.values(ZUORDNUNGEN).flatMap((l) => l.map(([, z]) => z)),
     ...LAGEN.map((l) => wetterZeichen(l)),
     'haus', 'werkzeug', 'blatt', 'firma', 'person',
+    // Die drei Stellungen des Designschalters, siehe thema.js.
+    'bildschirm', 'mond',
   ]);
   const unbenutzt = ZEICHENNAMEN.filter((z) => !benutzt.has(z));
   pruef('Kein Zeichen liegt ungenutzt herum', unbenutzt.length === 0, unbenutzt.join(', '));

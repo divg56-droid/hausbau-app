@@ -7,10 +7,10 @@
 //   'hell'    feste Wahl, unabhaengig vom Geraet
 //   'dunkel'  feste Wahl, unabhaengig vom Geraet
 //
-// Der Schalter im Kopf hat nur zwei Stellungen, weil er zeigt, was gerade zu
-// sehen ist. Ein Schalter mit drei Stellungen waere im Kopf einer App nicht
-// zu bedienen. Wer zurueck auf "automatisch" will, findet die Wahl in den
-// Einstellungen; dort stehen alle drei nebeneinander.
+// Der Schalter im Kopf zeigt alle drei nebeneinander: Geraet, Sonne, Mond.
+// Ein Kippschalter mit zwei Stellungen kann "automatisch" nicht darstellen --
+// er zeigt, was gerade zu sehen ist, und verschweigt, warum. Drei Zeichen
+// nebeneinander zeigen beides: was gewaehlt ist und was es sonst gibt.
 //
 // Die Wahl liegt in localStorage und nicht in der Datenbank. Sie gehoert dem
 // Geraet: Wer am Telefon dunkel liest und am Rechner hell, will das so, und
@@ -82,29 +82,46 @@ export function themaSetzen(wahl) {
   anwenden();
 }
 
+/** Die drei Stellungen, in der Reihenfolge, in der sie im Schalter stehen. */
+export const THEMEN = [
+  { id: 'auto', zeichen: 'bildschirm', name: 'Wie das Gerät' },
+  { id: 'hell', zeichen: 'sonnig', name: 'Immer hell' },
+  { id: 'dunkel', zeichen: 'mond', name: 'Immer dunkel' },
+];
+
 function schalterZeichnen(schalter) {
-  const wirksam = themaWirksam();
-  schalter.dataset.modus = wirksam;
-  const nach = wirksam === 'dunkel' ? 'Helles' : 'Dunkles';
-  schalter.title = nach + ' Design einschalten';
-  schalter.setAttribute('aria-label', schalter.title);
-  schalter.setAttribute('aria-pressed', String(wirksam === 'dunkel'));
-  const kugel = schalter.querySelector('.kugel');
-  if (kugel) kugel.textContent = wirksam === 'dunkel' ? '\u{1F319}' : '☀️';
+  const wahl = lies();
+  schalter.dataset.modus = themaWirksam();
+  for (const knopf of schalter.querySelectorAll('[data-thema]')) {
+    const aktiv = knopf.dataset.thema === wahl;
+    knopf.classList.toggle('aktiv', aktiv);
+    knopf.setAttribute('aria-pressed', String(aktiv));
+  }
 }
 
 /**
- * Haengt das Verhalten an einen vorhandenen Schalter im Kopf.
+ * Baut den Schalter in einen vorhandenen Knoten.
  *
- * Ein Druck waehlt fest das Gegenteil dessen, was gerade zu sehen ist. Damit
- * verlaesst man "automatisch" - das ist gewollt: Wer den Schalter drueckt,
- * will genau diese Einstellung und nicht, dass sie sich abends wieder aendert.
+ * Drei Knoepfe, kein Kippschalter: "automatisch" ist eine eigene Stellung
+ * und keine Zwischenstufe. Wer eines der beiden festen Zeichen waehlt,
+ * verlaesst damit die Geraeteeinstellung -- das ist gewollt.
  */
-export function schalterAnbinden(schalter) {
+export async function schalterAnbinden(schalter) {
   if (!schalter) return;
-  schalter.addEventListener('click', () => {
-    themaSetzen(themaWirksam() === 'dunkel' ? 'hell' : 'dunkel');
-  });
+  const { zeichen } = await import('./zeichen.js');
+
+  schalter.replaceChildren(...THEMEN.map((th) => {
+    const knopf = document.createElement('button');
+    knopf.type = 'button';
+    knopf.className = 'thema-taste';
+    knopf.dataset.thema = th.id;
+    knopf.title = th.name;
+    knopf.setAttribute('aria-label', th.name);
+    knopf.append(zeichen(th.zeichen, { groesse: 16 }));
+    knopf.addEventListener('click', () => themaSetzen(th.id));
+    return knopf;
+  }));
+
   schalterZeichnen(schalter);
 }
 
