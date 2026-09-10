@@ -61,6 +61,14 @@ function alsPdfText(text) {
   return raus;
 }
 
+/*
+ * Die Marke in der Fusszeile jedes PDF. Sie steht hier und nicht in den
+ * Modulen: Sonst schreibt sie jedes Blatt selbst hin, und beim naechsten
+ * Namenswechsel bleibt eines davon stehen. Die Module liefern nur noch den
+ * beschreibenden Teil.
+ */
+export const PDF_MARKE = 'BauZeuge.de';
+
 export const A4 = { breite: 595.28, hoehe: 841.89 };
 export const RAND = 48;
 export const INNEN = A4.breite - 2 * RAND;
@@ -449,7 +457,7 @@ export class Blatt {
 
     // Fusszeile auf jede Seite, erst jetzt, weil die Gesamtzahl feststeht.
     const seitenStroeme = this.seiten.map((strom, i) => {
-      const links = this.fusszeile;
+      const links = this.fusszeile ? PDF_MARKE + ' · ' + this.fusszeile : PDF_MARKE;
       const rechts = 'Seite ' + (i + 1) + ' von ' + anzahl;
       let fuss = '0.6 G 0.5 w ' + RAND + ' ' + (RAND + 14) + ' m ' + (A4.breite - RAND) + ' ' + (RAND + 14) + ' l S 0 G\n';
       fuss += 'BT /F1 7.5 Tf 0.45 0.47 0.5 rg 1 0 0 1 ' + RAND + ' ' + RAND + ' Tm (' + alsPdfText(links) + ') Tj ET\n';

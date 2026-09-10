@@ -16,11 +16,14 @@ was schon steht.
 - [ ] Offene To-Dos und Fortschritt des Bauleitfadens nachziehen,
       sobald Schritt 2 und 6 stehen
 
-## 2. Bauleitfaden
+## 2. Bauleitfaden — erledigt
 
-- [ ] Sechs Phasen von der Finanzierung bis zur Uebergabe
-- [ ] Aufgaben je Phase zum Abhaken, Fortschritt je Phase und gesamt
-- [ ] Schritt-fuer-Schritt-Ansicht neben der Gesamtliste
+- [x] Sechs Phasen von der Finanzierung bis zur Uebergabe
+- [x] Vierundsechzig Punkte je mit Begruendung, zum Abhaken, Fortschritt je
+      Phase und gesamt
+- [x] Schritt-fuer-Schritt-Ansicht neben der Gesamtliste
+- [x] Verweise aus den Punkten in die passenden Bereiche
+- [x] Fortschritt auf der Projektuebersicht
 
 ## 3. Baukosten aufteilen
 

@@ -544,3 +544,33 @@ body.leiste-offen #kopf .menue-knopf span:nth-child(3) { transform: translateY(-
 .kennzahl { background: var(--karte); border: 1px solid var(--linie); border-radius: 12px; padding: 12px 14px; }
 .kennzahl .wert { font-size: 21px; font-weight: 700; display: block; line-height: 1.2; }
 .kennzahl .name { font-size: 13px; color: var(--tinte-leise); }
+
+/* --------------------------------------------------------- Bauleitfaden */
+
+.phasenblock > summary {
+  display: flex; align-items: center; gap: 12px;
+  cursor: pointer; list-style: none; margin-bottom: 8px;
+}
+.phasenblock > summary::-webkit-details-marker { display: none; }
+.phasen-titel { font-size: 17px; font-weight: 700; flex: 1; }
+.phasen-zahl {
+  font-size: 13px; font-weight: 700; color: var(--tinte-leise);
+  font-variant-numeric: tabular-nums;
+}
+.phasenblock > summary::after {
+  content: '\203A'; font-size: 20px; color: var(--tinte-leise);
+  transform: rotate(90deg); transition: transform 0.2s;
+}
+.phasenblock[open] > summary::after { transform: rotate(-90deg); }
+
+.leitfaden-zeile {
+  display: flex; align-items: flex-start; gap: 11px;
+  padding: 9px 0; min-height: 44px;
+}
+.leitfaden-zeile input[type="checkbox"] { margin-top: 3px; flex: none; }
+.leitfaden-zeile .zeilen-text { flex: 1; min-width: 0; }
+.leitfaden-zeile .zeilen-unter { white-space: normal; }
+/* Erledigtes bleibt lesbar, tritt aber zurueck. Durchstreichen waere hier
+   falsch: Die Begruendung soll man auch spaeter noch lesen koennen. */
+.leitfaden-zeile.erledigt .zeilen-titel { color: var(--tinte-leise); }
+.leitfaden-zeile .knopf-schmal { flex: none; align-self: center; }

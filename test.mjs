@@ -17,6 +17,7 @@ import { postenRechnen } from './www/module/baukasse.js';
 import { helferVon, stundenJeHelfer } from './www/module/tagebuch.js';
 import { angeboteRechnen } from './www/module/angebote.js';
 import { BEREICHE, MODULE } from './www/bereiche.js';
+import { PHASEN, ALLE_PUNKTE, leitfadenStand } from './www/leitfaden-daten.js';
 import { csvText, zelle } from './www/csv.js';
 import {
   KOSTENGRUPPEN, kostengruppeName, kostengruppeLang, hauptgruppe,
@@ -714,6 +715,109 @@ console.log('Gliederung und Seitenleiste');
 
   const sw = readFileSync('./www/sw.js', 'utf8');
   pruef('Die Uebersicht liegt in der Offline-Schale', sw.includes("'./module/uebersicht.js'"));
+}
+
+console.log('PDF-Fusszeile');
+{
+  const quelle = readFileSync('./www/pdf.js', 'utf8');
+  pruef('Die Marke steht an genau einer Stelle',
+    quelle.includes("export const PDF_MARKE = 'BauZeuge.de';"));
+  pruef('Die Fusszeile setzt sie davor',
+    /const links = this\.fusszeile \? PDF_MARKE/.test(quelle));
+
+  // Kein Modul darf die Marke noch einmal selbst hinschreiben, sonst steht
+  // sie nach dem naechsten Namenswechsel irgendwo doppelt oder veraltet.
+  const doppelt = [];
+  for (const datei of readdirSync('./www/module')) {
+    const t = readFileSync('./www/module/' + datei, 'utf8');
+    if (/fusszeile: '[^']*BauZeuge/.test(t)) doppelt.push(datei);
+  }
+  pruef('Kein Modul schreibt die Marke selbst', doppelt.length === 0, doppelt.join(', '));
+
+  const blatt = new Blatt({ titel: 'Probe', fusszeile: 'Maengelliste' });
+  const text = new TextDecoder('latin1').decode(blatt.bytes());
+  pruef('Die Marke steht im erzeugten PDF', text.includes('BauZeuge.de'));
+  pruef('Der beschreibende Teil steht daneben', text.includes('Maengelliste'));
+
+  const ohne = new Blatt({ titel: 'Probe' });
+  pruef('Auch ohne Zusatz steht die Marke unten',
+    new TextDecoder('latin1').decode(ohne.bytes()).includes('BauZeuge.de'));
+}
+
+console.log('Bauleitfaden');
+{
+  pruef('Sechs Phasen', PHASEN.length === 6, String(PHASEN.length));
+  pruef('Jede Phase hat Kennung, Titel und Einleitung',
+    PHASEN.every((p) => p.id && p.titel && p.text));
+
+  const ids = ALLE_PUNKTE.map((p) => p.id);
+  // Die Kennung ist zugleich der Datenbankschluessel des Hakens. Kaeme eine
+  // doppelt vor, wuerden zwei Punkte denselben Haken teilen.
+  pruef('Keine Kennung kommt doppelt vor', new Set(ids).size === ids.length,
+    ids.filter((x, i) => ids.indexOf(x) !== i).join(', '));
+  pruef('Kennungen passen in die Schluesselspalte',
+    ids.every((i) => i.length <= 36 && /^[a-z0-9-]+$/.test(i)),
+    ids.filter((i) => i.length > 36 || !/^[a-z0-9-]+$/.test(i)).join(', '));
+  pruef('Jeder Punkt hat einen Titel', ALLE_PUNKTE.every((p) => p.titel.length > 5));
+  // Ohne Begruendung waere es eine Liste zum Abhaken statt ein Leitfaden.
+  pruef('Jeder Punkt sagt, warum er dran ist',
+    ALLE_PUNKTE.every((p) => p.text && p.text.length > 25),
+    ALLE_PUNKTE.filter((p) => !p.text || p.text.length <= 25).map((p) => p.id).join(', '));
+  pruef('Mindestens fuenfzig Punkte', ALLE_PUNKTE.length >= 50, String(ALLE_PUNKTE.length));
+
+  // Jeder Verweis muss auf einen Bereich zeigen, den es wirklich gibt.
+  const wege = new Set(MODULE.map((m) => '#/' + m.weg));
+  const ziele = ALLE_PUNKTE.filter((p) => p.ziel).map((p) => p.ziel);
+  pruef('Es gibt Verweise in die Bereiche', ziele.length >= 8, String(ziele.length));
+  pruef('Jeder Verweis trifft einen Bereich',
+    ziele.every((z) => wege.has(z)), ziele.filter((z) => !wege.has(z)).join(', '));
+
+  // Ohne Haken steht alles auf null und der erste Punkt ist dran.
+  const leer = leitfadenStand([]);
+  pruef('Ohne Haken ist nichts erledigt', leer.erledigt === 0);
+  pruef('Die Gesamtzahl stimmt mit der Vorlage', leer.gesamt === ALLE_PUNKTE.length);
+  pruef('Die erste Phase laeuft', leer.laufend.id === PHASEN[0].id);
+  pruef('Der erste Punkt ist als Naechstes dran',
+    leer.naechster.id === PHASEN[0].punkte[0].id);
+
+  // Ein Haken in der ersten Phase schiebt nur den naechsten Punkt weiter.
+  const einer = leitfadenStand([{ id: PHASEN[0].punkte[0].id, erledigt: true, am: '2026-09-01' }]);
+  pruef('Ein Haken zaehlt', einer.erledigt === 1);
+  pruef('Die Phase laeuft weiter', einer.laufend.id === PHASEN[0].id);
+  pruef('Jetzt ist der zweite Punkt dran', einer.naechster.id === PHASEN[0].punkte[1].id);
+  pruef('Das Datum wandert mit', einer.phasen[0].punkte[0].am === '2026-09-01');
+
+  // Vorarbeiten in einer spaeteren Phase duerfen die laufende nicht
+  // ueberspringen. Am Bau arbeitet man vor, der Rueckstand bleibt trotzdem.
+  const vorgearbeitet = leitfadenStand([{ id: PHASEN[3].punkte[0].id, erledigt: true }]);
+  pruef('Vorarbeit springt die laufende Phase nicht weiter',
+    vorgearbeitet.laufend.id === PHASEN[0].id, vorgearbeitet.laufend.id);
+
+  // Alles abgehakt: kein naechster Punkt mehr.
+  const alles = leitfadenStand(ALLE_PUNKTE.map((p) => ({ id: p.id, erledigt: true })));
+  pruef('Vollstaendig abgehakt zaehlt alles', alles.erledigt === ALLE_PUNKTE.length);
+  pruef('Dann gibt es keinen naechsten Punkt', alles.naechster === null);
+
+  // Ein Haken auf eine Kennung, die es nicht mehr gibt, darf nichts kaputt
+  // machen: Die Vorlage darf sich aendern, ohne dass Daten wandern muessen.
+  const fremd = leitfadenStand([{ id: 'gibt-es-nicht-mehr', erledigt: true }]);
+  pruef('Unbekannte Haken werden ignoriert', fremd.erledigt === 0);
+
+  const sw = readFileSync('./www/sw.js', 'utf8');
+  pruef('Leitfaden liegt in der Offline-Schale',
+    sw.includes("'./leitfaden-daten.js'") && sw.includes("'./module/leitfaden.js'"));
+
+  // Der Speicher muss ueberall bekannt sein, sonst faellt er beim Abgleich
+  // oder bei der Sicherung durch.
+  for (const [datei, was] of [
+    ['www/daten.js', 'Datenbank'],
+    ['www/abgleich.js', 'Abgleich'],
+    ['server/abgleich.php', 'Server'],
+    ['www/module/einstellungen.js', 'Sicherung'],
+  ]) {
+    pruef(was + ' kennt den Speicher leitfaden',
+      readFileSync('./' + datei, 'utf8').includes('leitfaden'));
+  }
 }
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');

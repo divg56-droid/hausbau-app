@@ -365,7 +365,7 @@ async function pdfErzeugen(maengel, kontakte) {
   const blatt = new Blatt({
     titel: 'Mängelliste',
     untertitel: (projekt ? projekt + ' · ' : '') + 'Stand ' + datumLang(heute()),
-    fusszeile: 'BauZeuge · Mängelliste',
+    fusszeile: 'Mängelliste',
   });
 
   // Nach Raum sortieren und durchnummerieren: die Nummer verbindet die

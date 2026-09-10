@@ -430,7 +430,7 @@ async function din276Pdf(gerechnet, gruppen, summe) {
   const blatt = new Blatt({
     titel: 'Kostenaufstellung nach DIN 276',
     untertitel: (projekt ? projekt + ' · ' : '') + 'Stand ' + datumLang(heute()),
-    fusszeile: 'BauZeuge · Kostenaufstellung',
+    fusszeile: 'Kostenaufstellung',
   });
 
   blatt.absatz(

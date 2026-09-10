@@ -180,7 +180,7 @@ export async function zeige(rahmen) {
     const blatt = new Blatt({
       titel: 'Tilgungsverlauf',
       untertitel: (projekt ? projekt + ' · ' : '') + 'Stand ' + datumLang(heute()),
-      fusszeile: 'BauZeuge · unverbindliche Modellrechnung',
+      fusszeile: 'unverbindliche Modellrechnung',
     });
 
     blatt.ueberschrift('Annahmen');

@@ -16,13 +16,17 @@
 //              Abgleich vom anderen Geraet zurueck, weil der ihn noch kennt.
 
 const DB_NAME = 'hausbau';
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 
 // Wo Eintraege zu einem Elternobjekt gehoeren (Pins zu einem Geschoss), steht
 // dessen Kennung als Feld drin und bekommt einen Index.
 const SPEICHER = {
   einstellungen: { schluessel: 'name' },
   darlehen: { indizes: [] },
+  // Bauleitfaden: nur der Haken je Punkt. Der Text steht im Programm, und
+  // die Kennung des Punktes ist zugleich die des Satzes. So gibt es je Punkt
+  // genau einen Datensatz, auch wenn zwei Geraete ihn abhaken.
+  leitfaden: { indizes: [] },
   // Kostenpositionen: was geplant war und was es wirklich wurde.
   posten: { indizes: ['gewerk'] },
   // Angebote zu einer Position. Mehrere je Position, genau darum geht es.
@@ -91,7 +95,7 @@ function db() {
       // Ab hier reicht Anlegen: anlegen() ueberspringt, was es schon gibt.
       // Die Wanderung auf Fassung 2 legt neue Speicher bereits mit an, ein
       // zweiter Aufruf schadet deshalb nicht.
-      if (ereignis.oldVersion < 5) {
+      if (ereignis.oldVersion < 6) {
         anlegen(d);
       }
     };

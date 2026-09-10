@@ -11,8 +11,8 @@ import { daten, einstellung } from '../daten.js';
 // bleibt beim Loeschen stehen. Sie steht deshalb in derselben Reihenfolge wie
 // SPEICHER in daten.js, damit ein neuer Speicher beim Vergleich auffaellt.
 const SPEICHER = [
-  'darlehen', 'posten', 'angebote', 'belege', 'geschosse', 'raeume',
-  'pins', 'maengel', 'aufgaben', 'tagebuch', 'kontakte',
+  'darlehen', 'leitfaden', 'posten', 'angebote', 'belege', 'geschosse',
+  'raeume', 'pins', 'maengel', 'aufgaben', 'tagebuch', 'kontakte',
 ];
 
 export async function zeige(rahmen) {
@@ -119,6 +119,7 @@ async function zeichne(rahmen) {
     karte([
       el('h2', { text: 'Was gespeichert ist' }),
       wertzeile('Finanzierungsposten', String(bestand.darlehen)),
+      wertzeile('Abgehakte Leitfaden-Punkte', String(bestand.leitfaden)),
       wertzeile('Kostenpositionen', String(bestand.posten)),
       wertzeile('Angebote', String(bestand.angebote)),
       wertzeile('Rechnungen', String(bestand.belege)),

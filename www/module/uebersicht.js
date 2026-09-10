@@ -16,9 +16,10 @@ import { finanzierungsstand } from './finanzierung.js';
 import { postenRechnen } from './baukasse.js';
 import { terminePlanen } from './ablauf.js';
 import { STATUS } from './maengel.js';
+import { leitfadenStand } from '../leitfaden-daten.js';
 
 export async function zeige(rahmen) {
-  const [projekt, stand, posten, belege, aufgaben, maengel, tagebuch] = await Promise.all([
+  const [projekt, stand, posten, belege, aufgaben, maengel, tagebuch, haken] = await Promise.all([
     einstellung('projektname'),
     finanzierungsstand(),
     daten.alle('posten'),
@@ -26,7 +27,9 @@ export async function zeige(rahmen) {
     daten.alle('aufgaben'),
     daten.alle('maengel'),
     daten.alle('tagebuch'),
+    daten.alle('leitfaden'),
   ]);
+  const leitfaden = leitfadenStand(haken);
 
   const gerechnet = posten.map((p) => ({ ...p, ...postenRechnen(p, belege) }));
   const geplant = gerechnet.reduce((s, p) => s + p.geplant, 0);
@@ -56,6 +59,7 @@ export async function zeige(rahmen) {
         }),
         knopf('Budget anlegen', () => { location.hash = '#/finanzierung'; }, 'knopf-haupt'),
         knopf('Erst einmal Baukosten schätzen', () => { location.hash = '#/baukosten'; }),
+        knopf('Oder dem Bauleitfaden folgen', () => { location.hash = '#/leitfaden'; }, 'knopf-leise'),
       ]),
       hinweisKasten(
         'Links in der Leiste stehen alle Bereiche. Auf dem Telefon öffnest du sie ' +
@@ -73,6 +77,31 @@ export async function zeige(rahmen) {
       kennzahl('Auftragssumme', eur.format(auftrag)),
       kennzahl('Mehrkosten', (mehr > 0 ? '+' : '') + eur.format(mehr),
         mehr > 0 ? 'mehr' : mehr < 0 ? 'weniger' : null),
+    ])
+  );
+
+  const lfAnteil = Math.round((leitfaden.erledigt / leitfaden.gesamt) * 100);
+  rahmen.append(
+    karte([
+      el('h2', { text: 'Bauleitfaden' }),
+      el('p', {
+        klasse: 'unterzeile',
+        text: `${leitfaden.laufend.titel} · ${leitfaden.erledigt} von ${leitfaden.gesamt} Punkten erledigt.`,
+      }),
+      el('div', { klasse: 'fortschrittsbalken' }, [
+        el('div', { stil: { width: lfAnteil + '%' } }),
+      ]),
+      leitfaden.naechster
+        ? el('div', { klasse: 'wertzeile' }, [
+            el('span', { text: 'Als Nächstes' }),
+            el('strong', { text: leitfaden.naechster.titel }),
+          ])
+        : null,
+      knopf(
+        leitfaden.naechster ? 'Zum Leitfaden' : 'Leitfaden ansehen',
+        () => { location.hash = '#/leitfaden'; },
+        'knopf-leise'
+      ),
     ])
   );
 

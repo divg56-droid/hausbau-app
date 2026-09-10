@@ -530,7 +530,7 @@ async function pdfErzeugen(eintraege, kontakte) {
   const blatt = new Blatt({
     titel: 'Bauhelfertagebuch',
     untertitel: (projekt ? projekt + ' · ' : '') + 'Stand ' + datumLang(heute()),
-    fusszeile: 'BauZeuge · Bauhelfertagebuch',
+    fusszeile: 'Bauhelfertagebuch',
   });
 
   // Aelteste zuerst: ein Nachweis liest sich chronologisch.

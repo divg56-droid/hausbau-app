@@ -21,6 +21,8 @@ export const BEREICHE = [
     punkte: [
       { weg: '', titel: 'Projektübersicht',
         text: 'Budget, Termine, offene Mängel und was als Nächstes ansteht.' },
+      { weg: 'leitfaden', titel: 'Bauleitfaden',
+        text: 'Was in welcher Reihenfolge zu tun ist, von der Finanzierung bis zur Abnahme.' },
     ],
   },
   {
