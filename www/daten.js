@@ -16,7 +16,7 @@
 //              Abgleich vom anderen Geraet zurueck, weil der ihn noch kennt.
 
 const DB_NAME = 'hausbau';
-const DB_VERSION = 7;
+const DB_VERSION = 8;
 
 // Wo Eintraege zu einem Elternobjekt gehoeren (Pins zu einem Geschoss), steht
 // dessen Kennung als Feld drin und bekommt einen Index.
@@ -41,6 +41,9 @@ const SPEICHER = {
   // To-Dos und Checklisten: dasselbe mit und ohne Listennamen. Ein einziger
   // Speicher, sonst gaebe es zwei Wege, dieselbe Zahl auszurechnen.
   todos: { indizes: ['liste'] },
+  // Dokumentenablage. Die Datei selbst liegt im Bilderspeicher; hier steht
+  // nur, was sie ist und wozu sie gehoert.
+  dokumente: { indizes: ['art'] },
   tagebuch: { indizes: ['datum'] },
   kontakte: { indizes: [] },
   bilder: { indizes: [] },
@@ -56,6 +59,7 @@ const VERWEISE = {
   belege: { kontaktId: 'kontakte', quelleId: 'darlehen', bildId: 'bilder', postenId: 'posten' },
   maengel: { kontaktId: 'kontakte', raumId: 'raeume' },
   aufgaben: { vorgaengerId: 'aufgaben', kontaktId: 'kontakte', mangelId: 'maengel' },
+  dokumente: { mangelId: 'maengel', postenId: 'posten', kontaktId: 'kontakte' },
 };
 
 // Verweislisten: Feld enthaelt ein Feld von Kennungen.
@@ -63,6 +67,7 @@ const VERWEISLISTEN = {
   maengel: { bildIds: 'bilder' },
   raeume: { bildIds: 'bilder' },
   tagebuch: { bildIds: 'bilder', helferIds: 'kontakte' },
+  dokumente: { bildIds: 'bilder' },
 };
 
 /** Weltweit eindeutige Kennung, ohne Absprache zwischen den Geraeten. */
@@ -98,7 +103,7 @@ function db() {
       // Ab hier reicht Anlegen: anlegen() ueberspringt, was es schon gibt.
       // Die Wanderung auf Fassung 2 legt neue Speicher bereits mit an, ein
       // zweiter Aufruf schadet deshalb nicht.
-      if (ereignis.oldVersion < 7) {
+      if (ereignis.oldVersion < 8) {
         anlegen(d);
       }
     };

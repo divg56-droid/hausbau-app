@@ -5,7 +5,7 @@
 // wie im Browser. Ein Plugin weniger, das kaputtgehen kann.
 
 import { el, knopf } from './hilfen.js';
-import { bildAblegen, bildUrl, bildLoeschen } from './daten.js';
+import { daten, bildAblegen, bildUrl, bildLoeschen } from './daten.js';
 
 /**
  * Baut eine Fotoreihe mit Aufnahme-Knopf.
@@ -35,7 +35,19 @@ export function fotofeld(ids, beiWechsel, optionen = {}) {
     reihe.replaceChildren();
     for (const id of ids) {
       const url = await bildUrl(id);
-      const bild = el('img', { src: url || '', alt: 'Angehängtes Foto' });
+      const eintrag = await daten.holen('bilder', id);
+      // Ein PDF hat keine Vorschau. Als <img> waere es ein kaputtes Bild;
+      // stattdessen eine Kachel mit dem Dateinamen, die sich antippen laesst.
+      const istPdf = eintrag && String(eintrag.typ || '').includes('pdf');
+      const bild = istPdf
+        ? el('a', {
+            klasse: 'dateikachel', href: url || '#', target: '_blank', rel: 'noopener',
+            title: eintrag.name || 'PDF',
+          }, [
+            el('span', { klasse: 'dateizeichen', text: 'PDF' }),
+            el('span', { klasse: 'dateiname', text: eintrag.name || 'Dokument' }),
+          ])
+        : el('img', { src: url || '', alt: 'Angehängtes Foto' });
       const weg = el(
         'button',
         {

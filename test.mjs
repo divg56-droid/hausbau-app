@@ -1013,8 +1013,35 @@ console.log('To-Dos und Checklisten');
     pruef(was + ' kennt den Speicher todos',
       readFileSync('./' + datei, 'utf8').includes('todos'));
   }
-  pruef('Die Datenbank ist auf Fassung sieben',
-    readFileSync('./www/daten.js', 'utf8').includes('const DB_VERSION = 7;'));
+  // Ein neuer Speicher ohne neue Fassung wird beim Aufmachen der Datenbank
+  // nicht angelegt: Er fehlt dann genau auf den Geraeten, die es schon gibt.
+  const daten_js = readFileSync('./www/daten.js', 'utf8');
+  const fassung = Number(daten_js.match(/const DB_VERSION = (\d+);/)[1]);
+  const speicher = [...daten_js.matchAll(/^  ([a-z]+): \{ (?:indizes|schluessel)/gm)].map((m) => m[1]);
+  pruef('Jeder Speicher ist beim Hochziehen dabei',
+    daten_js.includes('ereignis.oldVersion < ' + fassung), 'Fassung ' + fassung);
+  pruef('Alle Speicher stehen im Abgleich',
+    speicher.filter((n) => n !== 'einstellungen')
+      .every((n) => readFileSync('./www/abgleich.js', 'utf8').includes("'" + n + "'")),
+    speicher.filter((n) => n !== 'einstellungen' &&
+      !readFileSync('./www/abgleich.js', 'utf8').includes("'" + n + "'")).join(', '));
+  // Ein Verweis, den umschreiben() nicht kennt, zeigt nach dem Einspielen
+  // einer Sicherung auf die Kennung des fremden Geraets, also ins Leere.
+  for (const [feld, wo] of [
+    ['mangelId', 'VERWEISE'], ['postenId', 'VERWEISE'],
+    ['kontaktId', 'VERWEISE'], ['bildIds', 'VERWEISLISTEN'],
+  ]) {
+    const block = daten_js.slice(daten_js.indexOf('const ' + wo));
+    pruef('Dokumente: ' + feld + ' steht in ' + wo,
+      /dokumente: \{[^}]*\}/.test(block) &&
+      block.slice(block.indexOf('dokumente:')).slice(0, 120).includes(feld));
+  }
+
+  pruef('Und in der Sicherung',
+    speicher.filter((n) => !['einstellungen', 'leitfaden', 'bilder'].includes(n))
+      .every((n) => readFileSync('./www/module/einstellungen.js', 'utf8').includes("'" + n + "'")),
+    speicher.filter((n) => !['einstellungen', 'leitfaden', 'bilder'].includes(n) &&
+      !readFileSync('./www/module/einstellungen.js', 'utf8').includes("'" + n + "'")).join(', '));
 }
 
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');

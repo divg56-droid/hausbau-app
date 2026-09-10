@@ -21,7 +21,7 @@ import {
 const SPEICHER = [
   'einstellungen', 'darlehen', 'leitfaden', 'posten', 'angebote', 'belege',
   'geschosse', 'raeume', 'pins', 'maengel', 'aufgaben', 'todos', 'tagebuch',
-  'kontakte', 'bilder',
+  'dokumente', 'kontakte', 'bilder',
 ];
 
 // So viele Bilddateien je Runde. Mehr laesst eine wacklige Verbindung

@@ -255,6 +255,19 @@ tr.bindung td { background: var(--band); font-weight: 700; }
 .fotoreihe { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .fotoreihe figure { position: relative; margin: 0; }
 .fotoreihe img { width: 84px; height: 84px; object-fit: cover; border-radius: 8px; border: 1px solid var(--linie); }
+.dateikachel {
+  width: 84px; height: 84px; border-radius: 8px; border: 1px solid var(--linie);
+  background: var(--band); display: flex; flex-direction: column; gap: 4px;
+  align-items: center; justify-content: center; padding: 6px;
+  text-decoration: none; color: var(--tinte); overflow: hidden;
+}
+.dateizeichen { font-weight: 700; font-size: 13px; color: var(--akzent-dunkel); }
+.dateiname {
+  font-size: 10.5px; line-height: 1.2; text-align: center; color: var(--tinte-leise);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden; overflow-wrap: anywhere;
+}
+
 .fotoreihe .weg {
   position: absolute; top: -6px; right: -6px; width: 26px; height: 26px;
   border-radius: 50%; border: 1px solid var(--linie); background: var(--karte);

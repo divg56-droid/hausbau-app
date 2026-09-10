@@ -13,8 +13,7 @@ was schon steht.
 - [x] Projektuebersicht als Startseite: Budget, geplante Kosten,
       Auftragssumme, Mehrkosten, Restbudget, naechster Arbeitsschritt,
       offene Maengel mit Fristwarnung, Stand des Tagebuchs
-- [ ] Offene To-Dos und Fortschritt des Bauleitfadens nachziehen,
-      sobald Schritt 2 und 6 stehen
+- [x] Offene To-Dos und Fortschritt des Bauleitfadens nachgezogen
 
 ## 2. Bauleitfaden — erledigt
 
@@ -59,11 +58,12 @@ Schritt 10.
 - [x] Umbenennen zieht Positionen, Maengel und Kontakte mit
 - [x] Loeschen nur, solange nichts daran haengt
 
-## 6. Organisation
+## 6. Organisation — erledigt
 
-- [ ] To-Do-Liste
-- [ ] Checklisten
-- [ ] Dokumentenablage mit Verknuepfung zu Mangel, Position oder Firma
+- [x] To-Do-Liste mit Frist, Notiz und Schnelleingabe
+- [x] Checklisten, nach Liste gruppiert, mit fuenf Vorlagen
+- [x] Dokumentenablage mit Verknuepfung zu Mangel, Position oder Firma
+- [x] Offene To-Dos auf der Projektuebersicht (der offene Punkt aus Schritt 1)
 
 ## 7. Dokumentation ergaenzen
 

@@ -24,7 +24,7 @@ require __DIR__ . '/_start.php';
 const SPEICHER = [
     'einstellungen', 'darlehen', 'leitfaden', 'posten', 'angebote', 'belege',
     'geschosse', 'raeume', 'pins', 'maengel', 'aufgaben', 'todos', 'tagebuch',
-    'kontakte', 'bilder',
+    'dokumente', 'kontakte', 'bilder',
 ];
 
 // Obergrenze je Antwort. Bei einem grossen Bestand holt sich das Geraet den
