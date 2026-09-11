@@ -168,14 +168,47 @@ jobs:
             cp "$apk" "bauzeuge-${{ steps.fassung.outputs.name }}.apk"
           done
 
-          # Was im Paket steht, nicht was gemeint war. Aus dem AAB liest sich
-          # das Manifest im Klartext.
-          unzip -o -q "bauzeuge-${{ steps.fassung.outputs.name }}.aab" -d entpackt
-          echo "--- Fassung und SDK laut Paket:"
-          "$ANDROID_HOME"/build-tools/36.0.0/aapt2 dump xmltree \
-            "bauzeuge-${{ steps.fassung.outputs.name }}.aab" --file manifest/AndroidManifest.xml \
-            | grep -Ei 'versionCode|versionName|SdkVersion|permission|debuggable' || true
           ls -la bauzeuge-*.a*
+
+      # Was im Paket steht, nicht was gemeint war.
+      #
+      # aapt2 kann das hier nicht: Ein AAB ist kein APK, das Manifest liegt
+      # darin als Protobuf ("could not identify format of APK"). bundletool
+      # ist das Werkzeug dafuer. Dieser Schritt bricht ab statt zu warnen --
+      # eine Pruefung, die durchgeht, wenn sie nicht laufen konnte, ist keine.
+      - name: Paket nachprüfen
+        run: |
+          fassung=1.18.1
+          curl -sSL -o bundletool.jar \
+            "https://github.com/google/bundletool/releases/download/$fassung/bundletool-all-$fassung.jar"
+          datei="bauzeuge-${{ steps.fassung.outputs.name }}.aab"
+
+          echo "--- Manifest:"
+          manifest=$(java -jar bundletool.jar dump manifest --bundle="$datei")
+          echo "$manifest" | grep -Ei 'versionCode|versionName|SdkVersion|permission|debuggable' || true
+
+          hole() { echo "$manifest" | grep -o "$1=\"[^\"]*\"" | head -1 | cut -d'"' -f2; }
+          ziel=$(hole 'android:targetSdkVersion')
+          code=$(hole 'android:versionCode')
+
+          # Play weist seit dem 31.08.2026 alles unter 36 ab. Lieber hier
+          # scheitern als nach dem Hochladen.
+          [ "$ziel" = "36" ] || { echo "FEHLER: targetSdk ist '$ziel', Play verlangt 36." >&2; exit 1; }
+          [ "$code" = "${{ steps.fassung.outputs.code }}" ] || {
+            echo "FEHLER: versionCode im Paket ist '$code', erwartet ${{ steps.fassung.outputs.code }}." >&2; exit 1; }
+          if echo "$manifest" | grep -qi 'android:debuggable="true"'; then
+            echo "FEHLER: debuggable steht im Paket." >&2; exit 1
+          fi
+
+          echo "--- Signatur:"
+          if unzip -l "$datei" | grep -qE 'META-INF/.*\.(RSA|DSA|EC)$'; then
+            unzip -l "$datei" | grep -E 'META-INF/.*\.(RSA|SF)$'
+            echo "Signiert."
+          else
+            echo "::warning::Unsigniert - so nimmt Play das Paket nicht an."
+          fi
+
+          echo "--- In Ordnung: targetSdk $ziel, versionCode $code, keine Debug-Marke."
 
       - uses: actions/upload-artifact@v4
         with:
