@@ -172,14 +172,30 @@ export async function zeige(rahmen) {
   function summe() {
     const gesamt = zeilen.reduce((s, z) => s + Math.max(0, betragVon(z)), 0);
     const b = basen();
-    const anteil = b.bau > 0 ? (gesamt / b.bau) * 100 : 0;
+
+    // Die Faustregel "15 bis 20 Prozent" meint die Nebenkosten des Baus.
+    // Was am Grundstueck haengt -- Steuer, Notar, Makler, Vermessung --
+    // richtet sich nach dessen Preis und wuerde den Anteil verfaelschen:
+    // Bei 100.000 Euro Grundstueck kaeme man auf 27 Prozent und haette
+    // trotzdem nichts falsch gemacht. Deshalb wird nur der Bauteil
+    // verglichen, und der Rest steht als eigene Zahl daneben.
+    const amGrundstueck = zeilen
+      .filter((z) => z.basis === 'grundstueck' || z.id === 'vermessung')
+      .reduce((s, z) => s + Math.max(0, betragVon(z)), 0);
+    const amBau = gesamt - amGrundstueck;
+    const anteil = b.bau > 0 ? (amBau / b.bau) * 100 : 0;
+
     fuellen(
       summenzeile,
       wertzeile('Baunebenkosten gesamt', eur.format(gesamt), true),
       el('p', {
         klasse: 'unterzeile',
-        text: `${zahl(anteil, 1)} Prozent der Bausumme. Üblich sind 15 bis 20 Prozent; ` +
-          'liegst du deutlich darunter, fehlt eine Zeile.',
+        text: amGrundstueck > 0
+          ? `Davon ${eur.format(amGrundstueck)} rund ums Grundstück und ` +
+            `${eur.format(amBau)} am Bau — ${zahl(anteil, 1)} Prozent der Bausumme. ` +
+            'Üblich sind dort 15 bis 20 Prozent.'
+          : `${zahl(anteil, 1)} Prozent der Bausumme. Üblich sind 15 bis 20 Prozent; ` +
+            'liegst du deutlich darunter, fehlt eine Zeile.',
       })
     );
   }
