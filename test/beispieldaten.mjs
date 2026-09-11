@@ -23,6 +23,15 @@ export const FUELLEN = `(async () => {
   await einstellung('ort', 'Nünschweiler');
   await einstellung('baustelle', 'Nünschweiler');
 
+  /* Die Wohnflaeche ist kein eigener Schluessel, sie steckt in der Eingabe
+     des Baukostenrechners: einstellung('baukosten_eingabe', { flaeche }).
+     Ohne sie steht auf der Budgetplanung zweimal ein Strich statt des
+     Preises je Quadratmeter. */
+  await einstellung('baukosten_eingabe', {
+    land: 'rheinland-pfalz', flaeche: 148, standard: 'mittel',
+    keller: false, grundstueck: 132000,
+  });
+
   /* Das Budget kommt aus der Finanzierung, nicht aus einer Einstellung:
      finanzierungsstand() summiert Eigenkapital, Zuschuesse und Darlehen.
      Ohne diese Saetze steht auf der Uebersicht "Noch nicht festgelegt". */
