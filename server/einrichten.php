@@ -19,6 +19,28 @@ if ($erwartet === '' || !hash_equals($erwartet, $geliefert)) {
 }
 
 /*
+ * Ein schwerer Fehler beendet PHP, ohne dass eine Ausnahme entsteht -- kein
+ * try/catch fasst ihn, und heraus kommt eine 500 mit null Byte Rumpf. Genau
+ * das stand hier einmal und liess sich von aussen nicht unterscheiden von
+ * "Server kaputt". Diese Datei darf reden, also sagt sie, woran sie starb.
+ */
+register_shutdown_function(static function (): void {
+    $letzter = error_get_last();
+    if ($letzter === null || !in_array($letzter['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        return;
+    }
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+    }
+    echo json_encode([
+        'fehler' => 'Abbruch beim Einrichten.',
+        'meldung' => $letzter['message'],
+        'stelle' => basename((string)$letzter['file']) . ':' . $letzter['line'],
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+});
+
+/*
  * Ab hier ist bewiesen, dass der Aufrufer den Schluessel kennt, also der
  * Betreiber ist. Deshalb darf die echte Meldung der Datenbank heraus - ohne
  * sie sucht man bei "nicht erreichbar" im Dunkeln. Alle anderen
@@ -197,13 +219,29 @@ foreach (db()->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN) as $name) {
     $vorhanden[$name] = true;
 }
 
+/*
+ * Mit Meldung, nicht mit einer leeren 500.
+ *
+ * Bis hierher war klar, dass der Aufrufer den Schluessel kennt, also der
+ * Betreiber ist -- und trotzdem brach ein misslungenes CREATE als
+ * unbehandelte Ausnahme ab: HTTP 500, null Byte Rumpf, keine Spur. Wer
+ * das Schema anlegt, muss lesen koennen, woran es lag.
+ */
 foreach ($tabellen as $name => $sql) {
     if (isset($vorhanden[$name])) {
         $meldungen[] = "$name: vorhanden";
         continue;
     }
-    db()->exec($sql);
-    $meldungen[] = "$name: angelegt";
+    try {
+        db()->exec($sql);
+        $meldungen[] = "$name: angelegt";
+    } catch (Throwable $ex) {
+        antwort([
+            'fehler' => 'Tabelle ' . $name . ' liess sich nicht anlegen.',
+            'meldung' => $ex->getMessage(),
+            'bis_dahin' => $meldungen,
+        ], 500);
+    }
 }
 
 // Nachtraeglich hinzugekommene Spalten. Die Tabellen oben werden nur
@@ -214,18 +252,46 @@ $nachtrag = [
     ['freigaben', 'aufrufe', 'INT UNSIGNED NOT NULL DEFAULT 0'],
     ['freigaben', 'zuletzt', 'DATETIME NULL'],
 ];
+/*
+ * Spalten holen und in PHP vergleichen, nicht "SHOW COLUMNS ... LIKE ?".
+ *
+ * Genau das stand hier und hat die Datei jedes Mal getoetet, sobald es die
+ * Tabelle freigaben gab: MariaDB nimmt in einem echten vorbereiteten
+ * Statement -- und PDO::ATTR_EMULATE_PREPARES steht in _start.php auf false
+ * -- an dieser Stelle keinen Platzhalter. Heraus kam eine leere 500, und
+ * weil das Einrichten danach abbrach, wurde nie gemeldet, dass die
+ * Nachtragsspalten fehlten.
+ *
+ * Den Namen in die Abfrage zu schreiben waere die andere Loesung gewesen.
+ * Sie ist hier zwar ungefaehrlich -- die Namen stehen drei Zeilen hoeher im
+ * Quelltext --, aber ein SQL-Text, in den etwas eingesetzt wird, ist eine
+ * Gewohnheit, die man sich nicht angewoehnen sollte.
+ */
+$spaltenVon = [];
+foreach ($nachtrag as [$tabelle, , ]) {
+    if (isset($vorhanden[$tabelle]) && !isset($spaltenVon[$tabelle])) {
+        $spaltenVon[$tabelle] = db()->query('SHOW COLUMNS FROM `' . $tabelle . '`')
+            ->fetchAll(PDO::FETCH_COLUMN);
+    }
+}
 foreach ($nachtrag as [$tabelle, $spalte, $art]) {
     if (!isset($vorhanden[$tabelle])) {
         continue;
     }
-    $da = db()->prepare('SHOW COLUMNS FROM `' . $tabelle . '` LIKE ?');
-    $da->execute([$spalte]);
-    if ($da->fetch()) {
+    if (in_array($spalte, $spaltenVon[$tabelle] ?? [], true)) {
         $meldungen[] = "$tabelle.$spalte: vorhanden";
         continue;
     }
-    db()->exec('ALTER TABLE `' . $tabelle . '` ADD `' . $spalte . '` ' . $art);
-    $meldungen[] = "$tabelle.$spalte: ergaenzt";
+    try {
+        db()->exec('ALTER TABLE `' . $tabelle . '` ADD `' . $spalte . '` ' . $art);
+        $meldungen[] = "$tabelle.$spalte: ergaenzt";
+    } catch (Throwable $ex) {
+        antwort([
+            'fehler' => 'Spalte ' . $tabelle . '.' . $spalte . ' liess sich nicht ergaenzen.',
+            'meldung' => $ex->getMessage(),
+            'bis_dahin' => $meldungen,
+        ], 500);
+    }
 }
 
 // Ablage fuer die Bilddateien. Liegt unter daten/, das per .htaccess gesperrt

@@ -242,6 +242,16 @@ function zugriffZaehlen(int $bytesRaus): void
     if (!$id) {
         return;
     }
+    /* Wacht gegen Wiedereintritt. antwort() ruft diese Funktion, und wuerde
+     * db() hier scheitern, riefe es fehler() -- also wieder antwort(), also
+     * wieder hierher. In der Praxis kommt es dazu nicht, weil db() die
+     * Verbindung zwischenspeichert und nutzer() sie vor uns gebraucht hat.
+     * Eine Zeile ist trotzdem billiger als ein ueberlaufender Stapel auf
+     * einem Server, an dem gerade niemand sitzt. */
+    if (!empty($GLOBALS['hausbau_zaehlt'])) {
+        return;
+    }
+    $GLOBALS['hausbau_zaehlt'] = true;
     $rein = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
     try {
         db()->prepare(

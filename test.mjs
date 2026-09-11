@@ -1963,6 +1963,21 @@ console.log('Verwaltung');
     paare.length >= 8 && paare.every(([, schluessel, tabelle]) => schluessel === tabelle),
     paare.filter(([, s, t]) => s !== t).map(([, s, t]) => s + '/' + t).join(', '));
 
+  pruef('Die Zaehlung kann sich nicht selbst aufrufen',
+    start.includes("hausbau_zaehlt"));
+
+  /*
+   * MariaDB nimmt in SHOW COLUMNS/TABLES keinen Platzhalter, wenn die
+   * Statements echt vorbereitet werden -- und das tun sie hier
+   * (EMULATE_PREPARES steht auf false). Das hat einrichten.php jedes Mal
+   * mit einer leeren 500 beendet, sobald die Tabelle freigaben existierte.
+   */
+  pruef('Kein Platzhalter in SHOW-Abfragen',
+    !/prepare\(\s*'SHOW [^']*\?/.test(einrichten + start + admin));
+  // Und wenn es doch einmal knallt, soll es nicht stumm knallen.
+  pruef('Einrichten meldet auch schwere Fehler',
+    einrichten.includes('register_shutdown_function') && einrichten.includes('error_get_last'));
+
   // Nicht in der Leiste: Die Verwaltung ist fuer den Betreiber.
   pruef('Der Weg steht nicht in der Leiste',
     /weg: 'admin', titel: 'Verwaltung', ausLeiste: true/.test(bereiche));
