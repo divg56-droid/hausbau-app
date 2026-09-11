@@ -187,11 +187,25 @@ echten Daten. Wer sie durch eigene ersetzen will: auf dem Telefon aufnehmen,
 
 Diese Schritte kann kein Skript übernehmen — sie brauchen das Konto.
 
-1. **Entwicklerkonto**, einmalig 25 US-Dollar. Für ein Firmenkonto verlangt
-   Google einen Nachweis der Organisation (Handelsregisterauszug) und eine
-   D-U-N-S-Nummer. Beides dauert; wenn es noch nicht da ist, ist das der
-   längste Posten auf dieser Liste.
-2. **App anlegen**: Name, Sprache Deutsch, kostenlos, App (keine Spiel).
+1. **Entwicklerkonto** — vorhanden (Stand 11.09.2026).
+
+   **Eine Frage vorweg, sie bestimmt den ganzen Zeitplan:** Was steht in der
+   Console unter *Einstellungen → Entwicklerkonto → Kontodetails* als
+   Kontotyp?
+
+   - **Organisation:** nichts weiter zu tun. Nach der Prüfung geht die App in
+     die Produktion.
+   - **Privatperson, Konto nach dem 13.11.2023 angelegt:** Vor der Produktion
+     verlangt Google einen **geschlossenen Test mit mindestens 12 Testern,
+     die 14 Tage ununterbrochen angemeldet bleiben**. Wer aussteigt und wieder
+     einsteigt, fängt seine 14 Tage von vorn an. Danach wird der
+     Produktionszugang beantragt; die Prüfung dauert meist unter einer Woche.
+     In diesem Fall die zwölf Leute *jetzt* sammeln — die 14 Tage laufen
+     nicht schneller, weil die App fertig ist.
+   - **Privatperson, Konto von vor dem 13.11.2023:** frei wie eine
+     Organisation.
+
+2. **App anlegen**: Name, Sprache Deutsch, kostenlos, App (kein Spiel).
 3. **Play App Signing bestätigen.** Beim ersten Upload fragt Google, ob es den
    Signaturschlüssel verwahren soll. Ja. Unser Schlüssel
    (`ressourcen/schluessel/upload.p12`) ist dann der *Upload*-Schlüssel: Geht
@@ -199,8 +213,16 @@ Diese Schritte kann kein Skript übernehmen — sie brauchen das Konto.
    wäre er unersetzlich und die App bei Verlust tot.
 4. **AAB hochladen**: aus dem Lauf „Store-Paket bauen“ das Artefakt
    `bauzeuge-<Fassung>.aab` herunterladen und in einen Release ziehen.
-   Empfehlung: erst **Interner Test**, dort selbst installieren, dann
-   Produktion.
+
+   Reihenfolge: **Interner Test** zuerst (bis zu 100 Tester, sofort
+   verfügbar, keine Wartezeit), danach je nach Kontotyp geschlossener Test
+   oder direkt Produktion. Der interne Test zählt **nicht** auf die 12 × 14
+   Tage an — dafür braucht es den *geschlossenen* Test.
+
+   Vor dem Hochladen lässt sich das Paket auf dem eigenen Telefon prüfen: Der
+   Ablauf baut mit der Option „Zusätzlich ein signiertes APK“ ein
+   installierbares `bauzeuge-<Fassung>.apk` mit demselben Schlüssel und
+   demselben Inhalt. Was dort läuft, läuft auch aus dem Store.
 5. **Datensicherheit** nach Abschnitt 2 ausfüllen.
 6. **Inhaltsklassifizierung** nach Abschnitt 3 beantworten.
 7. **Store-Eintrag** nach Abschnitt 1 füllen, Grafiken nach Abschnitt 4
