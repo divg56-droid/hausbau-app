@@ -6,7 +6,9 @@
   "scripts": {
     "start": "npx --yes http-server www -p 4300 -c-1",
     "sync": "cap sync android",
-    "apk": "cap sync android && cd android && ./gradlew assembleDebug"
+    "apk": "cap sync android && cd android && ./gradlew assembleDebug",
+    "breite": "node test/breite.mjs",
+    "store-bilder": "node ressourcen/store-bilder.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",

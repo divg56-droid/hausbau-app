@@ -56,6 +56,25 @@ dorthin umgeleitet. Das ist keine Kosmetik: Apex und www sind für den Browser
 zwei verschiedene Herkünfte. Ohne die Umleitung hätte dieselbe Person je nach
 eingetippter Adresse zwei getrennte Datenbestände.
 
+## In den Play Store
+
+Alles, was dafür gebraucht wird, steht in `ressourcen/play/EINTRAG.md`:
+Store-Texte, Angaben fürs Datensicherheitsformular, Grafiken und die
+Schritte, die nur in der Play Console gehen.
+
+Das Paket baut der Arbeitsablauf **Store-Paket bauen** — von Hand
+auszulösen, nicht bei jedem Push. Er erzeugt ein signiertes AAB mit
+targetSdk 36 (seit dem 31.08.2026 Pflicht) und bricht ab, wenn das Paket
+nicht hält, was version.json sagt.
+
+**Vor jedem Upload den `versionCode` in `version.json` erhöhen.** Play nimmt
+dieselbe Zahl kein zweites Mal an.
+
+Die Grafiken und Screenshots erzeugen:
+
+    python ressourcen/store.py     Symbol 512 und Kopfgrafik 1024x500
+    npm run store-bilder           acht Telefonbilder, 1080x1920
+
 ## Das APK bekommen
 
 Nach jedem Push auf `main` baut GitHub das Paket und hängt es an die

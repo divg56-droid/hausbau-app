@@ -178,8 +178,20 @@ input[type="checkbox"] { width: 22px; height: 22px; min-height: 0; accent-color:
 /* Einzeln untereinander stehende Knoepfe brauchen Luft; in einer Reihe
    uebernimmt das gap den Abstand, dort stoert der Rand. */
 .knopf, .knopf-haupt, .knopf-leise, .knopf-warn { margin-bottom: 10px; }
-.knopf-reihe { display: flex; gap: 10px; margin-bottom: 10px; }
-.knopf-reihe > * { flex: 1; margin-bottom: 0; }
+/* Zwei oder drei Knoepfe nebeneinander, solange sie nebeneinander passen.
+   Sonst untereinander.
+
+   Vorher stand hier "flex: 1" ohne Umbruch. Flex-Kinder haben von sich aus
+   "min-width: auto" und schrumpfen deshalb nie unter ihre Textbreite -- drei
+   Knoepfe mit je 126 Pixeln standen in einer 254 Pixel breiten Karte und
+   schoben die Seite nach rechts. Aufgefallen erst mit gefuellten Daten bei
+   320 Pixeln, also dort, wo niemand hinschaut.
+
+   "flex: 1 1 140px": Jeder Knopf will 140 Pixel; reicht es nicht fuer zwei,
+   bricht die Reihe um. min-width: 0 erlaubt zusaetzlich, dass ein langer
+   Text den Knopf nicht aufblaeht. */
+.knopf-reihe { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+.knopf-reihe > * { flex: 1 1 140px; min-width: 0; margin-bottom: 0; }
 .karte > .knopf:last-child, .karte > .knopf-haupt:last-child,
 .karte > .knopf-leise:last-child, .karte > .knopf-warn:last-child { margin-bottom: 0; }
 .knopf-schmal { width: auto; }
@@ -823,6 +835,14 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
 /* Ein Abschnitt, der noch keine Zahlen hat: Der Rahmen steht schon, damit
    man sieht, was spaeter dort steht. */
 .leer-hinweis { margin: 0; }
+
+/* Datenschutz und Impressum am Fuss der Einstellungen. Nebeneinander,
+   wenn Platz ist, sonst untereinander -- drei Links in einer 320 Pixel
+   breiten Zeile werden sonst zu drei halben Woertern. */
+.rechtsverweise {
+  display: flex; flex-wrap: wrap; gap: 6px 18px;
+  margin: 14px 0 0; font-size: 14px;
+}
 
 .kennzahlen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
 .kennzahl { background: var(--karte); border: 1px solid var(--linie); border-radius: 12px; padding: 12px 14px; }

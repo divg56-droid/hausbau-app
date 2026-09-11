@@ -219,6 +219,26 @@ async function zeichne(rahmen) {
           'Stand 08.2026. ' +
           'Ergebnisse sind Prognosen auf Grundlage realer Marktdaten, keine Angebote.',
       }),
+      /* Datenschutz und Impressum gehoeren in die App und nicht nur in den
+         Store-Eintrag: Im Store liest sie niemand, und wer wissen will, was
+         mit seinen Baudaten passiert, sitzt gerade hier.
+
+         target="_blank" oeffnet im Systembrowser statt in der WebView --
+         ohne das liefe der Nutzer im Paket in eine Seite ohne Zurueck. */
+      el('p', { klasse: 'rechtsverweise' }, [
+        el('a', {
+          href: 'https://www.bauzeuge.de/app-datenschutz/',
+          target: '_blank', rel: 'noopener', text: 'Datenschutz',
+        }),
+        el('a', {
+          href: 'https://www.bauzeuge.de/impressum/',
+          target: '_blank', rel: 'noopener', text: 'Impressum',
+        }),
+        el('a', {
+          href: 'https://www.bauzeuge.de/',
+          target: '_blank', rel: 'noopener', text: 'BauZeuge.de',
+        }),
+      ]),
     ])
   );
 }
