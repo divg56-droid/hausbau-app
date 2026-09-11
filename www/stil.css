@@ -299,6 +299,10 @@ tr.bindung td { background: var(--band); font-weight: 700; }
 .raummarke {
   position: absolute; transform: translate(-50%, -50%);
   max-width: 46%; padding: 4px 9px; border-radius: 999px;
+  /* Erst die einfache Farbe, dann die gemischte: color-mix kennt erst
+     Chrome 111. Aeltere WebViews ueberspringen die zweite Zeile und behalten
+     die erste -- ohne Rueckfall stuende hier gar keine Farbe. */
+  background: var(--karte);
   background: color-mix(in srgb, var(--karte) 88%, transparent);
   border: 1.5px solid var(--akzent); color: var(--akzent-dunkel);
   font: inherit; font-size: 12.5px; font-weight: 700; line-height: 1.2;
@@ -842,6 +846,28 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
 .rechtsverweise {
   display: flex; flex-wrap: wrap; gap: 6px 18px;
   margin: 14px 0 0; font-size: 14px;
+}
+
+/* Der Zettel, wenn die App nicht startet. Eigene Farben statt Variablen:
+   Wenn das Stylesheet nur halb ankommt, soll wenigstens das hier lesbar
+   sein. */
+.startfehler {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px; background: #f5f7f6;
+  font: 16px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; color: #1f2a30;
+}
+.startfehler-karte {
+  max-width: 34em; background: #fff; border: 1px solid #d3dcd9;
+  border-radius: 12px; padding: 22px 24px;
+}
+.startfehler-karte h1 { margin: 0 0 12px; font-size: 22px; }
+.startfehler-karte p { margin: 0 0 12px; }
+.startfehler-karte a { color: #0a5155; }
+.startfehler-grund:empty { display: none; }
+.startfehler-grund {
+  font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px;
+  color: #54626a; word-break: break-word;
 }
 
 .kennzahlen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }

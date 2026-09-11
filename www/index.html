@@ -14,6 +14,86 @@
 <meta name="apple-mobile-web-app-title" content="BauZeuge" />
 </head>
 <body>
+<!--
+  Startschutz. Laeuft vor allem anderen, deshalb kein Modul und kein import:
+  Ein <script type="module"> wird verzoegert ausgefuehrt und faengt die
+  Fehler nicht mehr, die es abfangen soll.
+
+  Zwei Aufgaben:
+
+  1. Ein Ersatz fuer replaceChildren. Die App benutzt es an 41 Stellen, um
+     einen Bildschirm neu zu zeichnen; ein WebView vor Chrome 86 kennt es
+     nicht und wirft bei jedem Aufbau einen TypeError. Das Ergebnis ist eine
+     weisse Flaeche -- und genau so sieht es aus, wenn eine Pruefstelle
+     "die App stuerzt ab" schreibt.
+
+  2. Statt der weissen Flaeche eine Meldung. Was hier schiefgeht, kann
+     niemand mehr abfangen: kein Bildschirm ist gezeichnet, keine Meldung
+     laesst sich zeigen. Also haengt dieser Zettel von Anfang an bereit.
+-->
+<script>
+(function () {
+  if (!Element.prototype.replaceChildren) {
+    Element.prototype.replaceChildren = function () {
+      while (this.firstChild) this.removeChild(this.firstChild);
+      if (arguments.length) this.append.apply(this, arguments);
+    };
+    if (typeof DocumentFragment !== 'undefined' && !DocumentFragment.prototype.replaceChildren) {
+      DocumentFragment.prototype.replaceChildren = Element.prototype.replaceChildren;
+    }
+  }
+
+  var gemeldet = false;
+  function zettel(grund) {
+    if (gemeldet) return;
+    gemeldet = true;
+    var kasten = document.getElementById('startfehler');
+    if (!kasten) return;
+    kasten.hidden = false;
+    var stelle = document.getElementById('startfehler-grund');
+    if (stelle && grund) stelle.textContent = String(grund).slice(0, 200);
+  }
+
+  window.addEventListener('error', function (e) {
+    zettel(e && (e.message || (e.error && e.error.message)));
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    zettel(e && e.reason && (e.reason.message || e.reason));
+  });
+
+  // Nach sechs Sekunden steht der erste Bildschirm, oder es stimmt etwas
+  // nicht. Ein Fehler, der keine Ausnahme wirft -- eine Datei, die nicht
+  // ankommt, ein Modul, das der WebView nicht uebersetzen kann -- meldet
+  // sich sonst nirgends.
+  setTimeout(function () {
+    var inhalt = document.getElementById('inhalt');
+    if (!inhalt || inhalt.children.length === 0) zettel('');
+  }, 6000);
+})();
+</script>
+
+<div id="startfehler" class="startfehler" hidden>
+  <div class="startfehler-karte">
+    <h1>BauZeuge startet nicht</h1>
+    <p>
+      Das liegt fast immer an einer veralteten Android&nbsp;System&nbsp;WebView —
+      der Komponente, mit der Android Webinhalte anzeigt. BauZeuge braucht
+      Fassung&nbsp;92 oder neuer.
+    </p>
+    <p>
+      <strong>So geht es weiter:</strong> Im Play Store nach
+      „Android System WebView“ suchen und aktualisieren, danach BauZeuge neu
+      starten. Hilft das nicht, schreib uns — wir schauen es uns an.
+    </p>
+    <p class="startfehler-grund" id="startfehler-grund"></p>
+    <p>
+      <a href="mailto:info@atlanta-pfalz.de?subject=BauZeuge%20startet%20nicht">info@atlanta-pfalz.de</a>
+      &nbsp;·&nbsp;
+      <a href="https://www.bauzeuge.de/app/">www.bauzeuge.de/app/</a>
+    </p>
+  </div>
+</div>
+
 <header id="kopf">
   <button class="menue-knopf" id="menueknopf" type="button" aria-label="Menü"
     aria-expanded="false" aria-controls="seitenleiste">

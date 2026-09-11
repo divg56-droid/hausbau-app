@@ -84,6 +84,21 @@ export async function browserStarten({ basis }) {
         sessionId);
     },
 
+    /* Schiebt Code vor jedes Skript der Seite. Gebraucht, um Zustaende
+     * herzustellen, die sich nachtraeglich nicht mehr herstellen lassen --
+     * etwa einen WebView ohne replaceChildren. */
+    async vorschalten(quelltext) {
+      await ruf('Page.addScriptToEvaluateOnNewDocument', { source: quelltext }, sessionId);
+    },
+
+    /* Laesst Dateien nicht ankommen. Naeher an der Wirklichkeit als eine
+     * geworfene Ausnahme: Eine Datei, die fehlt, wirft nichts -- sie fehlt
+     * einfach, und der Bildschirm bleibt weiss. */
+    async blockieren(muster) {
+      await ruf('Network.enable', {}, sessionId);
+      await ruf('Network.setBlockedURLs', { urls: muster }, sessionId);
+    },
+
     async laden(weg = '/') {
       await ruf('Page.navigate', { url: basis + weg }, sessionId);
       await new Promise((g) => {
