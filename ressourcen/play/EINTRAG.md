@@ -93,6 +93,7 @@ Kategorie Finanzen zieht zusätzliche Prüfungen nach sich.*
 - E-Mail: `info@atlanta-pfalz.de`
 - Website: `https://www.bauzeuge.de/`
 - Datenschutzerklärung: `https://www.bauzeuge.de/app-datenschutz/`
+- Kontolöschung: `https://www.bauzeuge.de/app-konto-loeschen/`
 
 ---
 
@@ -108,8 +109,19 @@ Weitergabe an Dritte.
 
 **Werden Daten bei der Übertragung verschlüsselt?** Ja (HTTPS/TLS).
 
-**Können Nutzer die Löschung beantragen?** Ja — in der App unter „Konto“ mit
-sofortiger Wirkung, zusätzlich auf Anfrage.
+**Können Nutzer die Löschung beantragen?** Ja.
+
+**URL zur Datenlöschung** — Pflichtfeld, sobald die App Konten anbietet:
+
+```
+https://www.bauzeuge.de/app-konto-loeschen/
+```
+
+Das Feld steht im Datensicherheitsformular unter *Datenlöschung*. Der Grund
+für die zweite, webseitige Möglichkeit: Wer die App deinstalliert hat, kommt
+an den Löschknopf darin nicht mehr heran. Google prüft, dass die Seite lädt,
+dass der Löschweg oben steht und dass App- oder Entwicklername genannt sind —
+alles drei erfüllt.
 
 | Datentyp | Erhoben | Geteilt | Zweck | Pflicht? |
 |---|---|---|---|---|
@@ -189,21 +201,16 @@ Diese Schritte kann kein Skript übernehmen — sie brauchen das Konto.
 
 1. **Entwicklerkonto** — vorhanden (Stand 11.09.2026).
 
-   **Eine Frage vorweg, sie bestimmt den ganzen Zeitplan:** Was steht in der
-   Console unter *Einstellungen → Entwicklerkonto → Kontodetails* als
-   Kontotyp?
+   Kontotyp: **Organisationskonto** (ATLANTA Pfalz, Konto-ID 5244411496667657819).
 
-   - **Organisation:** nichts weiter zu tun. Nach der Prüfung geht die App in
-     die Produktion.
-   - **Privatperson, Konto nach dem 13.11.2023 angelegt:** Vor der Produktion
-     verlangt Google einen **geschlossenen Test mit mindestens 12 Testern,
-     die 14 Tage ununterbrochen angemeldet bleiben**. Wer aussteigt und wieder
-     einsteigt, fängt seine 14 Tage von vorn an. Danach wird der
-     Produktionszugang beantragt; die Prüfung dauert meist unter einer Woche.
-     In diesem Fall die zwölf Leute *jetzt* sammeln — die 14 Tage laufen
-     nicht schneller, weil die App fertig ist.
-   - **Privatperson, Konto von vor dem 13.11.2023:** frei wie eine
-     Organisation.
+   Damit entfällt die Testpflicht, die für persönliche Konten seit dem
+   13.11.2023 gilt — zwölf Tester, vierzehn Tage ununterbrochen angemeldet.
+   Der Weg führt direkt in die Produktion.
+
+   Offen bleibt die **Identitätsbestätigung für Android-Entwickler** (eigener
+   Punkt in der Seitenleiste). Ist sie nicht abgeschlossen, wird nichts
+   veröffentlicht, egal wie fertig das Paket ist. Vor dem Einreichen
+   nachsehen.
 
 2. **App anlegen**: Name, Sprache Deutsch, kostenlos, App (kein Spiel).
 3. **Play App Signing bestätigen.** Beim ersten Upload fragt Google, ob es den
