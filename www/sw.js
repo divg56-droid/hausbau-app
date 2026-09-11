@@ -59,6 +59,7 @@ const SCHALE = [
   './unterschrift.js',
   './wetter.js',
   './module/ablauf.js',
+  './module/admin.js',
   './module/angebote.js',
   './module/anschlussplan.js',
   './module/baukasse.js',

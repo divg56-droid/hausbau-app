@@ -612,6 +612,13 @@ html[data-thema="dunkel"] {
   background: var(--karte); color: var(--akzent-dunkel);
   box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
 }
+/* Dieselbe Pille mit Beschriftung statt Zeichen -- fuer Wahlmoeglichkeiten,
+   die sich nicht in ein Sinnbild fassen lassen ("30 Tage"). Ein zweiter
+   Schaltertyp daneben saehe aus wie ein zweites Bedienkonzept. */
+.thema-schalter.mit-text .thema-taste {
+  width: auto; padding: 0 13px; font: inherit; font-size: 13px; font-weight: 600;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .thema-taste { transition: none; }
 }
@@ -820,7 +827,14 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
 .kennzahlen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
 .kennzahl { background: var(--karte); border: 1px solid var(--linie); border-radius: 12px; padding: 12px 14px; }
 .kennzahl .wert { font-size: 21px; font-weight: 700; display: block; line-height: 1.2; }
-.kennzahl .name { font-size: 13px; color: var(--tinte-leise); }
+.kennzahl .name { font-size: 13px; color: var(--tinte-leise); display: block; }
+/* Dritte Zeile: die Einordnung zur Zahl ("2 neu in 30 Tagen"). Eigene
+   Zeile und leiser als der Name -- ohne display:block klebte sie an ihm
+   ("Konten2 neu in 30 Tagen"). */
+.kennzahl .zusatz {
+  display: block; margin-top: 2px;
+  font-size: 12px; line-height: 1.35; color: var(--tinte-leise); opacity: .8;
+}
 
 /* Wo nichts steht, steht der Weg dorthin: Die Kachel wird ein Knopf,
    bleibt aber ruhig -- vier laute Aufforderungen nebeneinander waeren

@@ -124,6 +124,12 @@ export const BEREICHE = [
         text: 'Anmelden, damit App und Internetseite dieselben Daten zeigen.' },
       { weg: 'einstellungen', titel: 'Einstellungen',
         text: 'Projekt, Darstellung, Sicherung, CSV, alles löschen.' },
+      // Nicht in der Leiste: Die Verwaltung ist fuer den Betreiber, nicht fuer
+      // Bauherren. Wer sie sehen darf, findet den Verweis auf der Kontoseite;
+      // wer nicht, bekommt von admin.php eine 404 wie auf jeden anderen Weg,
+      // den es nicht gibt.
+      { weg: 'admin', titel: 'Verwaltung', ausLeiste: true,
+        text: 'Wer die App nutzt, wie oft und mit wie viel Datenverkehr.' },
     ],
   },
 ];

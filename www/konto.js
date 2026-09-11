@@ -200,6 +200,16 @@ export async function kontoLoeschen(passwort, adresse = '') {
   return ergebnis;
 }
 
+/**
+ * Zahlen fuer die Verwaltung. Antwortet mit 404, wenn die angemeldete
+ * Adresse nicht auf der Liste in geheim.php steht -- absichtlich derselbe
+ * Fehler wie fuer einen Weg, den es nicht gibt.
+ *
+ * @param {number} tage Fenster in Tagen, 1 bis 365.
+ */
+export const adminUeberblick = (tage = 30) =>
+  ruf('/admin.php', { tun: 'ueberblick', tage });
+
 // ------------------------------------------------------------------ Freigabe
 
 export const freigabeStand = () => ruf('/freigabe.php', { tun: 'stand' });

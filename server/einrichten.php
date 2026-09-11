@@ -144,7 +144,13 @@ CREATE TABLE freigaben (
     CONSTRAINT freigabe_nutzer FOREIGN KEY (nutzer_id) REFERENCES nutzer (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
 
-'bremse' => "
+// Der Schluessel ist der Tabellenname: Danach wird geprueft, ob sie schon
+// da ist. Hier stand einmal 'bremse' ueber dem CREATE fuer anmeldelinks --
+// mit der Folge, dass anmeldelinks nie angelegt wurde, sobald bremse
+// existierte, und CREATE TABLE bremse bei jedem Aufruf erneut lief und
+// abbrach. Aufgefallen ist es nicht, weil konto.php sich die Tabelle beim
+// ersten Gebrauch selbst anlegt.
+'anmeldelinks' => "
 CREATE TABLE anmeldelinks (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
     epost VARCHAR(190) NOT NULL,
@@ -158,11 +164,28 @@ CREATE TABLE anmeldelinks (
     KEY epost (epost)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
 
-"CREATE TABLE bremse (
+'bremse' => "CREATE TABLE bremse (
     kennung VARCHAR(190) NOT NULL,
     versuche INT UNSIGNED NOT NULL DEFAULT 0,
     bis DATETIME NOT NULL,
     PRIMARY KEY (kennung)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+
+// Wer wie viel Verkehr macht. Eine Zeile je Nutzer und Tag statt einer je
+// Anfrage: Der Abgleich macht mehrere Anfragen hintereinander, ein Rohprotokoll
+// waere nach einem Jahr das Groesste in der Datenbank und beantwortet keine
+// Frage besser. bytes_rein/raus als BIGINT, ein Bilderabgleich bewegt
+// zweistellige Megabyte am Tag.
+'zugriffe' => "
+CREATE TABLE zugriffe (
+    nutzer_id INT UNSIGNED NOT NULL,
+    tag DATE NOT NULL,
+    anfragen INT UNSIGNED NOT NULL DEFAULT 0,
+    bytes_rein BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    bytes_raus BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    PRIMARY KEY (nutzer_id, tag),
+    KEY nach_tag (tag),
+    CONSTRAINT zugriff_nutzer FOREIGN KEY (nutzer_id) REFERENCES nutzer (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
 
 ];

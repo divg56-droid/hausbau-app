@@ -23,6 +23,11 @@ return [
     // Absender fuer Bestaetigungs- und Passwortmails
     'absender' => 'kontakt@bauzeuge.de',
 
+    // Wer die Verwaltung unter #/admin sehen darf. Adressen, die sich
+    // normal anmelden; diese Liste kommt oben drauf. Leer lassen heisst:
+    // niemand, und admin.php antwortet wie auf einen unbekannten Weg.
+    'admins' => ['kontakt@bauzeuge.de'],
+
     // Schuetzt einrichten.php. Selbst ausdenken, lang und zufaellig.
     // Ohne diesen Wert laesst sich das Schema nicht anlegen.
     'einrichten_schluessel' => '',

@@ -101,7 +101,10 @@ function antwort(array $inhalt, int $code = 200): never
     http_response_code($code);
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store');
-    echo json_encode($inhalt, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $text = json_encode($inhalt, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    echo $text;
+    // Nach dem Ausgeben: Der Aufrufer soll auf die Statistik nicht warten.
+    zugriffZaehlen(strlen((string)$text));
     exit;
 }
 
@@ -166,6 +169,7 @@ function nutzer(): array
     )->execute([hash('sha256', $marke)]);
 
     $gefunden = ['id' => (int)$zeile['id'], 'epost' => $zeile['epost']];
+    $GLOBALS['hausbau_nutzer_id'] = $gefunden['id'];
     return $gefunden;
 }
 
@@ -177,6 +181,80 @@ function sitzungAnlegen(int $nutzerId): string
         'INSERT INTO sitzungen (marke, nutzer_id, angelegt, gesehen) VALUES (?, ?, NOW(), NOW())'
     )->execute([hash('sha256', $marke), $nutzerId]);
     return $marke;
+}
+
+// ------------------------------------------------------------------ Verwaltung
+
+/**
+ * Darf dieser Nutzer die Verwaltung sehen?
+ *
+ * Die Liste steht in geheim.php und nicht in der Datenbank: Ein Kennzeichen
+ * in einer Tabelle laesst sich mit einem SQL-Fehler irgendwo setzen, ein
+ * Eintrag in einer Datei, die nur der Betreiber hochlaedt, nicht.
+ */
+function istAdmin(string $epost): bool
+{
+    $liste = geheim()['admins'] ?? [];
+    foreach ($liste as $eine) {
+        if (hash_equals(strtolower(trim((string)$eine)), strtolower($epost))) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Verkuerzt eine Adresse fuer die Anzeige: "andreas@example.de" wird zu
+ * "an…as@example.de".
+ *
+ * Die Verkuerzung passiert hier und nicht im Browser. Sonst ginge die volle
+ * Adresse trotzdem ueber die Leitung und staende in jedem Zwischenspeicher,
+ * und die Anzeige waere nur ein Vorhang davor.
+ */
+function epostKurz(string $epost): string
+{
+    $at = strrpos($epost, '@');
+    if ($at === false || $at === 0) {
+        return '…';
+    }
+    $name = substr($epost, 0, $at);
+    $wirt = substr($epost, $at);
+    if (mb_strlen($name) <= 4) {
+        return mb_substr($name, 0, 1) . '…' . $wirt;
+    }
+    return mb_substr($name, 0, 2) . '…' . mb_substr($name, -2) . $wirt;
+}
+
+/**
+ * Zaehlt eine Anfrage auf das Tageskonto des angemeldeten Nutzers.
+ *
+ * Tagessummen und kein Protokoll je Anfrage: Ein Abgleich macht mehrere
+ * Anfragen, jede Rohzeile bliebe fuer immer liegen, und aufraeumen wuerde
+ * das niemand. Eine Zeile je Nutzer und Tag beantwortet "wie viel Verkehr
+ * macht wer" genauso und waechst nur mit dem Kalender.
+ *
+ * Fehler werden geschluckt. Eine Statistik darf keine Anfrage scheitern
+ * lassen -- lieber eine Luecke in der Zaehlung als ein kaputter Abgleich.
+ */
+function zugriffZaehlen(int $bytesRaus): void
+{
+    $id = $GLOBALS['hausbau_nutzer_id'] ?? null;
+    if (!$id) {
+        return;
+    }
+    $rein = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+    try {
+        db()->prepare(
+            'INSERT INTO zugriffe (nutzer_id, tag, anfragen, bytes_rein, bytes_raus)
+                  VALUES (?, CURDATE(), 1, ?, ?)
+             ON DUPLICATE KEY UPDATE
+                  anfragen = anfragen + 1,
+                  bytes_rein = bytes_rein + VALUES(bytes_rein),
+                  bytes_raus = bytes_raus + VALUES(bytes_raus)'
+        )->execute([$id, max(0, $rein), max(0, $bytesRaus)]);
+    } catch (Throwable $ex) {
+        error_log('Hausbau-Zaehlung: ' . $ex->getMessage());
+    }
 }
 
 // ------------------------------------------------------------------ Kleinkram

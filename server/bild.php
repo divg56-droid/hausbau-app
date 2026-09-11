@@ -101,4 +101,7 @@ header('Content-Length: ' . (string)filesize($pfad));
 // Der Inhalt zu einer Kennung aendert sich nie, also darf das Geraet ihn
 // behalten. Privat, weil es fremde Bilder sind.
 header('Cache-Control: private, max-age=31536000, immutable');
+// Bilder sind der einzige nennenswerte Verkehr dieser Schnittstelle und
+// laufen an antwort() vorbei -- hier also von Hand aufs Tageskonto.
+zugriffZaehlen((int)filesize($pfad));
 readfile($pfad);

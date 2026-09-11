@@ -151,6 +151,11 @@ async function zeichne(rahmen, art = 'anmelden') {
     ])
   );
 
+  // Ohne await: Der Verweis zur Verwaltung ist ein Nachtrag fuer den
+  // Betreiber, und die Kontoseite soll nicht darauf warten. Schlaegt der
+  // Aufruf fehl -- kein Netz, kein Recht -- bleibt es einfach dabei.
+  verwaltungAnbieten(rahmen);
+
   function passwortBlatt() {
     const alt = el('input', { type: 'password', autocomplete: 'current-password' });
     const neuesWort = el('input', { type: 'password', autocomplete: 'new-password' });
@@ -182,6 +187,32 @@ async function zeichne(rahmen, art = 'anmelden') {
       await nachher();
     }, { sicherText: 'Endgültig löschen' });
   }
+}
+
+/**
+ * Haengt den Verweis zur Verwaltung an, wenn dieses Konto sie sehen darf.
+ *
+ * Die Auskunft kommt vom Server; hier steht keine Liste von Adressen. Dass
+ * der Verweis fehlt, ist nur eine Anzeige -- den Zugang entscheidet
+ * admin.php, und zwar bei jedem Aufruf neu.
+ */
+async function verwaltungAnbieten(rahmen) {
+  let w;
+  try {
+    w = await wer();
+  } catch {
+    return;
+  }
+  if (!w.admin || !rahmen.isConnected) return;
+  anhaengen(rahmen, karte([
+    el('h2', { text: 'Verwaltung' }),
+    el('p', {
+      klasse: 'unterzeile',
+      text: 'Wer die App nutzt, wie oft und mit wie viel Datenverkehr. '
+        + 'Adressen stehen dort nur verkürzt.',
+    }),
+    knopf('Statistiken ansehen', () => geheZu('#/admin')),
+  ]));
 }
 
 // ------------------------------------------------------------- Nicht angemeldet

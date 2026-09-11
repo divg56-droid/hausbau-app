@@ -289,6 +289,10 @@ switch ($tun) {
             'saetze' => $saetze,
             'bilder' => (int)$bilder['n'],
             'bytes' => (int)$bilder['b'],
+            // Nur damit die App den Verweis zur Verwaltung zeigt oder nicht.
+            // Die Pruefung, die zaehlt, steht in admin.php -- diese hier ist
+            // eine Anzeige und kein Schloss.
+            'admin' => istAdmin($n['epost']),
         ]);
     }
 

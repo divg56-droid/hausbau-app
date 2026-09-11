@@ -1894,5 +1894,85 @@ console.log('Anmeldung per Link')
     readFileSync('./www/stil.css', 'utf8').includes('.codefeld {'));
 }
 
+console.log('Verwaltung');
+{
+  const start = readFileSync('./server/_start.php', 'utf8');
+  const admin = readFileSync('./server/admin.php', 'utf8');
+  const einrichten = readFileSync('./server/einrichten.php', 'utf8');
+  const bereiche = readFileSync('./www/bereiche.js', 'utf8');
+  const modul = readFileSync('./www/module/admin.js', 'utf8');
+
+  // Der Zugang haengt an einer Liste in geheim.php, nicht an einem Kennzeichen
+  // in der Datenbank. Ein Kennzeichen kann ein Fehler irgendwo setzen.
+  pruef('Die Adminliste steht in geheim.php',
+    start.includes("geheim()['admins']") && start.includes('hash_equals('));
+  pruef('admin.php fragt zuerst danach', /istAdmin\(\$n\['epost'\]\)/.test(admin));
+  // Wer nicht darf, soll nicht erfahren, dass es die Seite gibt.
+  pruef('Und antwortet sonst wie auf einen unbekannten Weg',
+    admin.includes("fehler(404, 'Nicht vorhanden.')"));
+
+  /*
+   * Die wichtigste Pruefung dieser Gruppe: Es darf keine vollstaendige
+   * Adresse herausgehen. Nicht "wird im Browser gekuerzt angezeigt" --
+   * gekuerzt wird auf dem Server, sonst steht die volle Adresse trotzdem in
+   * jeder Antwort, in jedem Zwischenspeicher und in jedem Protokoll.
+   */
+  pruef('Adressen gehen nur verkuerzt heraus',
+    admin.includes("'epost' => epostKurz(") &&
+    !/'epost'\s*=>\s*\(?string\)?\$z\['epost'\]/.test(admin));
+
+  // Die Kuerzung selbst, nachgerechnet statt nachgelesen. Dieselben Regeln
+  // wie epostKurz() in _start.php.
+  const kurz = (e) => {
+    const at = e.lastIndexOf('@');
+    if (at <= 0) return '…';
+    const name = e.slice(0, at), wirt = e.slice(at);
+    return name.length <= 4 ? name[0] + '…' + wirt : name.slice(0, 2) + '…' + name.slice(-2) + wirt;
+  };
+  pruef('Kurzform: andreas@example.de', kurz('andreas@example.de') === 'an…as@example.de',
+    'ist ' + kurz('andreas@example.de'));
+  pruef('Kurzform: kurze Namen behalten nur einen Buchstaben',
+    kurz('abc@x.de') === 'a…@x.de', 'ist ' + kurz('abc@x.de'));
+  pruef('Kurzform: nichts ohne @', kurz('kaputt') === '…');
+  // Der eigentliche Zweck: In keinem Fall steht der ganze Name da.
+  pruef('Kurzform verraet nie den ganzen Namen',
+    ['a@x.de', 'ab@x.de', 'abcd@x.de', 'abcde@x.de', 'andreas@example.de']
+      .every((e) => !kurz(e).startsWith(e.slice(0, e.lastIndexOf('@')) + '@')));
+
+  // Gezaehlt wird als Tagessumme. Ein Rohprotokoll je Anfrage waechst
+  // unbegrenzt, und aufraeumen wuerde es niemand.
+  pruef('Tagessummen statt Rohprotokoll',
+    einrichten.includes('PRIMARY KEY (nutzer_id, tag)') &&
+    start.includes('ON DUPLICATE KEY UPDATE'));
+  pruef('Jede Antwort zaehlt mit', start.includes('zugriffZaehlen(strlen('));
+  // readfile() geht an antwort() vorbei -- und Bilder sind der einzige
+  // nennenswerte Verkehr dieser Schnittstelle.
+  pruef('Bilder zaehlen auch',
+    readFileSync('./server/bild.php', 'utf8').includes('zugriffZaehlen((int)filesize($pfad))'));
+  // Eine kaputte Statistik darf keinen Abgleich scheitern lassen.
+  pruef('Die Zaehlung kann die Anfrage nicht kippen',
+    /catch \(Throwable \$ex\) \{\s*error_log\('Hausbau-Zaehlung/.test(start));
+
+  /*
+   * Der Schluessel im Tabellenfeld ist der Name, nach dem geprueft wird, ob
+   * die Tabelle schon existiert. Stand er einmal falsch, wurde anmeldelinks
+   * nie angelegt und CREATE TABLE bremse lief bei jedem Aufruf erneut.
+   */
+  const paare = [...einrichten.matchAll(/'([a-z_]+)' => "\s*\n?CREATE TABLE (\w+)/g)];
+  pruef('Jeder Tabellenschluessel heisst wie seine Tabelle',
+    paare.length >= 8 && paare.every(([, schluessel, tabelle]) => schluessel === tabelle),
+    paare.filter(([, s, t]) => s !== t).map(([, s, t]) => s + '/' + t).join(', '));
+
+  // Nicht in der Leiste: Die Verwaltung ist fuer den Betreiber.
+  pruef('Der Weg steht nicht in der Leiste',
+    /weg: 'admin', titel: 'Verwaltung', ausLeiste: true/.test(bereiche));
+  pruef('Die Kontoseite bietet ihn nur Berechtigten an',
+    readFileSync('./www/module/konto.js', 'utf8').includes('if (!w.admin'));
+  // Gleiche Optik wie der Hell-Dunkel-Schalter, kein zweiter Schaltertyp.
+  pruef('Der Zeitraumschalter nimmt die vorhandene Optik',
+    modul.includes("klasse: 'thema-schalter mit-text'") &&
+    readFileSync('./www/stil.css', 'utf8').includes('.thema-schalter.mit-text'));
+}
+
 console.log(fehler ? '\nFEHLGESCHLAGEN: ' + fehler : '\nAlle Pruefungen bestanden.');
 process.exit(fehler ? 1 : 0);
