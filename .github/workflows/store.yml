@@ -1,0 +1,184 @@
+# Baut das Paket fuer den Play Store: ein signiertes AAB.
+#
+# Getrennt von apk.yml, und zwar von Hand ausgeloest. Gruende:
+#
+#   - Der versionCode muss bei jedem Upload steigen und darf sich nie
+#     wiederholen. Liefe der Bau bei jedem Push, waere nach einer Woche
+#     Textarbeit die Zaehlung bei 40, ohne dass etwas veroeffentlicht wurde.
+#   - Der Upload-Schluessel gehoert nicht in einen Lauf, den ein beliebiger
+#     Commit anstoesst.
+#   - Der Store will ein AAB, kein APK. Google baut daraus die Pakete fuer die
+#     einzelnen Geraete; ein APK kann das nicht.
+#
+# Der Testbau (apk.yml) bleibt, wie er war: Debug-APK bei jedem Push.
+name: Store-Paket bauen
+
+on:
+  workflow_dispatch:
+    inputs:
+      auch_apk:
+        description: 'Zusaetzlich ein signiertes APK bauen (zum Ausprobieren vor dem Upload)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: store
+
+jobs:
+  bauen:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Fassung lesen
+        id: fassung
+        run: |
+          name=$(node -p "require('./version.json').versionName")
+          code=$(node -p "require('./version.json').versionCode")
+          # Play nimmt nur ganze Zahlen, und nur groessere als beim letzten Mal.
+          case "$code" in
+            ''|*[!0-9]*) echo "FEHLER: versionCode '$code' ist keine ganze Zahl." >&2; exit 1 ;;
+          esac
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "Fassung $name (Code $code)"
+
+      - name: Abhängigkeiten
+        run: npm ci
+
+      - name: Rechenkerne prüfen
+        run: node test.mjs
+
+      - name: Android-Plattform anlegen
+        run: npx --yes cap add android
+
+      # Play verlangt seit dem 31.08.2026 fuer neue Apps und Aktualisierungen
+      # Android 16 (API 36). Capacitor 7 stellt von sich aus 35 ein, das
+      # wuerde beim Hochladen abgewiesen. Verlaengerung bis zum 01.11.2026
+      # laesst sich in der Play Console beantragen -- besser ist, es gar nicht
+      # zu brauchen.
+      - name: Auf Android 16 stellen
+        run: |
+          sed -i 's/compileSdkVersion = [0-9]*/compileSdkVersion = 36/'   android/variables.gradle
+          sed -i 's/targetSdkVersion = [0-9]*/targetSdkVersion = 36/'     android/variables.gradle
+          # AGP 8.7 kennt SDK 36 noch nicht namentlich und warnt deswegen bei
+          # jedem Bau. Die Warnung ist richtig und hier trotzdem ohne Folge.
+          echo 'android.suppressUnsupportedCompileSdk=36' >> android/gradle.properties
+          cat android/variables.gradle
+
+      - name: Android-SDK 36 nachladen
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            'platforms;android-36' 'build-tools;36.0.0' > /dev/null
+          echo "SDK 36 liegt bereit."
+
+      - name: Fassung eintragen
+        run: |
+          sed -i "s/versionCode [0-9]*/versionCode ${{ steps.fassung.outputs.code }}/" android/app/build.gradle
+          sed -i "s/versionName \".*\"/versionName \"${{ steps.fassung.outputs.name }}\"/" android/app/build.gradle
+          grep -E 'versionCode|versionName' android/app/build.gradle
+
+      # Dieselbe Pruefung wie im Testbau: ausser INTERNET darf nichts drin
+      # stehen. Im Store ist jede zusaetzliche Berechtigung eine Frage im
+      # Datensicherheitsformular, die man sonst beantworten muss.
+      - name: Berechtigungen prüfen
+        run: |
+          manifest=android/app/src/main/AndroidManifest.xml
+          unerwartet=$(grep -o 'android\.permission\.[A-Z_]*' "$manifest" | sort -u | grep -v '^android\.permission\.INTERNET$' || true)
+          if [ -n "$unerwartet" ]; then
+            echo "FEHLER: unerwartete Berechtigung im Manifest:" >&2
+            echo "$unerwartet" >&2
+            exit 1
+          fi
+          grep -q 'android.permission.INTERNET' "$manifest" || {
+            echo "FEHLER: INTERNET fehlt." >&2; exit 1; }
+          echo "Nur INTERNET, wie vorgesehen."
+
+      - name: Symbole und Startbild erzeugen
+        run: |
+          mkdir -p assets
+          cp ressourcen/icon.png assets/icon.png
+          cp ressourcen/splash.png assets/splash.png
+          npx --yes @capacitor/assets@3 generate --android
+
+      - name: Web-Dateien übernehmen
+        run: npx --yes cap sync android
+
+      # Der Schluessel kommt als Base64 aus den Secrets und liegt nur fuer die
+      # Dauer des Laufs auf der Platte. Fehlt er, wird trotzdem gebaut -- dann
+      # eben unsigniert. So laesst sich pruefen, ob der Bau ueberhaupt
+      # durchlaeuft, bevor irgendein Schluessel existiert.
+      - name: Schlüssel bereitlegen
+        id: schluessel
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+        run: |
+          if [ -z "$KEYSTORE" ]; then
+            echo "da=nein" >> "$GITHUB_OUTPUT"
+            echo "::warning::Kein ANDROID_KEYSTORE hinterlegt - das Paket wird unsigniert gebaut und laesst sich nicht hochladen."
+          else
+            printf '%s' "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/upload.p12"
+            echo "da=ja" >> "$GITHUB_OUTPUT"
+            echo "Schluessel liegt bereit."
+          fi
+
+      - name: Paket bauen
+        env:
+          PASSWORT: ${{ secrets.ANDROID_KEYSTORE_PASSWORT }}
+          ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          cd android
+          chmod +x gradlew
+          ziele="bundleRelease"
+          [ "${{ inputs.auch_apk }}" = "true" ] && ziele="$ziele assembleRelease"
+
+          if [ "${{ steps.schluessel.outputs.da }}" = "ja" ]; then
+            # Ueber Gradle-Eigenschaften statt ueber einen signingConfig-Block
+            # in build.gradle: Die Datei wird bei jedem Lauf neu erzeugt, ein
+            # Block darin muesste jedes Mal wieder hineingeschrieben werden.
+            ./gradlew $ziele --no-daemon \
+              -Pandroid.injected.signing.store.file="$RUNNER_TEMP/upload.p12" \
+              -Pandroid.injected.signing.store.password="$PASSWORT" \
+              -Pandroid.injected.signing.key.alias="${ALIAS:-upload}" \
+              -Pandroid.injected.signing.key.password="$PASSWORT"
+          else
+            ./gradlew $ziele --no-daemon
+          fi
+
+      - name: Nachsehen, was entstanden ist
+        run: |
+          aab=$(find android -name '*.aab' | head -1)
+          [ -n "$aab" ] || { echo "FEHLER: kein AAB gebaut." >&2; exit 1; }
+          cp "$aab" "bauzeuge-${{ steps.fassung.outputs.name }}.aab"
+          for apk in $(find android -path '*release*' -name '*.apk'); do
+            cp "$apk" "bauzeuge-${{ steps.fassung.outputs.name }}.apk"
+          done
+
+          # Was im Paket steht, nicht was gemeint war. Aus dem AAB liest sich
+          # das Manifest im Klartext.
+          unzip -o -q "bauzeuge-${{ steps.fassung.outputs.name }}.aab" -d entpackt
+          echo "--- Fassung und SDK laut Paket:"
+          "$ANDROID_HOME"/build-tools/36.0.0/aapt2 dump xmltree \
+            "bauzeuge-${{ steps.fassung.outputs.name }}.aab" --file manifest/AndroidManifest.xml \
+            | grep -Ei 'versionCode|versionName|SdkVersion|permission|debuggable' || true
+          ls -la bauzeuge-*.a*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bauzeuge-store-${{ steps.fassung.outputs.name }}
+          path: bauzeuge-*.a*
+          retention-days: 90

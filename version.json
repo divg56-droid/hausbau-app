@@ -1,0 +1,16 @@
+{
+  "versionName": "1.0.0",
+  "versionCode": 1,
+
+  "_hinweis": [
+    "Die Fassung, die in den Play Store geht. Der Testbau (apk.yml) nimmt sie nicht,",
+    "der bleibt bei der Buildnummer von GitHub.",
+    "",
+    "versionCode muss bei jedem Upload groesser sein als beim letzten -- Play nimmt",
+    "dieselbe Zahl kein zweites Mal an, auch nicht nach dem Loeschen des Entwurfs.",
+    "Ganze Zahl, kein Punkt. versionName ist das, was im Store steht, und darf",
+    "aussehen wie man will.",
+    "",
+    "store.yml liest beides und schreibt es vor dem Bau in die Gradle-Dateien."
+  ]
+}
