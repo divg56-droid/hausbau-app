@@ -178,9 +178,62 @@ try {
       JSON.stringify(nachher));
   }
 
+  /* 8. Die Systemtaste ohne die Bruecke.
+   *
+   *    Der Fall vom Telefon: Capacitor liefert das backButton-Ereignis nicht,
+   *    macht stattdessen sein Standardverhalten -- history.back() -- und das
+   *    Blatt blieb als kleines Fenster im Vordergrund stehen, waehrend
+   *    dahinter der Bereich wechselte.
+   *
+   *    Geprueft wird deshalb ohne jeden Zuhoerer der Bruecke: nur der
+   *    Verlauf, so wie ihn auch das Standardverhalten benutzt. Danach muss
+   *    das Blatt zu sein UND der Bereich stehen geblieben. */
+  {
+    await seite.hin('maengel', 700);
+    await seite.werten(`(async () => {
+      const { blattOeffnen } = await import('/blatt.js');
+      blattOeffnen('Pruefung', [], () => {});
+      await new Promise((g) => setTimeout(g, 250));
+    })()`);
+    const vorher = await seite.werten(`({
+      blatt: !!document.querySelector('.ueberlagerung'),
+      weg: location.hash, tiefe: history.length,
+    })`);
+    const nachher = await seite.werten(`(async () => {
+      history.back();
+      await new Promise((g) => setTimeout(g, 500));
+      return { blatt: !!document.querySelector('.ueberlagerung'), weg: location.hash };
+    })()`);
+    pruef('Ein Blatt legt einen Eintrag in den Verlauf', vorher.blatt, JSON.stringify(vorher));
+    pruef('history.back() schliesst das Blatt', !nachher.blatt, JSON.stringify(nachher));
+    pruef('Und der Bereich bleibt stehen', nachher.weg === vorher.weg,
+      `${vorher.weg} -> ${nachher.weg}`);
+  }
+
+  /* 9. Und andersherum: Wer auf Abbrechen tippt, darf keinen Eintrag
+   *    zuruecklassen -- sonst braucht die Zuruecktaste danach zwei Tipps
+   *    fuer einen Schritt. */
+  {
+    await seite.hin('maengel', 700);
+    const ergebnis = await seite.werten(`(async () => {
+      const vorher = history.length;
+      const { blattOeffnen } = await import('/blatt.js');
+      blattOeffnen('Pruefung', [], () => {});
+      await new Promise((g) => setTimeout(g, 250));
+      [...document.querySelectorAll('.ueberlagerung button')]
+        .find((b) => b.textContent === 'Abbrechen').click();
+      await new Promise((g) => setTimeout(g, 500));
+      return { vorher, nachher: history.length,
+        blatt: !!document.querySelector('.ueberlagerung'), weg: location.hash };
+    })()`);
+    pruef('Abbrechen schliesst das Blatt', !ergebnis.blatt, JSON.stringify(ergebnis));
+    pruef('Und raeumt seinen Eintrag wieder ab',
+      ergebnis.nachher === ergebnis.vorher, JSON.stringify(ergebnis));
+  }
+
   await seite.hin('');
 
-  // 8. Nach der Bedenkzeit gilt die Ansage nicht mehr -- sonst beendet ein
+  // 10. Nach der Bedenkzeit gilt die Ansage nicht mehr -- sonst beendet ein
   //    Tipp von vor einer Minute die App.
   await seite.werten('window.__zurueck.beendet = 0');
   // Erst die Bedenkzeit des vorigen Falls ablaufen lassen, sonst beendet
