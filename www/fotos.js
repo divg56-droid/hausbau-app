@@ -1,8 +1,14 @@
 // Fotos anhaengen, ueberall gleich: Maengel, Tagebuch, Pins, Belege.
 //
-// Bewusst ohne Kamera-Erweiterung. Ein Dateifeld mit capture="environment"
-// oeffnet auf Android direkt die Kamera und funktioniert im WebView genauso
-// wie im Browser. Ein Plugin weniger, das kaputtgehen kann.
+// Bewusst ohne Kamera-Erweiterung: Zwei Dateifelder tun dasselbe und koennen
+// nicht kaputtgehen. Das eine traegt capture="environment" und oeffnet die
+// Kamera, das andere nicht und oeffnet die Galerie.
+//
+// Vorher gab es nur das erste. Wer ein Foto anhaengen wollte, das gestern
+// entstanden ist, kam nicht daran -- die Kamera sprang sofort an. Die Wahl
+// dem System zu ueberlassen, indem man capture weglaesst, waere kuerzer
+// gewesen: Android zeigt dann meist einen Auswahldialog. Meist. Zwei Knoepfe
+// zeigen die Wahl da, wo man sie sucht, und haengen an nichts.
 
 import { el, knopf } from './hilfen.js';
 import { daten, bildAblegen, bildUrl, bildLoeschen } from './daten.js';
@@ -23,12 +29,15 @@ export function fotofeld(ids, beiWechsel, optionen = {}) {
 
   const reihe = el('div', { klasse: 'fotoreihe' });
 
-  const dateifeld = el('input', {
-    klasse: 'versteckt',
-    type: 'file',
-    accept: pdfErlaubt ? 'image/*,application/pdf' : 'image/*',
-    capture: pdfErlaubt ? null : 'environment',
-    multiple: mehrere,
+  const akzeptiert = pdfErlaubt ? 'image/*,application/pdf' : 'image/*';
+
+  // Die Kamera nimmt immer nur eine Aufnahme entgegen; "multiple" waere dort
+  // eine Zusage, die das System nicht einhaelt.
+  const kamerafeld = el('input', {
+    klasse: 'versteckt', type: 'file', accept: 'image/*', capture: 'environment',
+  });
+  const galeriefeld = el('input', {
+    klasse: 'versteckt', type: 'file', accept: akzeptiert, multiple: mehrere,
   });
 
   async function zeichneReihe() {
@@ -65,9 +74,9 @@ export function fotofeld(ids, beiWechsel, optionen = {}) {
     }
   }
 
-  dateifeld.addEventListener('change', async () => {
-    const dateien = [...dateifeld.files];
-    dateifeld.value = '';
+  async function uebernehmen(feld) {
+    const dateien = [...feld.files];
+    feld.value = '';
     for (const datei of dateien) {
       const id = await bildAblegen(datei);
       if (!mehrere) ids.length = 0;
@@ -75,14 +84,21 @@ export function fotofeld(ids, beiWechsel, optionen = {}) {
     }
     await zeichneReihe();
     beiWechsel(ids);
-  });
+  }
+
+  kamerafeld.addEventListener('change', () => uebernehmen(kamerafeld));
+  galeriefeld.addEventListener('change', () => uebernehmen(galeriefeld));
 
   zeichneReihe();
 
   return el('div', {}, [
     reihe,
-    dateifeld,
-    knopf('\u{1F4F7} ' + text, () => dateifeld.click()),
+    kamerafeld,
+    galeriefeld,
+    el('div', { klasse: 'knopf-reihe' }, [
+      knopf('\u{1F4F7} ' + text, () => kamerafeld.click()),
+      knopf('\u{1F5BC}\uFE0F Aus der Galerie', () => galeriefeld.click()),
+    ]),
   ]);
 }
 

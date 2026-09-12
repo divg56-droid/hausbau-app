@@ -177,7 +177,11 @@ select, textarea {
   border: 1px solid var(--linie); border-radius: 8px;
   background: var(--karte); color: var(--tinte);
 }
-textarea { min-height: 88px; resize: vertical; line-height: 1.45; }
+/* Drei Zeilen statt fuenf. Ein Mangel wird in einem Satz beschrieben --
+   "Riss neben der Terrassentuer, etwa 40 cm" --, und ein Kasten, der auf
+   einen Aufsatz wartet, draengt das Formular auf dem Telefon nach unten.
+   Wer mehr schreibt, zieht ihn auf: resize bleibt. */
+textarea { min-height: 62px; resize: vertical; line-height: 1.45; }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--akzent); outline-offset: -1px; }
 
 input[type="range"] { width: 100%; height: 44px; accent-color: var(--akzent); }
@@ -241,10 +245,19 @@ input[type="checkbox"] { width: 22px; height: 22px; min-height: 0; accent-color:
   padding: 12px 0; border-bottom: 1px solid var(--linie);
 }
 .nebenliste > .nebenzeile:last-child { border-bottom: none; }
-.nebenzeile .zeilen-text { flex: 1 1 220px; min-width: 0; }
-.nebenzeile > input { flex: 0 0 120px; width: 120px; text-align: right; }
-.nebenknoepfe { display: flex; gap: 8px; flex: 0 0 auto; margin-left: auto; }
-.nebenknoepfe .knopf { width: auto; }
+.nebenzeile .zeilen-text { flex: 1 1 200px; min-width: 0; }
+/* Betrag und Knoepfe bilden eine Einheit und rutschen gemeinsam in die
+   zweite Zeile, wenn der Name den Platz braucht. */
+.nebenwerte {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  flex: 1 1 auto; justify-content: flex-end;
+}
+.nebenwerte > input { flex: 0 0 96px; width: 96px; text-align: right; }
+.nebenknoepfe { display: flex; gap: 6px; flex: 0 0 auto; }
+/* Enger als ein gewoehnlicher Knopf: Zwei davon neben einem Betragsfeld
+   passen sonst auf keinem Telefon in eine Zeile. Die Hoehe bleibt, damit
+   sie mit dem Finger zu treffen sind. */
+.nebenknoepfe .knopf { width: auto; padding: 10px 11px; font-size: 14px; }
 .listenzeile .zeilen-text { flex: 1; min-width: 0; }
 .zeilen-titel { font-weight: 600; display: block; }
 .zeilen-unter { font-size: 13px; color: var(--tinte-leise); display: block; }
@@ -905,6 +918,32 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
 .zeilen-marken {
   display: flex; flex-wrap: wrap; justify-content: flex-end;
   gap: 5px; flex: none; max-width: 45%;
+}
+
+/* Zustand zum Antippen. Verwandt mit dem Hell-Dunkel-Schalter, aber ueber
+   die volle Breite eines Formularfeldes: Hier ist die Wahl der Inhalt und
+   nicht eine Kleinigkeit am Rand.
+
+   Die gewaehlte Taste traegt den Akzent, nicht nur eine hellere Flaeche --
+   auf einem Telefon im Sonnenlicht ist ein Grauton neben einem anderen
+   Grauton keine Antwort auf "was gilt gerade?". */
+.zustandswahl {
+  display: flex; gap: 2px; padding: 3px;
+  border: 1px solid var(--linie); border-radius: 10px; background: var(--band);
+}
+.zustandstaste {
+  flex: 1 1 0; min-width: 0; min-height: 42px; padding: 8px 6px;
+  border: none; border-radius: 8px; background: none; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--tinte-leise);
+  transition: background .15s, color .15s;
+}
+.zustandstaste:active { background: var(--karte); }
+.zustandstaste.aktiv {
+  background: var(--akzent); color: var(--auf-akzent);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+}
+@media (prefers-reduced-motion: reduce) {
+  .zustandstaste { transition: none; }
 }
 
 .kennzahlen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }

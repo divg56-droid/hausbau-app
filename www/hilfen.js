@@ -114,6 +114,61 @@ export function auswahl(optionen, gewaehlt, eigenschaften = {}) {
   );
 }
 
+/**
+ * Ein Zustand zum Antippen statt zum Aufklappen.
+ *
+ * Eine Klappliste kostet drei Handgriffe: aufklappen, suchen, tippen -- und
+ * sie zeigt nicht, was es sonst noch gibt. Bei drei Moeglichkeiten ist das
+ * ein Umweg. Nebeneinander steht der Zustand da, und ihn zu aendern ist ein
+ * Tipp.
+ *
+ * Verhaelt sich wie ein Formularfeld: Das zurueckgegebene Element hat
+ * ".value", damit der aufrufende Code nichts anders macht als bei auswahl().
+ *
+ * @param {Array<[string, string]>} moeglich  [wert, Beschriftung]
+ * @param {string} gewaehlt
+ */
+export function zustandswahl(moeglich, gewaehlt) {
+  const behaelter = el('div', {
+    klasse: 'zustandswahl', role: 'radiogroup',
+  });
+  let wert = gewaehlt;
+
+  const tasten = moeglich.map(([w, beschriftung]) =>
+    el('button', {
+      type: 'button',
+      klasse: 'zustandstaste' + (w === wert ? ' aktiv' : ''),
+      role: 'radio',
+      'aria-checked': String(w === wert),
+      'data-wert': w,
+      text: beschriftung,
+      onclick: () => {
+        wert = w;
+        for (const t of tasten) {
+          const an = t.dataset.wert === wert;
+          t.classList.toggle('aktiv', an);
+          t.setAttribute('aria-checked', String(an));
+        }
+        behaelter.dispatchEvent(new Event('change', { bubbles: true }));
+      },
+    })
+  );
+  behaelter.append(...tasten);
+
+  Object.defineProperty(behaelter, 'value', {
+    get: () => wert,
+    set: (neu) => {
+      wert = neu;
+      for (const t of tasten) {
+        const an = t.dataset.wert === wert;
+        t.classList.toggle('aktiv', an);
+        t.setAttribute('aria-checked', String(an));
+      }
+    },
+  });
+  return behaelter;
+}
+
 export function knopf(text, beim_klick, klasse = 'knopf') {
   return el('button', { type: 'button', klasse, onclick: beim_klick }, [text]);
 }

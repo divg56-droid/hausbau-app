@@ -227,6 +227,11 @@ export async function zeige(rahmen) {
             ].filter(Boolean).join(' · '),
           }),
         ]),
+        /* Betrag und Knoepfe in einem Behaelter: Sonst stapelt die Zeile auf
+           dem Telefon drei Stockwerke -- Name, darunter der Betrag, darunter
+           die Knoepfe -- und ein Posten wird 211 Punkte hoch. So bricht
+           hoechstens einmal um, und was zusammengehoert bleibt beieinander. */
+        el('div', { klasse: 'nebenwerte' }, [
         betrag,
         el('div', { klasse: 'nebenknoepfe' }, [
           el('button', {
@@ -241,6 +246,7 @@ export async function zeige(rahmen) {
               await merken();
             },
           }),
+        ]),
         ]),
       ]);
     }));

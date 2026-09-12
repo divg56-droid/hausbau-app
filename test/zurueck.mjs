@@ -15,6 +15,7 @@
  * Reihenfolge in zurueck.js -- und nicht eine Nachbildung davon.
  */
 import { browserStarten } from './browser.mjs';
+import { FUELLEN } from './beispieldaten.mjs';
 
 const BASIS = process.argv[2] || 'http://localhost:4301';
 
@@ -62,6 +63,9 @@ try {
   await seite.vorschalten(BRUECKE);
   await seite.laden('/');
   await new Promise((g) => setTimeout(g, 1200));
+  // Ohne Daten gibt es keine Einzelseiten, und Punkt 6 haette nichts zu
+  // pruefen.
+  await seite.werten(FUELLEN);
 
   pruef('Die Taste ist angebunden',
     await seite.werten('!!window.__zurueck.zuhoerer'));
@@ -106,7 +110,77 @@ try {
   pruef('Das zweite Mal beendet die App', zweitesMal.beendet === 1,
     JSON.stringify(zweitesMal));
 
-  // 5. Nach der Bedenkzeit gilt die Ansage nicht mehr -- sonst beendet ein
+  /* 5. Jeder Weg der App, einzeln.
+   *
+   *    "Das musst Du bei jedem Reiter in der ganzen App ueberpruefen" -- also
+   *    nicht an drei Beispielen, sondern an allen. Geprueft wird zweierlei:
+   *    Die App darf nicht enden, und der Zurücktipp muss irgendwo ankommen,
+   *    wo man vorher war. Fuer Unterseiten heisst das ihre Liste, fuer
+   *    Bereiche die Übersicht.
+   */
+  const WEGE = await seite.werten(`(async () => {
+    const { MODULE } = await import('/bereiche.js');
+    return MODULE.map((m) => m.weg).filter((w) => w !== '');
+  })()`);
+
+  let schief = [];
+  const zaehlerNull = () => seite.werten('window.__zurueck.beendet = 0');
+  await zaehlerNull();
+  for (const weg of WEGE) {
+    await seite.hin(weg, 500);
+    const nachher = await seite.werten(DRUECKEN);
+    if (nachher.beendet !== 0) schief.push(`${weg}: beendet die App`);
+    else if (nachher.weg !== '') schief.push(`${weg}: landet auf "${nachher.weg}"`);
+  }
+  pruef(`Alle ${WEGE.length} Bereiche gehen auf die Übersicht`,
+    schief.length === 0, schief.join(' | '));
+
+  /* 6. Unterseiten: Sie gehoeren zu einer Liste und muessen dorthin zurueck.
+   *    Hier lag der zweite Teil des Fehlers -- die App flog nicht mehr
+   *    hinaus, sprang aber aus jeder Einzelseite gleich aufs Dashboard. */
+  const unterwege = await seite.werten(`(async () => {
+    const { daten } = await import('/daten.js');
+    const [kontakte, raeume] = await Promise.all([
+      daten.alle('kontakte'), daten.alle('raeume'),
+    ]);
+    const raus = [];
+    if (kontakte[0]) raus.push(['kontakte/' + kontakte[0].id, 'kontakte']);
+    if (raeume[0]) raus.push(['raeume/' + raeume[0].id, 'raeume']);
+    return raus;
+  })()`);
+  pruef('Es gibt Unterseiten zum Pruefen', unterwege.length >= 1,
+    'keine gefunden -- die Beispieldaten liefern keine');
+
+  for (const [weg, erwartet] of unterwege) {
+    await zaehlerNull();
+    await seite.hin(weg, 700);
+    const nachher = await seite.werten(DRUECKEN);
+    pruef(`#/${weg.split('/')[0]}/<kennung> geht auf die Liste`,
+      nachher.weg === erwartet && nachher.beendet === 0,
+      JSON.stringify(nachher));
+  }
+
+  /* 7. Ein offenes Formular geht zu, in jedem Bereich, der eines hat.
+   *    "Mangel erfassen, anders ueberlegt, zurueck" -- und man steht wieder
+   *    in der Mangelliste, nicht irgendwo. */
+  for (const weg of ['maengel', 'kontakte', 'todos', 'ablauf', 'baukasse/kosten']) {
+    await zaehlerNull();
+    await seite.hin(weg, 600);
+    const geoeffnet = await seite.werten(`(async () => {
+      const { blattOeffnen } = await import('/blatt.js');
+      blattOeffnen('Pruefung', [], () => {});
+      await new Promise((g) => setTimeout(g, 150));
+      return !!document.querySelector('.ueberlagerung');
+    })()`);
+    const nachher = await seite.werten(DRUECKEN);
+    pruef(`In #/${weg} schliesst zurück das Formular`,
+      geoeffnet && !nachher.blatt && nachher.weg === weg && nachher.beendet === 0,
+      JSON.stringify(nachher));
+  }
+
+  await seite.hin('');
+
+  // 8. Nach der Bedenkzeit gilt die Ansage nicht mehr -- sonst beendet ein
   //    Tipp von vor einer Minute die App.
   await seite.werten('window.__zurueck.beendet = 0');
   // Erst die Bedenkzeit des vorigen Falls ablaufen lassen, sonst beendet

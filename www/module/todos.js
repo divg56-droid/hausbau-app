@@ -94,7 +94,10 @@ function zeigeTodos(rahmen, todos, raeume, neu) {
     karte([
       el('div', { klasse: 'filterleiste' }, [
         feldNeu,
-        knopf('Hinzufügen', anlegen, 'knopf-leise'),
+        // Nicht "leise": Ein Knopf ohne Rahmen neben einem Eingabefeld sieht
+        // aus wie eine Beschriftung. Wer etwas eintraegt, sucht danach etwas
+        // zum Antippen.
+        knopf('Hinzufügen', anlegen, 'knopf-haupt'),
       ]),
       el('p', {
         klasse: 'unterzeile',
@@ -222,9 +225,15 @@ function zeigeChecklisten(rahmen, todos, raeume, neu) {
     (a, b) => a.localeCompare(b, 'de')
   );
 
+  /* Der Knopf steht oben, nicht unter den Listen.
+   *
+   * Unten fand ihn niemand: Wer sechs Vorlagen geladen hat, scrollt an
+   * sechs Karten vorbei, bevor er sieht, dass es eine eigene Liste gibt --
+   * und wer noch keine hat, sucht ihn genau dort, wo er anfaengt zu lesen. */
   anhaengen(
     rahmen,
-    kopfzeile('Checklisten', 'Listen für einen Termin: abarbeiten, abhaken, weglegen.')
+    kopfzeile('Checklisten', 'Listen für einen Termin: abarbeiten, abhaken, weglegen.'),
+    knopf('Eigene Liste anlegen', () => listeAnlegen(listen, neu), 'knopf-haupt')
   );
 
   if (!listen.length) {
@@ -296,10 +305,6 @@ function zeigeChecklisten(rahmen, todos, raeume, neu) {
     );
   }
 
-  anhaengen(
-    rahmen,
-    knopf('Eigene Liste anlegen', () => listeAnlegen(listen, neu), 'knopf-haupt')
-  );
 }
 
 async function vorlageLaden(vorlage, nachher) {

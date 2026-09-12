@@ -176,6 +176,8 @@ import('./zurueck.js').then(({ zurueckAnbinden }) =>
     leisteOffen: () => document.body.classList.contains('leiste-offen'),
     leisteZu: () => leisteSchalten(false),
     zurUebersicht: () => { location.hash = ''; },
+    istBereich: (weg) => MODULE.some((m) => m.weg === weg),
+    zuBereich: (weg) => { location.hash = '/' + weg; },
   })
 );
 

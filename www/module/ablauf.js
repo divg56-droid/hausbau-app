@@ -9,6 +9,7 @@ import {
   el, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile, hinweisKasten,
   leerzustand, zuZahl, melde, datumLang, heute, kontaktName, kontaktLang,
   anhaengen,
+  zustandswahl,
 } from '../hilfen.js';
 import { daten, einstellung } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -535,7 +536,11 @@ function aufgabeBearbeiten(aufgabe, alleAufgaben, kontakte, maengel, nachher) {
   const titel = eingabe({ value: aufgabe.titel || '', placeholder: 'z. B. Estrich einbringen' });
   const phase = auswahl(PHASEN.map((p) => [p, p]), aufgabe.phase || 'Rohbau');
   const dauer = zahlfeld({ value: String(aufgabe.dauer || 1) });
-  const status = auswahl(
+  /* Drei Tasten statt einer Klappliste: Den Zustand eines Arbeitsschritts
+     aendert man haeufiger als alles andere in diesem Blatt, meistens im
+     Stehen und mit einer Hand. Aufklappen, suchen, tippen sind dafuer zwei
+     Handgriffe zu viel. */
+  const status = zustandswahl(
     [['offen', 'Offen'], ['laeuft', 'Läuft'], ['fertig', 'Fertig']],
     aufgabe.status || 'offen'
   );
