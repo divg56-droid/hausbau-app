@@ -80,6 +80,28 @@ jobs:
           echo 'android.suppressUnsupportedCompileSdk=36' >> android/gradle.properties
           cat android/variables.gradle
 
+      # R8 einschalten: Code verkleinern, umschreiben, Ressourcen wegwerfen.
+      #
+      # Lange nicht gemacht, weil Capacitor seine Plugins ueber den
+      # Klassennamen aus capacitor.plugins.json laedt -- also ueber Reflexion,
+      # die R8 nicht sieht. Das Argument war falsch: Capacitor liefert eigene
+      # Keep-Regeln mit ("-keep public class * extends com.getcapacitor
+      # .Plugin") und reicht sie ueber consumerProguardFiles an die App
+      # weiter. Genau dafuer sind sie da.
+      #
+      # "proguard-android-optimize.txt" und nicht "proguard-android.txt": Die
+      # zweite Datei enthaelt -dontoptimize und wuerde die halbe Arbeit
+      # abschalten. Google raet inzwischen ausdruecklich von ihr ab.
+      - name: Code optimieren lassen
+        run: |
+          datei=android/app/build.gradle
+          # Zwei getrennte Befehle: Ein sed-Ersetzungstext mit Zeilenumbruch
+          # ist in YAML eine Falle, und "a\\" haengt die Zeile sauber an.
+          sed -i 's/minifyEnabled false/minifyEnabled true/' "$datei"
+          sed -i '/minifyEnabled true/a\            shrinkResources true' "$datei"
+          sed -i "s/getDefaultProguardFile('proguard-android.txt')/getDefaultProguardFile('proguard-android-optimize.txt')/" "$datei"
+          sed -n '/buildTypes/,/^    }/p' "$datei"
+
       - name: Android-SDK 36 nachladen
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
@@ -207,6 +229,27 @@ jobs:
           else
             echo "::warning::Unsigniert - so nimmt Play das Paket nicht an."
           fi
+
+          # Nach R8 muessen die Plugin-Klassen noch unter ihrem Originalnamen
+          # im Code stehen -- Capacitor sucht sie ueber genau diesen Namen aus
+          # capacitor.plugins.json. Faenden sie sich nicht mehr, liefe die App
+          # zwar an, aber die Zuruecktaste, das Teilen und die Statusleiste
+          # waeren still tot. Das faellt sonst erst auf dem Geraet auf.
+          echo "--- Plugin-Klassen nach der Optimierung:"
+          unzip -o -q "$datei" -d entpackt-pruef
+          fehlt=0
+          for klasse in             com.getcapacitor.BridgeActivity             com.capacitorjs.plugins.app.AppPlugin             com.capacitorjs.plugins.statusbar.StatusBarPlugin             com.capacitorjs.plugins.share.SharePlugin             com.capacitorjs.plugins.filesystem.FilesystemPlugin
+          do
+            pfad=$(echo "$klasse" | tr '.' '/')
+            if grep -rqa "L$pfad;" entpackt-pruef/base/dex/ 2>/dev/null; then
+              echo "    da     $klasse"
+            else
+              echo "    FEHLT  $klasse" >&2
+              fehlt=$((fehlt + 1))
+            fi
+          done
+          rm -rf entpackt-pruef
+          [ "$fehlt" -eq 0 ] || { echo "FEHLER: $fehlt Plugin-Klasse(n) wegoptimiert." >&2; exit 1; }
 
           echo "--- In Ordnung: targetSdk $ziel, versionCode $code, keine Debug-Marke."
 
