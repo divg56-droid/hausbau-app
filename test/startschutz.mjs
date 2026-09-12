@@ -82,5 +82,22 @@ pruef('Und die Übersicht steht trotzdem', alt.inhalt > 0 && alt.titel.length > 
   JSON.stringify(alt));
 pruef('Ohne Zettel, denn es ist nichts kaputt', !alt.zettel);
 
+/* Und die Gegenprobe: Laeuft die App schon, gehoert ein Fehler nicht auf den
+ * Zettel.
+ *
+ * Genau das ging schief: Ein ReferenceError im Rechnungsformular erschien
+ * als "Android System WebView ist veraltet". Die Diagnose stimmte nicht, und
+ * sie schickte die Fehlersuche in die falsche Richtung -- es wurde eine
+ * WebView aktualisiert, die nichts dafuer konnte. */
+{
+  const spaet = await fall((s) => s.vorschalten(`
+    window.addEventListener('load', () => setTimeout(() => {
+      throw new Error('Pruefung: Fehler im laufenden Betrieb');
+    }, 2200));
+  `), 4000);
+  pruef('Ein Fehler im Betrieb zeigt keinen Zettel', !spaet.zettel, JSON.stringify(spaet));
+  pruef('Der Bildschirm bleibt stehen', spaet.inhalt > 0, JSON.stringify(spaet));
+}
+
 console.log(fehler ? `\nFEHLGESCHLAGEN: ${fehler}` : '\nDer Startschutz haelt.');
 process.exit(fehler ? 1 : 0);

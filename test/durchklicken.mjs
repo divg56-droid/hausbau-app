@@ -65,6 +65,60 @@ async function durchlauf(seite, titel, vorbereiten) {
     '\n       ' + laut.slice(0, 6).join('\n       '));
 }
 
+/* Jedes Anlegen-Formular einmal aufmachen.
+ *
+ * Die Luecke, durch die "Rechnung erfassen" gekommen ist: Der Durchlauf oben
+ * oeffnet Bildschirme, keine Formulare. Dort lag ein ReferenceError -- eine
+ * oertliche Variable hiess wie ein Import und beschattete ihn --, und
+ * gefunden hat ihn niemand, weil niemand den Knopf gedrueckt hat.
+ *
+ * Gedrueckt wird, was nach Anlegen aussieht: "hinzufuegen", "erfassen",
+ * "anlegen", "neu". Was sich oeffnet, wird gleich wieder geschlossen.
+ */
+async function formulare(seite, titel) {
+  const wege = await seite.werten(`(async () => {
+    const { MODULE } = await import('/bereiche.js');
+    return MODULE.map((m) => m.weg).filter((w) => w !== '');
+  })()`);
+
+  const kaputt = [];
+  let geoeffnet = 0;
+
+  for (const weg of wege) {
+    await seite.hin(weg, 700);
+    seite.klagenHolen();
+
+    const knoepfe = await seite.werten(`(() => [...document.querySelectorAll('#inhalt button')]
+      .map((b, i) => ({ i, text: b.textContent.trim().slice(0, 40) }))
+      .filter((b) => /hinzuf|erfass|anlegen|^neue|neuer |ergänz/i.test(b.text)))()`);
+
+    for (const { i, text } of knoepfe.slice(0, 3)) {
+      const wie = await seite.werten(`(async () => {
+        document.querySelectorAll('#inhalt button')[${i}].click();
+        await new Promise((g) => setTimeout(g, 900));
+        const blatt = document.querySelector('.ueberlagerung');
+        const zettel = !document.getElementById('startfehler').hidden;
+        if (blatt) blatt.remove();
+        return { blatt: !!blatt, zettel };
+      })()`);
+      // Rueckfragen abholen, damit sie nicht in den naechsten Durchgang
+      // hineinragen -- beantwortet hat sie der Browser-Helfer schon.
+      seite.dialogeHolen();
+      const klagen = seite.klagenHolen().filter(ernst);
+      geoeffnet++;
+      if (klagen.length || wie.zettel) {
+        kaputt.push(`#/${weg} "${text}": ` +
+          (wie.zettel ? '[Startzettel] ' : '') +
+          klagen.map((k) => `[${k.art}] ${String(k.text).slice(0, 140)}`).join(' '));
+      }
+    }
+  }
+
+  console.log(`\n${titel} (${geoeffnet} Formulare)`);
+  pruef('Jedes Formular oeffnet ohne Fehler', kaputt.length === 0,
+    '\n       ' + kaputt.slice(0, 6).join('\n       '));
+}
+
 const seite = await browserStarten({ basis: BASIS });
 
 try {
@@ -80,6 +134,8 @@ try {
     await s.werten(FUELLEN);
     await s.hin('', 600);
   });
+
+  await formulare(seite, 'Anlegen-Formulare');
 } finally {
   seite.schliessen();
 }

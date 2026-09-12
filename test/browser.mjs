@@ -87,9 +87,25 @@ export async function browserStarten({ basis }) {
    * App ueber sich selbst sagt. Dazu Anfragen, die nicht ankommen -- eine
    * fehlende Datei ist der haeufigste Grund fuer einen leeren Bildschirm. */
   const klagen = [];
+
+  /* Dialoge wegklicken.
+   *
+   * confirm() und alert() halten die Seite an, bis jemand tippt -- und in
+   * einem kopflosen Browser tippt niemand. Runtime.evaluate kehrt dann nie
+   * zurueck, und die Pruefung steht still. Genau das ist passiert, als der
+   * Durchlauf anfing, Knoepfe zu druecken.
+   *
+   * Beantwortet wird mit "ja": Ein Test, der jede Rueckfrage verneint,
+   * prueft nur den Abbruchweg. Was dahinter passiert, sieht er nie. */
+  const dialoge = [];
   ws.addEventListener('message', (e) => {
     const n = JSON.parse(e.data);
     if (n.sessionId !== sessionId) return;
+    if (n.method === 'Page.javascriptDialogOpening') {
+      dialoge.push({ art: n.params.type, text: n.params.message });
+      ruf('Page.handleJavaScriptDialog', { accept: true }, sessionId).catch(() => {});
+      return;
+    }
     if (n.method === 'Runtime.exceptionThrown') {
       const d = n.params.exceptionDetails;
       klagen.push({ art: 'Ausnahme', text: d.exception?.description || d.text });
@@ -106,6 +122,13 @@ export async function browserStarten({ basis }) {
   });
 
   const seite = {
+    /** Die Rueckfragen, die unterwegs beantwortet wurden. Leert den Eimer. */
+    dialogeHolen() {
+      const raus = dialoge.slice();
+      dialoge.length = 0;
+      return raus;
+    },
+
     /** Alles Gemeldete seit dem letzten Abholen. Leert den Eimer. */
     klagenHolen() {
       const raus = klagen.slice();

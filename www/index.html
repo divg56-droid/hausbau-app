@@ -44,8 +44,22 @@
   }
 
   var gemeldet = false;
+
+  /* Der Zettel gehoert zum Start und zu nichts sonst.
+   *
+   * Vorher stand er bei jedem unbehandelten Fehler, auch mitten im Betrieb.
+   * Ein Tippfehler im Rechnungsformular erschien dadurch als "Android System
+   * WebView ist veraltet" -- eine Diagnose, die nicht stimmte und die
+   * Fehlersuche in die falsche Richtung schickte. Steht der erste Bildschirm
+   * schon, kann die WebView nicht zu alt sein: Dann hat sie die App ja
+   * gezeichnet. */
+  function laeuft() {
+    var inhalt = document.getElementById('inhalt');
+    return !!inhalt && inhalt.children.length > 0;
+  }
+
   function zettel(grund) {
-    if (gemeldet) return;
+    if (gemeldet || laeuft()) return;
     gemeldet = true;
     var kasten = document.getElementById('startfehler');
     if (!kasten) return;
@@ -54,11 +68,43 @@
     if (stelle && grund) stelle.textContent = String(grund).slice(0, 200);
   }
 
+  /* Faellt spaeter etwas um, sagt es die App an Ort und Stelle -- eine kurze
+     Meldung ueber dem Bildschirm, auf dem man steht. Der Bildschirm bleibt,
+     wo er ist; wer gerade ein Formular ausgefuellt hat, verliert nichts. */
+  function spaeterMelden(text) {
+    var kasten = document.createElement('div');
+    kasten.className = 'meldung';
+    kasten.textContent = 'Da ist etwas schiefgegangen: ' + String(text).slice(0, 120);
+    document.body.appendChild(kasten);
+    setTimeout(function () { kasten.classList.add('weg'); }, 4200);
+    setTimeout(function () { kasten.remove(); }, 4600);
+  }
+
+  function klage(text) {
+    if (laeuft()) spaeterMelden(text || 'unbekannter Fehler');
+    else zettel(text);
+  }
+
+  /* Keine ungefragte Einladung zum Installieren.
+   *
+   * Weil unter /app/ ein Web-App-Manifest liegt, bietet der Browser von sich
+   * aus an, eine Verknuepfung anzulegen -- als Leiste am unteren Rand oder
+   * als Frage beim Herunterladen. Gewuenscht ist das nicht: Wer die App auf
+   * dem Telefon will, holt sie aus dem Play Store, und wer sie im Browser
+   * benutzt, hat sich dafuer entschieden.
+   *
+   * preventDefault nimmt nur die Einladung weg, nicht die Faehigkeit: Ueber
+   * das Menue des Browsers laesst sich die Seite weiterhin installieren, und
+   * die Offlineablage arbeitet unveraendert. */
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+  });
+
   window.addEventListener('error', function (e) {
-    zettel(e && (e.message || (e.error && e.error.message)));
+    klage(e && (e.message || (e.error && e.error.message)));
   });
   window.addEventListener('unhandledrejection', function (e) {
-    zettel(e && e.reason && (e.reason.message || e.reason));
+    klage(e && e.reason && (e.reason.message || e.reason));
   });
 
   // Nach sechs Sekunden steht der erste Bildschirm, oder es stimmt etwas

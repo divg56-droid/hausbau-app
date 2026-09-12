@@ -1543,7 +1543,11 @@ function belegBearbeiten(beleg, posten, stand, kontakte, nachher) {
     [['', '– kein Kontakt –'], ...kontakte.map((k) => [k.id, kontaktName(k)])],
     beleg.kontaktId ?? (treffer ? treffer.id : '')
   );
-  const kontaktName = eingabe({ value: beleg.kontaktName || '', placeholder: 'Firma laut Rechnung' });
+  /* Nicht "kontaktName": So hiess dieses Feld einmal, und damit beschattete
+     es den gleichnamigen Import aus hilfen.js im ganzen Funktionsrumpf.
+     Die beiden Aufrufe darueber liefen dadurch in einen ReferenceError --
+     "Rechnung erfassen" oeffnete kein Formular mehr, sondern warf. */
+  const firmenfeld = eingabe({ value: beleg.kontaktName || '', placeholder: 'Firma laut Rechnung' });
 
   const quelle = auswahl(
     [['', '– keine Zuordnung –'], ...stand.posten.map((p) => [p.id, p.name])],
@@ -1561,7 +1565,7 @@ function belegBearbeiten(beleg, posten, stand, kontakte, nachher) {
       feld('Rechnungsdatum', datum),
       feld('Gehört zu Position', zuPosten,
         'Damit weiß die App, was von dieser Position noch offen ist.'),
-      feld('Firma laut Rechnung', kontaktName),
+      feld('Firma laut Rechnung', firmenfeld),
       feld('Zugeordneter Kontakt', kontakt),
       feld('Bezahlt aus', quelle, 'Bestimmt, von welchem Budgetposten der Betrag abgeht.'),
       el('span', { klasse: 'feld-name', text: 'Beleg' }),
@@ -1573,7 +1577,7 @@ function belegBearbeiten(beleg, posten, stand, kontakte, nachher) {
         beschreibung: beschreibung.value.trim(),
         datum: datum.value || heute(),
         postenId: zuPosten.value || null,
-        kontaktName: kontaktName.value.trim(),
+        kontaktName: firmenfeld.value.trim(),
         kontaktId: kontakt.value || null,
         quelleId: quelle.value || null,
         bildId: bilder[0] ?? null,
