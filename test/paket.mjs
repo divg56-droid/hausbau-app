@@ -91,6 +91,7 @@ const SUITEN = [
   ['Startschutz', 'startschutz.mjs'],
   ['Zurücktaste', 'zurueck.mjs'],
   ['Anmeldung', 'anmeldung.mjs'],
+  ['Zwei Geräte', 'zweiGeraete.mjs'],
   ['Durchklicken', 'durchklicken.mjs'],
   ['Breiten', 'breite.mjs'],
 ];

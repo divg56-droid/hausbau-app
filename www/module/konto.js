@@ -76,6 +76,69 @@ async function zeichneLink(rahmen, token) {
  * Neu laden statt einzelne Zeiger zurueckzusetzen: Es passiert einmal nach
  * dem Anmelden, dauert einen Wimpernschlag, und es gibt keine zweite Stelle,
  * an der man das Nachziehen vergessen kann. */
+/* Was liegt hier, was liegt dort -- Zeile fuer Zeile.
+ *
+ * Eine Gesamtzahl beantwortet nicht, was man wissen will. "Die Rechnung ist
+ * da, die Kontakte nicht" ist die Art von Beobachtung, mit der eine Suche
+ * anfaengt, und dafuer braucht es beide Seiten nebeneinander. Steht rechts
+ * eine Null, wurde nie hochgeladen; stehen beide Zahlen gleich und der
+ * Bildschirm bleibt leer, liegt es am offenen Projekt und nicht am Abgleich.
+ */
+async function vergleichZeigen(rahmen, w) {
+  const { SPEICHERNAMEN } = await import('../daten.js');
+  const namen = {
+    projekte: 'Bauprojekte', posten: 'Kostenpositionen', belege: 'Rechnungen',
+    angebote: 'Angebote', maengel: 'Mängel', kontakte: 'Kontakte',
+    aufgaben: 'Arbeitsschritte', todos: 'To-Dos', tagebuch: 'Tageseinträge',
+    raeume: 'Räume', dokumente: 'Dokumente', baudoku: 'Baudokumentation',
+    darlehen: 'Geldmittel', einstellungen: 'Einstellungen', leitfaden: 'Leitfaden',
+    geschosse: 'Geschosse', pins: 'Markierungen', bilder: 'Fotos',
+  };
+
+  const zeilen = [];
+  for (const speicher of SPEICHERNAMEN) {
+    const hier = (await daten.alleMitGrabsteinen(speicher)).filter((x) => !x.geloescht).length;
+    const dort = speicher === 'bilder' ? w.bilder : (w.je_speicher || {})[speicher] || 0;
+    if (!hier && !dort) continue;
+    zeilen.push({ name: namen[speicher] || speicher, hier, dort });
+  }
+
+  blattOeffnen('Hier und auf dem Server', [
+    el('div', { klasse: 'tabellenrahmen' }, [
+      el('table', {}, [
+        el('thead', {}, [
+          el('tr', {}, [
+            el('th', { text: '' }),
+            el('th', { text: 'Dieses Gerät', stil: { textAlign: 'right' } }),
+            el('th', { text: 'Server', stil: { textAlign: 'right' } }),
+          ]),
+        ]),
+        el('tbody', {}, zeilen.map((z) =>
+          el('tr', {}, [
+            el('td', { text: z.name }),
+            el('td', { text: String(z.hier), stil: { textAlign: 'right' } }),
+            el('td', {
+              text: String(z.dort),
+              stil: {
+                textAlign: 'right',
+                // Was hier liegt und dort fehlt, ist noch nicht hochgeladen.
+                color: z.dort < z.hier ? 'var(--warn)' : 'inherit',
+                fontWeight: z.dort < z.hier ? '700' : '400',
+              },
+            }),
+          ])
+        )),
+      ]),
+    ]),
+    hinweisKasten(
+      'Steht rechts eine kleinere Zahl, ist noch nicht alles hochgeladen — dann hilft ' +
+        '„Jetzt abgleichen". Sind beide Zahlen gleich und ein Bereich bleibt trotzdem leer, ' +
+        'ist auf diesem Gerät ein anderes Bauprojekt geöffnet als das, zu dem die Daten gehören.',
+      'info'
+    ),
+  ], () => {}, { sicherText: 'Schließen' });
+}
+
 async function frischAufbauen() {
   const { projektzeigerVergessen } = await import('../daten.js');
   projektzeigerVergessen();
@@ -163,10 +226,10 @@ async function zeichne(rahmen, art = 'anmelden') {
       wertzeile('Rechnungen', String(zahlen.belege)),
       wertzeile('Kontakte', String(zahlen.kontakte)),
       wertzeile('Fotos', String(zahlen.bilder), true),
-      knopf('Stand auf dem Server prüfen', async () => {
+      knopf('Mit dem Server vergleichen', async () => {
         try {
           const w = await wer();
-          melde(`Server: ${w.saetze} Sätze, ${w.bilder} Fotos, ${Math.round(w.bytes / 1024 / 1024 * 10) / 10} MB.`);
+          await vergleichZeigen(rahmen, w);
         } catch (fehler) {
           melde(fehler.message);
         }

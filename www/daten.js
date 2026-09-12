@@ -56,6 +56,15 @@ const SPEICHER = {
   bilder: { indizes: [] },
 };
 
+/* Die Namen aller Speicher, einmal.
+ *
+ * Dieselbe Liste stand bisher dreimal da: hier, in abgleich.js und in
+ * einstellungen.js. Fehlt ein Name in einer der Kopien, wird der Speicher
+ * still nicht abgeglichen oder beim Loeschen uebersehen -- und beides faellt
+ * erst auf, wenn jemand seine Daten vermisst. Wer eine neue Liste braucht,
+ * nimmt diese. */
+export const SPEICHERNAMEN = Object.keys(SPEICHER);
+
 // Einzelne Verweise: Feld -> Speicher, auf den es zeigt.
 const VERWEISE = {
   geschosse: { bildId: 'bilder' },

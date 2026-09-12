@@ -1,6 +1,6 @@
 {
-  "versionName": "1.1.0",
-  "versionCode": 11,
+  "versionName": "1.1.1",
+  "versionCode": 12,
   "_hinweis": [
     "Die Fassung, die in den Play Store geht. Der Testbau (apk.yml) nimmt sie nicht,",
     "der bleibt bei der Buildnummer von GitHub.",

@@ -281,12 +281,29 @@ switch ($tun) {
         $s = db()->prepare('SELECT COUNT(*) AS n FROM saetze WHERE nutzer_id = ? AND geloescht = 0');
         $s->execute([$n['id']]);
         $saetze = (int)$s->fetch()['n'];
+
+        /* Aufgeschluesselt nach Speicher.
+         *
+         * Eine Gesamtzahl beantwortet die Frage nicht, um die es geht: Wenn
+         * jemand sagt "die Rechnung ist da, die Kontakte nicht", hilft nur
+         * eine Zeile je Speicher. Sie zeigt auf einen Blick, ob etwas gar
+         * nicht hochgeladen wurde oder nur nicht angezeigt wird. */
+        $je = db()->prepare(
+            'SELECT speicher, COUNT(*) AS n FROM saetze
+              WHERE nutzer_id = ? AND geloescht = 0 GROUP BY speicher'
+        );
+        $je->execute([$n['id']]);
+        $jeSpeicher = [];
+        foreach ($je as $zeile) {
+            $jeSpeicher[$zeile['speicher']] = (int)$zeile['n'];
+        }
         $s = db()->prepare('SELECT COUNT(*) AS n, COALESCE(SUM(groesse), 0) AS b FROM bilder WHERE nutzer_id = ? AND geloescht = 0');
         $s->execute([$n['id']]);
         $bilder = $s->fetch();
         antwort([
             'epost' => $n['epost'],
             'saetze' => $saetze,
+            'je_speicher' => $jeSpeicher,
             'bilder' => (int)$bilder['n'],
             'bytes' => (int)$bilder['b'],
             // Nur damit die App den Verweis zur Verwaltung zeigt oder nicht.
