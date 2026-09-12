@@ -95,11 +95,18 @@ a { color: var(--akzent-dunkel); }
   padding-left: 8px; padding-right: 8px;
   background: var(--karte); border-bottom: 1px solid var(--linie);
 }
+/* Der Zurueckpfeil ist der meistbenutzte Knopf der App und sass bei 26 Pixeln
+   als duenner Winkel im Kopf. Jetzt 34 und eine groessere Flaeche darunter:
+   Auf der Baustelle wird mit Handschuhen getippt, und das Zeichen selbst ist
+   schmal -- ein "‹" hat kaum Flaeche, es braucht Groesse, um als Pfeil
+   gelesen zu werden. */
 #kopf .zurueck {
-  width: 44px; height: 44px; flex: none;
+  width: 48px; height: 48px; flex: none;
   display: flex; align-items: center; justify-content: center;
   border: none; background: none; color: var(--tinte);
-  font-size: 26px; line-height: 1; cursor: pointer; border-radius: 8px;
+  font-size: 34px; line-height: 1; cursor: pointer; border-radius: 10px;
+  /* Der Winkel steht optisch zu tief, weil unter ihm die Unterlaenge fehlt. */
+  padding-bottom: 3px;
 }
 #kopf .zurueck:active { background: var(--band); }
 /* Die Marke ist ein Weg zur Uebersicht, kein Schmuck. Sie soll aber auch
