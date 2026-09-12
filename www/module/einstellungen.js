@@ -1,5 +1,19 @@
 // Einstellungen, Sicherung und Loeschung.
 
+/* Die Adresse im Play Store.
+ *
+ * Sie steht fest, sobald die App veroeffentlicht ist -- sie leitet sich aus
+ * dem Paketnamen ab. Bis dahin null, und dann zeigt die Seite den Verweis
+ * gar nicht: Eine Store-Seite, die es noch nicht gibt, endet bei Google in
+ * einer Fehlermeldung, und das ist schlechter als kein Verweis.
+ *
+ * Zum Freischalten die naechste Zeile tauschen. Dieselbe Adresse steht in
+ * hausbauatlas/src/pages/index.astro -- beide gehoeren beim Livegang
+ * umgelegt.
+ */
+const PLAY_STORE = null;
+// const PLAY_STORE = 'https://play.google.com/store/apps/details?id=de.bauzeuge.app';
+
 import {
   el, feld, eingabe, knopf, karte, kopfzeile, wertzeile, hinweisKasten, melde, heute,
   kontaktName,
@@ -225,6 +239,14 @@ async function zeichne(rahmen) {
 
          target="_blank" oeffnet im Systembrowser statt in der WebView --
          ohne das liefe der Nutzer im Paket in eine Seite ohne Zurueck. */
+      /* Nur in der Fassung im Browser. Wer die App aus dem Store hat, sieht
+         hier sonst einen Verweis auf das, was er gerade benutzt. */
+      PLAY_STORE && !window.Capacitor?.isNativePlatform?.()
+        ? el('a', {
+            klasse: 'knopf', href: PLAY_STORE, target: '_blank', rel: 'noopener',
+            text: 'BauZeuge für Android laden',
+          })
+        : null,
       el('p', { klasse: 'rechtsverweise' }, [
         el('a', {
           href: 'https://www.bauzeuge.de/app-datenschutz/',
