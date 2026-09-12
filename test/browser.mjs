@@ -76,8 +76,43 @@ export async function browserStarten({ basis }) {
     { targetId: ziel.targetId, flatten: true });
   await ruf('Page.enable', {}, sessionId);
   await ruf('Runtime.enable', {}, sessionId);
+  await ruf('Log.enable', {}, sessionId);
+  await ruf('Network.enable', {}, sessionId);
+
+  /* Alles, was die Seite als kaputt meldet, an einer Stelle.
+   *
+   * Drei Quellen, weil keine allein reicht: Runtime.exceptionThrown faengt
+   * geworfene Fehler, Log.entryAdded die Meldungen des Browsers selbst (ein
+   * Skript, das nicht laedt, wirft nichts), und console.error das, was die
+   * App ueber sich selbst sagt. Dazu Anfragen, die nicht ankommen -- eine
+   * fehlende Datei ist der haeufigste Grund fuer einen leeren Bildschirm. */
+  const klagen = [];
+  ws.addEventListener('message', (e) => {
+    const n = JSON.parse(e.data);
+    if (n.sessionId !== sessionId) return;
+    if (n.method === 'Runtime.exceptionThrown') {
+      const d = n.params.exceptionDetails;
+      klagen.push({ art: 'Ausnahme', text: d.exception?.description || d.text });
+    } else if (n.method === 'Log.entryAdded' && n.params.entry.level === 'error') {
+      klagen.push({ art: 'Browser', text: n.params.entry.text, wo: n.params.entry.url });
+    } else if (n.method === 'Runtime.consoleAPICalled' && n.params.type === 'error') {
+      klagen.push({
+        art: 'console.error',
+        text: n.params.args.map((a) => a.description || a.value).join(' '),
+      });
+    } else if (n.method === 'Network.loadingFailed' && !n.params.canceled) {
+      klagen.push({ art: 'Netz', text: n.params.errorText });
+    }
+  });
 
   const seite = {
+    /** Alles Gemeldete seit dem letzten Abholen. Leert den Eimer. */
+    klagenHolen() {
+      const raus = klagen.slice();
+      klagen.length = 0;
+      return raus;
+    },
+
     async groesse(breite, hoehe, dichte = 1) {
       await ruf('Emulation.setDeviceMetricsOverride',
         { width: breite, height: hoehe, deviceScaleFactor: dichte, mobile: breite < 768 },

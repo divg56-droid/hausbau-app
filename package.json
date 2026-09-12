@@ -10,7 +10,8 @@
     "breite": "node test/breite.mjs",
     "store-bilder": "node ressourcen/store-bilder.mjs",
     "startschutz": "node test/startschutz.mjs",
-    "zurueck": "node test/zurueck.mjs"
+    "zurueck": "node test/zurueck.mjs",
+    "durchklicken": "node test/durchklicken.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
