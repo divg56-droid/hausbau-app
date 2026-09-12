@@ -238,7 +238,12 @@ jobs:
           echo "--- Plugin-Klassen nach der Optimierung:"
           unzip -o -q "$datei" -d entpackt-pruef
           fehlt=0
-          for klasse in             com.getcapacitor.BridgeActivity             com.capacitorjs.plugins.app.AppPlugin             com.capacitorjs.plugins.statusbar.StatusBarPlugin             com.capacitorjs.plugins.share.SharePlugin             com.capacitorjs.plugins.filesystem.FilesystemPlugin
+          # MainActivity und nicht BridgeActivity: Die Basisklasse darf R8
+          # einschmelzen, sie wird nie ueber ihren Namen gesucht. Im Manifest
+          # steht MainActivity, und die Plugins stehen namentlich in
+          # capacitor.plugins.json. In diese Liste gehoert nur, was ueber
+          # seinen Namen gefunden werden muss.
+          for klasse in             de.bauzeuge.app.MainActivity             com.capacitorjs.plugins.app.AppPlugin             com.capacitorjs.plugins.statusbar.StatusBarPlugin             com.capacitorjs.plugins.share.SharePlugin             com.capacitorjs.plugins.filesystem.FilesystemPlugin
           do
             pfad=$(echo "$klasse" | tr '.' '/')
             if grep -rqa "L$pfad;" entpackt-pruef/base/dex/ 2>/dev/null; then
