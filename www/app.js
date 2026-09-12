@@ -39,12 +39,22 @@ function wortmarke() {
     '<rect x="16" y="31" width="32" height="20" fill="none" stroke="#f5f7f6" stroke-width="4"></rect>' +
     '<rect x="28" y="40" width="8" height="11" fill="#f5f7f6"></rect>';
 
+/* Die Wortmarke traegt in der App kein ".de".
+ *
+ * Auf der Website ist es die Adresse und gehoert dazu. In der App ist es
+ * keine mehr -- dort steht es nur noch im Weg: Der erste Bildschirm sah
+ * dadurch aus wie die aufgerufene Internetseite, und man fragte sich, ob man
+ * die App ueberhaupt vor sich hat.
+ *
+ * Wo weiterhin ".de" steht, ist die Website gemeint und nicht die App: der
+ * Verweis in den Einstellungen, die Quellenangabe der Baukosten, der Hinweis
+ * beim Konto ("in der App und auf BauZeuge.de") und die Marke auf den PDF.
+ * Auf Papier ist die Adresse ein Hinweis, wo das herkommt. */
   return el('span', { klasse: 'wortmarke' }, [
     zeichen,
     el('span', { klasse: 'wm-text' }, [
       'Bau',
       el('span', { klasse: 'wm-akzent', text: 'Zeuge' }),
-      el('span', { klasse: 'wm-de', text: '.de' }),
     ]),
   ]);
 }

@@ -94,10 +94,27 @@ const SUITEN = [
   ['Breiten', 'breite.mjs'],
 ];
 
+/* Die Ausgabe der Unterlaeufe durchreichen UND mitschreiben.
+ *
+ * Mit stdio "inherit" schreiben sie direkt in denselben Deskriptor. Auf dem
+ * Bildschirm sieht das richtig aus, im Protokoll fehlte danach das meiste --
+ * beim Nachzaehlen standen neun Haken da, wo es ueber vierzig waren. Ein
+ * Bericht, den man nicht nachrechnen kann, ist keiner. */
 let schief = 0;
+let haken = 0;
+let fehlschlaege = 0;
+
 for (const [titel, datei] of SUITEN) {
   console.log(`\n${'='.repeat(58)}\n${titel}\n${'='.repeat(58)}`);
-  const lauf = spawn(process.execPath, [join(HIER, datei), basis], { stdio: 'inherit' });
+  const lauf = spawn(process.execPath, [join(HIER, datei), basis]);
+  for (const strom of [lauf.stdout, lauf.stderr]) {
+    strom.on('data', (stueck) => {
+      const text = String(stueck);
+      process.stdout.write(text);
+      haken += (text.match(/^\s{2}ok\s{3}/gm) || []).length;
+      fehlschlaege += (text.match(/^\s{2}FEHL\s/gm) || []).length;
+    });
+  }
   const code = await new Promise((g) => lauf.on('close', g));
   if (code !== 0) schief++;
 }
@@ -107,7 +124,7 @@ try { rmSync(ordner, { recursive: true, force: true }); } catch { /* egal */ }
 
 console.log('\n' + '='.repeat(58));
 console.log(schief
-  ? `${schief} von ${SUITEN.length} Pruefungen am Paket fehlgeschlagen.`
-  : `Alle ${SUITEN.length} Pruefungen am Paket bestanden.`);
+  ? `${schief} von ${SUITEN.length} Suiten fehlgeschlagen, ${fehlschlaege} Punkte rot.`
+  : `Alle ${SUITEN.length} Suiten bestanden, ${haken} Pruefpunkte gruen.`);
 console.log('Nicht geprueft: Kamera, Telefonwahl, Systemtaste -- dafuer braucht es ein Geraet.');
 process.exit(schief ? 1 : 0);

@@ -400,7 +400,7 @@ export async function zeige(rahmen) {
  */
 function willkommen() {
   return karte([
-    el('p', { klasse: 'willkommen-marke', text: 'Willkommen bei BauZeuge.de' }),
+    el('p', { klasse: 'willkommen-marke', text: 'Willkommen bei BauZeuge' }),
     el('h2', { klasse: 'willkommen-titel', text: 'Dein Bauvorhaben an einer Stelle' }),
     el('p', {
       klasse: 'willkommen-text',
