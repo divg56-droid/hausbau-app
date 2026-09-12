@@ -85,22 +85,19 @@
     else zettel(text);
   }
 
-  /* Keine Einladung zum Installieren, auch nicht im Menue.
+  /* Keine ungefragte Einladung -- aber installieren darf man.
    *
-   * Die eigentliche Antwort steht im Manifest: "display": "browser". Damit
-   * gilt die Seite fuer Chrome nicht mehr als installierbare App, und weder
-   * die Leiste am unteren Rand noch der Eintrag im Dreipunktmenue erscheinen.
-   * preventDefault allein haette nur die Leiste weggenommen -- das Menue
-   * blieb, samt der Rueckfrage mit "Verknuepfung erstellen".
+   * Zwischenstand, der zu weit ging: Mit "display": "browser" im Manifest
+   * verschwand die Rueckfrage, und mit ihr die Moeglichkeit. Chrome meldete
+   * dann schlicht, die App lasse sich nicht installieren. Wer sie auf den
+   * Startbildschirm legen will, soll das koennen.
    *
-   * Dieser Zuhoerer bleibt trotzdem: Samsung Internet und Edge haben eigene
-   * Regeln dafuer, wann sie das Hinzufuegen anbieten, und halten sich nicht
-   * immer an "display". Drei Zeilen gegen einen Fall, den man auf dem eigenen
-   * Geraet nicht nachstellen kann.
+   * Jetzt beides: Das Manifest sagt wieder "standalone", also geht das
+   * Installieren ueber das Menue des Browsers. preventDefault nimmt nur die
+   * Leiste weg, die von selbst hochkommt -- die war das Aufdringliche.
    *
-   * Unberuehrt bleiben die Offlineablage -- die haengt am Service Worker --
-   * und die App im Play Store: Dort laedt Capacitor die Oberflaeche nativ,
-   * das Manifest liest dort niemand. */
+   * Der Unterschied in einem Satz: Angeboten wird nichts mehr, verboten auch
+   * nichts. */
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault();
   });
