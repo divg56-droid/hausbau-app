@@ -15,6 +15,7 @@ import {
   wertzeile, hinweisKasten, melde, kontaktName, datumLang,
   anhaengen, kartengitter,
   geheZu,
+  erreichbar,
 } from '../hilfen.js';
 import { daten } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
@@ -107,13 +108,29 @@ async function zeigePersonen(rahmen, art, neu) {
                   .filter(Boolean).join(' · ') || 'ohne weitere Angaben',
               }),
             ]),
-            // tel: oeffnet im WebView die Telefon-App.
-            k.telefon
-              ? el('a', {
-                  klasse: 'marke', href: 'tel:' + k.telefon.replace(/\s/g, ''),
-                  'aria-label': 'Anrufen',
-                  onclick: (ereignis) => ereignis.stopPropagation(),
-                }, ['Anrufen'])
+            /* tel: und mailto: oeffnen im WebView die Telefon- oder
+               Mail-App. stopPropagation, weil die ganze Zeile auf die
+               Einzelseite fuehrt -- ohne das waere der Anruf ein Umweg
+               dorthin.
+
+               In einem eigenen Behaelter, der umbrechen darf: Zwei Marken
+               nebeneinander passen auf einem 360 Pixel breiten Telefon nicht
+               neben einen langen Firmennamen. */
+            (k.telefon || k.epost)
+              ? el('span', { klasse: 'zeilen-marken' }, [
+                  k.telefon
+                    ? el('a', {
+                        klasse: 'marke', href: 'tel:' + k.telefon.replace(/[\s/]/g, ''),
+                        onclick: (ereignis) => ereignis.stopPropagation(),
+                      }, ['Anrufen'])
+                    : null,
+                  k.epost
+                    ? el('a', {
+                        klasse: 'marke', href: 'mailto:' + k.epost,
+                        onclick: (ereignis) => ereignis.stopPropagation(),
+                      }, ['E-Mail schreiben'])
+                    : null,
+                ])
               : null,
           ]),
         ])
@@ -159,8 +176,8 @@ async function zeigeKontakt(rahmen, kennung) {
       el('h2', { text: 'Anschrift und Erreichbarkeit' }),
       k.strasse ? wertzeile('Straße', k.strasse) : null,
       k.plzOrt ? wertzeile('PLZ und Ort', k.plzOrt) : null,
-      k.telefon ? wertzeile('Telefon', k.telefon) : null,
-      k.epost ? wertzeile('E-Mail', k.epost) : null,
+      k.telefon ? wertzeile('Telefon', erreichbar('tel', k.telefon)) : null,
+      k.epost ? wertzeile('E-Mail', erreichbar('mail', k.epost)) : null,
       k.notiz ? el('p', { klasse: 'unterzeile', text: k.notiz }) : null,
       !k.strasse && !k.telefon && !k.epost
         ? el('p', { klasse: 'unterzeile', text: 'Noch keine Erreichbarkeit erfasst.' })
@@ -168,10 +185,12 @@ async function zeigeKontakt(rahmen, kennung) {
       el('div', { klasse: 'knopf-reihe' }, [
         k.telefon
           ? el('a', {
-              klasse: 'knopf', href: 'tel:' + k.telefon.replace(/\s/g, ''),
+              klasse: 'knopf', href: 'tel:' + k.telefon.replace(/[\s/]/g, ''),
             }, ['Anrufen'])
           : null,
-        k.epost ? el('a', { klasse: 'knopf', href: 'mailto:' + k.epost }, ['E-Mail']) : null,
+        k.epost
+          ? el('a', { klasse: 'knopf', href: 'mailto:' + k.epost }, ['E-Mail schreiben'])
+          : null,
       ]),
       knopf('Bearbeiten', () => bearbeiten(k, neu), 'knopf-haupt'),
     ])

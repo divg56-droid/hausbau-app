@@ -3,6 +3,27 @@
 
 import { el, knopf } from './hilfen.js';
 
+/* Die offenen Blaetter, das oberste zuletzt.
+ *
+ * Gebraucht von der Android-Zurücktaste: Sie muss ein offenes Blatt
+ * schliessen und nicht die App. Ohne diese Liste kaeme sie an das
+ * schliessen() eines Blattes nicht heran -- das ist eine oertliche Funktion,
+ * und das Blatt einfach aus dem Dokument zu nehmen liesse seinen
+ * Tastaturzuhoerer haengen.
+ *
+ * Ein Stapel und keine einzelne Marke: Ein Blatt kann ein zweites oeffnen. */
+const offene = [];
+
+/** Schliesst das oberste Blatt. Gibt false, wenn keines offen war. */
+export function blattSchliessen() {
+  const oben = offene[offene.length - 1];
+  if (!oben) return false;
+  oben();
+  return true;
+}
+
+export const blattOffen = () => offene.length > 0;
+
 /**
  * @param {string} titel
  * @param {Node[]} felder      fertige Formularfelder
@@ -39,6 +60,8 @@ export function blattOeffnen(titel, felder, beimSichern, optionen = {}) {
   function schliessen() {
     document.removeEventListener('keydown', beiTaste);
     ueberlagerung.remove();
+    const stelle = offene.indexOf(schliessen);
+    if (stelle !== -1) offene.splice(stelle, 1);
   }
 
   function beiTaste(ereignis) {
@@ -63,6 +86,7 @@ export function blattOeffnen(titel, felder, beimSichern, optionen = {}) {
 
   document.addEventListener('keydown', beiTaste);
   document.body.append(ueberlagerung);
+  offene.push(schliessen);
 
   const erstes = blatt.querySelector('input, select, textarea');
   if (erstes) erstes.focus();

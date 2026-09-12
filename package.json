@@ -9,13 +9,16 @@
     "apk": "cap sync android && cd android && ./gradlew assembleDebug",
     "breite": "node test/breite.mjs",
     "store-bilder": "node ressourcen/store-bilder.mjs",
-    "startschutz": "node test/startschutz.mjs"
+    "startschutz": "node test/startschutz.mjs",
+    "zurueck": "node test/zurueck.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
+    "@capacitor/app": "^7.1.2",
     "@capacitor/core": "^7.4.4",
     "@capacitor/filesystem": "^7.1.5",
-    "@capacitor/share": "^7.0.2"
+    "@capacitor/share": "^7.0.2",
+    "@capacitor/status-bar": "^7.0.6"
   },
   "devDependencies": {
     "@capacitor/cli": "^7.4.4"

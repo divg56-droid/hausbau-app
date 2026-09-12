@@ -169,12 +169,31 @@ export function leerzustand(titel, text, aktion) {
   ]);
 }
 
-// Zeile aus Bezeichnung und Wert, wie in den Ergebnisblöcken der Rechner.
+/**
+ * Zeile aus Bezeichnung und Wert, wie in den Ergebnisblöcken der Rechner.
+ *
+ * Der Wert darf auch ein Knoten sein. Gebraucht fuer Telefonnummern und
+ * E-Mail-Adressen: Sie sollen anklickbar sein und nicht nur danebenstehen,
+ * waehrend weiter unten ein Knopf dasselbe kann.
+ */
 export function wertzeile(name, wert, stark = false) {
   return el('div', { klasse: 'wertzeile' + (stark ? ' stark' : '') }, [
     el('span', { text: name }),
-    el('strong', { text: wert }),
+    wert instanceof Node ? el('strong', {}, [wert]) : el('strong', { text: wert }),
   ]);
+}
+
+/**
+ * Eine Telefonnummer oder E-Mail-Adresse zum Antippen.
+ *
+ * "tel:" und "mailto:" oeffnet die WebView im Telefon- oder Mailprogramm --
+ * dasselbe, was die Knoepfe darunter tun. Beides zu haben ist kein
+ * Doppelbau: Der Knopf ist der Weg, den man sucht, der Verweis der, den man
+ * findet, wenn man ohnehin schon auf die Nummer schaut.
+ */
+export function erreichbar(art, wert) {
+  const ziel = art === 'tel' ? 'tel:' + String(wert).replace(/[\s/]/g, '') : 'mailto:' + wert;
+  return el('a', { klasse: 'erreichbar', href: ziel, text: String(wert) });
 }
 
 // ------------------------------------------------------------------- Dialoge

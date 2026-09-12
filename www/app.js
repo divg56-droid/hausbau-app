@@ -161,6 +161,24 @@ seitenleiste.addEventListener('click', (e) => {
 
 leisteBauen();
 
+/* Die Zurücktaste von Android.
+ *
+ * Sie hat eine eigene Reihenfolge, die nicht die des Verlaufs ist: erst
+ * zumachen, was obenauf liegt, dann eine Ebene hoch, und hinaus nur von der
+ * Übersicht und nur mit Ansage. Steht in zurueck.js, weil sie mit dem
+ * Router nichts zu tun hat -- sie benutzt ihn nur.
+ *
+ * Nachgeladen: Im Browser tut sie nichts, und die ersten Bildschirme sollen
+ * nicht auf sie warten.
+ */
+import('./zurueck.js').then(({ zurueckAnbinden }) =>
+  zurueckAnbinden({
+    leisteOffen: () => document.body.classList.contains('leiste-offen'),
+    leisteZu: () => leisteSchalten(false),
+    zurUebersicht: () => { location.hash = ''; },
+  })
+);
+
 zurueckKnopf.addEventListener('click', () => {
   // history.back() statt fester Route: so stimmt auch die Android-Zurücktaste,
   // die auf denselben Verlauf wirkt.

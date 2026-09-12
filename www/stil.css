@@ -40,6 +40,11 @@
   --auf-akzent: #ffffff;
   --schleier: rgba(20, 22, 26, .55);
   --kopf-hoehe: 56px;
+  /* Der Kopf mitsamt dem freigehaltenen Streifen der Statusleiste. Alles,
+     was unter dem Kopf ansetzt -- die Seitenleiste, ihr Schatten --, rechnet
+     mit dieser Zahl und nicht mit der reinen Kopfhoehe. Sonst rutscht es
+     beim Ausfahren unter die Uhr. */
+  --kopf-gesamt: calc(var(--kopf-hoehe) + env(safe-area-inset-top));
   --schrift: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -57,8 +62,22 @@ html, body {
   overscroll-behavior-y: none;
 }
 
-/* Statusleiste des Telefons nicht ueberdecken. */
-body { padding-top: env(safe-area-inset-top); }
+/* Die Statusleiste des Telefons -- Uhr, Akku, bei neueren Geraeten die
+   Kamera -- gehoert dem System und muss frei bleiben.
+ *
+ * Das stand vorher am body, und das war falsch: #kopf klebt mit
+ * "position: sticky; top: 0" am oberen Rand des Sichtfensters, nicht am
+ * Innenrand des body. Beim Scrollen wanderte er unter die Statusleiste und
+ * verdeckte sie.
+ *
+ * Seit Android 15 faellt das auf, weil das System die App zwingt, bis unter
+ * die Systemleisten zu zeichnen. Bis targetSdk 35 liess sich das abschalten,
+ * ab 36 nicht mehr -- und 36 verlangt der Play Store. Also einruecken statt
+ * ausweichen: Der Streifen bekommt die Farbe des Kopfes und bleibt leer. */
+#kopf {
+  padding-top: env(safe-area-inset-top);
+  height: var(--kopf-gesamt);
+}
 
 h1 { font-size: 24px; line-height: 1.2; margin: 0 0 4px; font-weight: 700; }
 h2 { font-size: 18px; margin: 0 0 10px; font-weight: 700; }
@@ -71,7 +90,9 @@ a { color: var(--akzent-dunkel); }
 #kopf {
   position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; gap: 4px;
-  height: var(--kopf-hoehe); padding: 0 8px;
+  /* Hoehe und oberer Rand stehen oben bei der Statusleiste; hier nur die
+     Seiten, sonst faellt das Einruecken wieder heraus. */
+  padding-left: 8px; padding-right: 8px;
   background: var(--karte); border-bottom: 1px solid var(--linie);
 }
 #kopf .zurueck {
@@ -723,8 +744,8 @@ html[data-thema="dunkel"] {
 
 #seitenleiste {
   flex: none; width: 236px; align-self: stretch;
-  position: sticky; top: var(--kopf-hoehe);
-  max-height: calc(100vh - var(--kopf-hoehe));
+  position: sticky; top: var(--kopf-gesamt);
+  max-height: calc(100vh - var(--kopf-gesamt));
   overflow-y: auto; overscroll-behavior: contain;
   padding: 10px 8px calc(24px + env(safe-area-inset-bottom));
   background: var(--karte); border-right: 1px solid var(--linie);
@@ -779,14 +800,14 @@ body.leiste-offen #kopf .menue-knopf span:nth-child(3) { transform: translateY(-
 @media (max-width: 899px) {
   #kopf .menue-knopf { display: flex; }
   #seitenleiste {
-    position: fixed; top: var(--kopf-hoehe); left: 0; bottom: 0; z-index: 40;
+    position: fixed; top: var(--kopf-gesamt); left: 0; bottom: 0; z-index: 40;
     width: min(280px, 84vw); max-height: none;
     transform: translateX(-102%); transition: transform 0.28s ease;
     box-shadow: 2px 0 16px rgba(0, 0, 0, .18);
   }
   body.leiste-offen #seitenleiste { transform: translateX(0); }
   body.leiste-offen #leistenschatten {
-    display: block; position: fixed; inset: var(--kopf-hoehe) 0 0 0; z-index: 39;
+    display: block; position: fixed; inset: var(--kopf-gesamt) 0 0 0; z-index: 39;
     background: var(--schleier);
   }
   body.leiste-offen { overflow: hidden; }
@@ -868,6 +889,22 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
 .startfehler-grund {
   font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px;
   color: #54626a; word-break: break-word;
+}
+
+/* Telefonnummer und E-Mail-Adresse in einer Wertzeile: als Verweis kenntlich,
+   aber ohne die Zeile zu zerreissen. Umbrechen darf eine lange Adresse
+   trotzdem -- sonst schiebt sie auf dem Telefon die Seite nach rechts. */
+.erreichbar {
+  color: var(--akzent-dunkel); text-decoration: underline;
+  text-underline-offset: 3px; overflow-wrap: anywhere;
+}
+
+/* Die Marken am rechten Rand einer Kontaktzeile. Sie duerfen umbrechen:
+   "Anrufen" und "E-Mail schreiben" nebeneinander passen neben einem langen
+   Firmennamen auf 360 Pixeln nicht in eine Zeile. */
+.zeilen-marken {
+  display: flex; flex-wrap: wrap; justify-content: flex-end;
+  gap: 5px; flex: none; max-width: 45%;
 }
 
 .kennzahlen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }

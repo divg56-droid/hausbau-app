@@ -119,13 +119,24 @@ export const FUELLEN = `(async () => {
      Namen aus den Kontakten. Ohne sie steht unter "Stunden je Helfer"
      nichts. */
   const helferListe = [];
-  for (const [name, art, gewerk] of [
-    ['Matthias Volz', 'person', ''],
-    ['Stefan Bähr', 'person', ''],
-    ['Elektro Kessler', 'firma', 'Elektro'],
-    ['Sanitär Pirmasens', 'firma', 'Sanitär'],
+  /* Mit Nummer und Adresse, und mit einem absichtlich langen Firmennamen:
+     Die Zeile zeigt rechts die Marken "Anrufen" und "E-Mail schreiben", und
+     ob die neben einem langen Namen noch auf ein 320 Pixel breites Telefon
+     passen, sieht man nur, wenn beides zusammen dasteht. Kontakte ohne
+     Erreichbarkeit haetten die Marken gar nicht erst erzeugt -- und die
+     Breitenpruefung haette nichts gefunden, weil nichts da war. */
+  for (const [name, art, gewerk, telefon, epost] of [
+    ['Matthias Volz', 'person', '', '0631 4477201', 'm.volz@example.de'],
+    ['Stefan Bähr', 'person', '', '0170 2244880', ''],
+    ['Elektro Kessler GmbH & Co. KG', 'firma', 'Elektro',
+     '06331 984512', 'kontakt@elektro-kessler-pirmasens.example.de'],
+    ['Sanitär Pirmasens', 'firma', 'Sanitär', '06331 771030', 'info@sanitaer-ps.example.de'],
+    ['Zimmerei Hohenecken', 'firma', 'Zimmerer', '', 'buero@zimmerei-hohenecken.example.de'],
   ]) {
-    helferListe.push(await daten.sichern('kontakte', { name, art, gewerk }));
+    helferListe.push(await daten.sichern('kontakte', {
+      name, art, gewerk, telefon, epost,
+      strasse: 'Hauptstraße 14', plzOrt: '66989 Nünschweiler',
+    }));
   }
 
   const tage = [

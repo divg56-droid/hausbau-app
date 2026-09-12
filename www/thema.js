@@ -57,6 +57,32 @@ export function themaWirksam() {
  * hineinzuschreiben. Nur dann greift die Medienabfrage im Stylesheet, und nur
  * dann wandert die App mit, wenn das Telefon abends von selbst umschaltet.
  */
+/* Uhr, Akku und Netz in der Statusleiste.
+ *
+ * Seit Android 15 zeichnet die App bis unter die Systemleisten. Der Kopf
+ * liegt also hinter diesen Zeichen, und ihre Farbe bestimmt nicht mehr das
+ * System allein: Auf dunklem Kopf braucht es helle Zeichen, auf hellem
+ * dunkle. Ohne das waere die Uhr im Dunkelmodus unlesbar -- dunkelgrau auf
+ * anthrazit.
+ *
+ * "Style.Light" heisst bei Capacitor: heller Untergrund, also dunkle
+ * Zeichen. Der Name beschreibt die Flaeche, nicht die Schrift; wer das
+ * verwechselt, dreht es genau falsch herum.
+ *
+ * Laeuft nur im Paket und stoert im Browser nicht: Dort gibt es das Plugin
+ * nicht, der Import scheitert, und die Farbe kommt ohnehin aus theme-color.
+ */
+function statusleisteFaerben() {
+  const bruecke = window.Capacitor;
+  if (!bruecke?.isNativePlatform?.()) return;
+  const leiste = bruecke.Plugins?.StatusBar;
+  if (!leiste) return;
+  // Die Zeichenkette statt Style.Dark: Ohne Bundler gibt es den Aufzaehlungs-
+  // typ nicht, und die Bruecke nimmt ohnehin nur den Text entgegen.
+  leiste.setStyle({ style: themaWirksam() === 'dunkel' ? 'DARK' : 'LIGHT' })
+    .catch(() => { /* Ohne Plugin bleibt es beim Standard des Systems. */ });
+}
+
 function anwenden() {
   const wahl = lies();
   const wurzel = document.documentElement;
@@ -67,6 +93,7 @@ function anwenden() {
   // ein heller Balken.
   const marke = document.querySelector('meta[name="theme-color"]');
   if (marke) marke.setAttribute('content', themaWirksam() === 'dunkel' ? '#10171a' : '#f5f7f6');
+  statusleisteFaerben();
 
   for (const schalter of document.querySelectorAll('.thema-schalter')) {
     schalterZeichnen(schalter);
