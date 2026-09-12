@@ -373,6 +373,14 @@ const PROJEKTSACHEN = new Set([
 
 let aktivesProjekt = null;
 
+/* Nach einem Abgleich kann ein anderes Projekt offen sein als vorher: Das
+ * aktive Projekt steht als Einstellung und kommt mit herunter. Der gemerkte
+ * Wert hier wuesste davon nichts und zeigte weiter das alte -- die Daten
+ * waeren da und der Bildschirm leer. Genau so sah es aus. */
+export function projektzeigerVergessen() {
+  aktivesProjekt = null;
+}
+
 /** Die Kennung des Projekts, in dem gerade gearbeitet wird. */
 export async function projektAktiv() {
   if (aktivesProjekt) return aktivesProjekt;

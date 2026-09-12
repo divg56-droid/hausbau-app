@@ -12,7 +12,8 @@
     "startschutz": "node test/startschutz.mjs",
     "zurueck": "node test/zurueck.mjs",
     "durchklicken": "node test/durchklicken.mjs",
-    "paket": "node test/paket.mjs"
+    "paket": "node test/paket.mjs",
+    "anmeldung": "node test/anmeldung.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",

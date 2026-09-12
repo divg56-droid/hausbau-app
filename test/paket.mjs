@@ -90,6 +90,7 @@ const basis = `http://127.0.0.1:${PORT}`;
 const SUITEN = [
   ['Startschutz', 'startschutz.mjs'],
   ['Zurücktaste', 'zurueck.mjs'],
+  ['Anmeldung', 'anmeldung.mjs'],
   ['Durchklicken', 'durchklicken.mjs'],
   ['Breiten', 'breite.mjs'],
 ];

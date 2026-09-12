@@ -42,6 +42,7 @@ async function zeichneLink(rahmen, token) {
   try {
     await linkEinloesen(token);
     melde('Angemeldet.');
+    await gleichAbgleichen();
     // Weg von der Kennung in der Adresszeile: Sie ist verbraucht, und der
     // Router zeichnet den Kontobildschirm dann von selbst.
     geheZu('#/konto');
@@ -50,6 +51,48 @@ async function zeichneLink(rahmen, token) {
     meldung.textContent = fehler.message;
     anhaengen(rahmen.querySelector('.anmeldekarte'),
       knopf('Zur Anmeldung', () => { geheZu('#/konto'); }, 'knopf-haupt'));
+  }
+}
+
+/* Gleich nach dem Anmelden abgleichen.
+ *
+ * Der einzige selbsttaetige Abgleich lief beim Start der App -- und der ist
+ * vorbei, wenn jemand sich anmeldet. Wer also am Telefon etwas eintrug und
+ * sich danach im Browser anmeldete, sah dort nichts: Die Daten lagen auf dem
+ * Server, aber niemand holte sie. Anmelden und dann warten, bis man die Seite
+ * das naechste Mal neu laedt, ist keine Erklaerung, die jemand versteht.
+ *
+ * Das gilt in beide Richtungen: In der frisch angemeldeten App muss auch das
+ * hoch, was vorher ohne Konto entstanden ist.
+ */
+/* Kam etwas herunter, wird die App neu aufgebaut.
+ *
+ * Jeder Bildschirm haelt seine Daten im Speicher, und das offene Projekt
+ * steht als gemerkter Wert in daten.js. Nach einem Abgleich kann beides
+ * ueberholt sein -- besonders das Projekt: Wer am Telefon ein neues anlegt
+ * und sich dann im Browser anmeldet, bekommt es herunter, sieht aber weiter
+ * das alte und damit einen leeren Bildschirm.
+ *
+ * Neu laden statt einzelne Zeiger zurueckzusetzen: Es passiert einmal nach
+ * dem Anmelden, dauert einen Wimpernschlag, und es gibt keine zweite Stelle,
+ * an der man das Nachziehen vergessen kann. */
+async function frischAufbauen() {
+  const { projektzeigerVergessen } = await import('../daten.js');
+  projektzeigerVergessen();
+  setTimeout(() => location.reload(), 900);
+}
+
+async function gleichAbgleichen() {
+  try {
+    const stand = await abgleichen();
+    if (stand && (stand.hoch || stand.runter)) {
+      melde(`Abgeglichen: ${stand.hoch} hoch, ${stand.runter} herunter.`);
+    }
+    if (stand && stand.runter) await frischAufbauen();
+  } catch (fehler) {
+    // Kein Netz ist kein Grund, die Anmeldung zu vermasseln -- die gilt.
+    melde('Angemeldet. Der Abgleich folgt, sobald wieder Netz da ist.');
+    console.warn('Abgleich nach der Anmeldung:', fehler.message);
   }
 }
 
@@ -85,8 +128,12 @@ async function zeichne(rahmen, art = 'anmelden') {
         `${e.hoch} hoch, ${e.runter} herunter, ${e.bilder} Fotos` +
         (e.offen ? `, ${e.offen} Fotos folgen beim nächsten Mal` : '') + '.';
       melde('Abgleich fertig.');
-      // Zahlen neu einlesen, es können neue Sätze dazugekommen sein.
-      setTimeout(() => zeichne(rahmen), 1200);
+      if (e.runter) {
+        await frischAufbauen();
+      } else {
+        // Zahlen neu einlesen, es können neue Sätze dazugekommen sein.
+        setTimeout(() => zeichne(rahmen), 1200);
+      }
     } catch (fehler) {
       anzeige.textContent = fehler.message;
     } finally {
@@ -252,6 +299,7 @@ function zeigeAnmeldung(rahmen, art, nachher) {
       if (neuesKonto) await registrieren(adresse.value.trim(), passwort.value);
       else await anmelden(adresse.value.trim(), passwort.value);
       melde(neuesKonto ? 'Konto angelegt.' : 'Angemeldet.');
+      await gleichAbgleichen();
       await nachher();
     } catch (fehler) {
       meldung.textContent = fehler.message;
@@ -373,6 +421,7 @@ function zeigeCode(rahmen, adresse, nachher) {
     try {
       await codeEinloesen(adresse, code.value.trim());
       melde('Angemeldet.');
+      await gleichAbgleichen();
       await nachher();
     } catch (fehler) {
       meldung.textContent = fehler.message;
