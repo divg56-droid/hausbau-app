@@ -11,7 +11,8 @@
     "store-bilder": "node ressourcen/store-bilder.mjs",
     "startschutz": "node test/startschutz.mjs",
     "zurueck": "node test/zurueck.mjs",
-    "durchklicken": "node test/durchklicken.mjs"
+    "durchklicken": "node test/durchklicken.mjs",
+    "paket": "node test/paket.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
