@@ -85,17 +85,22 @@
     else zettel(text);
   }
 
-  /* Keine ungefragte Einladung zum Installieren.
+  /* Keine Einladung zum Installieren, auch nicht im Menue.
    *
-   * Weil unter /app/ ein Web-App-Manifest liegt, bietet der Browser von sich
-   * aus an, eine Verknuepfung anzulegen -- als Leiste am unteren Rand oder
-   * als Frage beim Herunterladen. Gewuenscht ist das nicht: Wer die App auf
-   * dem Telefon will, holt sie aus dem Play Store, und wer sie im Browser
-   * benutzt, hat sich dafuer entschieden.
+   * Die eigentliche Antwort steht im Manifest: "display": "browser". Damit
+   * gilt die Seite fuer Chrome nicht mehr als installierbare App, und weder
+   * die Leiste am unteren Rand noch der Eintrag im Dreipunktmenue erscheinen.
+   * preventDefault allein haette nur die Leiste weggenommen -- das Menue
+   * blieb, samt der Rueckfrage mit "Verknuepfung erstellen".
    *
-   * preventDefault nimmt nur die Einladung weg, nicht die Faehigkeit: Ueber
-   * das Menue des Browsers laesst sich die Seite weiterhin installieren, und
-   * die Offlineablage arbeitet unveraendert. */
+   * Dieser Zuhoerer bleibt trotzdem: Samsung Internet und Edge haben eigene
+   * Regeln dafuer, wann sie das Hinzufuegen anbieten, und halten sich nicht
+   * immer an "display". Drei Zeilen gegen einen Fall, den man auf dem eigenen
+   * Geraet nicht nachstellen kann.
+   *
+   * Unberuehrt bleiben die Offlineablage -- die haengt am Service Worker --
+   * und die App im Play Store: Dort laedt Capacitor die Oberflaeche nativ,
+   * das Manifest liest dort niemand. */
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault();
   });

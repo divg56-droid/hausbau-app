@@ -487,8 +487,22 @@ console.log('Web-App-Manifest');
   pruef('start_url zeigt auf die App', manifest.start_url === '/app/');
   pruef('Geltungsbereich umschliesst die start_url',
     manifest.start_url.startsWith(manifest.scope), manifest.scope);
-  pruef('Anzeige ist eigenstaendig',
-    ['standalone', 'fullscreen', 'minimal-ui'].includes(manifest.display), manifest.display);
+  /* "browser" und nicht "standalone", und das ist Absicht.
+   *
+   * Mit standalone haelt Chrome die Seite fuer eine installierbare App und
+   * bietet das Hinzufuegen an -- als Leiste am unteren Rand und als Eintrag
+   * im Dreipunktmenue, dort samt Rueckfrage "Verknuepfung erstellen". Das war
+   * ungewollt: Wer BauZeuge auf dem Telefon will, holt sie aus dem Play
+   * Store; die Fassung unter /app/ ist die fuer den Rechner.
+   *
+   * Schlaegt diese Pruefung an, hat jemand die Installierbarkeit
+   * zurueckgeholt. Das kann richtig sein -- dann gehoert dieser Test
+   * mitgeaendert und nicht umgangen. */
+  pruef('Anzeige bleibt im Browser', manifest.display === 'browser', manifest.display);
+  // Ohne Manifest-Installation braucht es auch keine Ausrichtung: Die gilt
+  // nur fuer eine App, die in einem eigenen Fenster startet.
+  pruef('Keine Ausrichtung, die ohnehin nicht greift',
+    manifest.orientation === undefined, String(manifest.orientation));
   // Der Papierton der Marke, Zeichen fuer Zeichen aus Base.astro der Website.
   pruef('Hintergrundfarbe passt zum Papierton',
     manifest.background_color === '#f5f7f6', manifest.background_color);
