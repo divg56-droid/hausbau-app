@@ -22,7 +22,6 @@ import { browserStarten } from '../test/browser.mjs';
 import { FUELLEN } from '../test/beispieldaten.mjs';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
-const ZIEL = join(HIER, 'play', 'screenshots');
 const BASIS = process.argv[2] || 'http://localhost:4301';
 
 /* Acht Bilder, Play erlaubt bis zu acht. Die Reihenfolge ist die des
@@ -43,7 +42,21 @@ const BILDER = [
   ['baukasse/kosten', '8-kostenaufstellung'],
 ];
 
-mkdirSync(ZIEL, { recursive: true });
+/* Zwei Formate.
+ *
+ * Play fragt Telefon- und Tablet-Bilder getrennt ab und stuft Apps ohne
+ * Tabletbilder in der Tabletsuche zurueck. Die App sieht dort anders aus --
+ * die Seitenleiste steht ausgeklappt neben dem Inhalt --, also taugt ein
+ * hochskaliertes Telefonbild nicht.
+ *
+ * 360x640 bei dreifacher Dichte ergibt 1080x1920, 800x1280 bei doppelter
+ * ergibt 1600x2560: beides Groessen, die Play annimmt, und beides das, was
+ * auf einem echten Geraet steht. */
+const FORMATE = [
+  { name: 'Telefon', ordner: 'screenshots', breite: 360, hoehe: 640, dichte: 3 },
+  { name: 'Tablet', ordner: 'screenshots-tablet', breite: 800, hoehe: 1280, dichte: 2 },
+];
+
 const seite = await browserStarten({ basis: BASIS });
 
 try {
@@ -52,19 +65,27 @@ try {
   const stand = await seite.werten(FUELLEN);
   console.log(`Beispielprojekt: ${stand.posten} Posten, Budget ${stand.budget} EUR`);
 
-  for (const [weg, datei] of BILDER) {
-    await seite.hin(weg, 1500);
-    const m = await seite.werten(`({
-      titel: (document.querySelector('main h1') || {}).textContent,
-      inhalt: document.querySelectorAll('main li, main tbody tr, main .karte').length,
-    })`);
-    // Ein Bild mit leerem Bildschirm faellt im Store auf und im Skript nicht
-    // -- deshalb steht der Inhalt hier in der Ausgabe.
-    console.log(`  ${datei.padEnd(18)} ${m.titel} · ${m.inhalt} Elemente`);
-    writeFileSync(join(ZIEL, datei + '.png'), await seite.bild());
+  for (const format of FORMATE) {
+    const ordner = join(HIER, 'play', format.ordner);
+    mkdirSync(ordner, { recursive: true });
+    await seite.groesse(format.breite, format.hoehe, format.dichte);
+    console.log(`\n${format.name} (${format.breite * format.dichte}x${format.hoehe * format.dichte}):`);
+
+    for (const [weg, datei] of BILDER) {
+      await seite.hin(weg, 1500);
+      const m = await seite.werten(`({
+        titel: (document.querySelector('main h1') || {}).textContent,
+        inhalt: document.querySelectorAll('main li, main tbody tr, main .karte').length,
+        quer: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+      })`);
+      // Ein Bild mit leerem Bildschirm faellt im Store auf und im Skript
+      // nicht -- deshalb steht der Inhalt hier in der Ausgabe.
+      console.log(`  ${datei.padEnd(20)} ${m.titel} · ${m.inhalt} Elemente${m.quer ? '  QUERROLLE' : ''}`);
+      writeFileSync(join(ordner, datei + '.png'), await seite.bild());
+    }
   }
 } finally {
   seite.schliessen();
 }
 
-console.log('\nFertig: ' + ZIEL);
+console.log('\nFertig.');
