@@ -87,7 +87,22 @@ Dieselbe App läuft auch im Browser unter www.bauzeuge.de/app/
 Hauswirtschaft passt besser — die App ist kein Finanzprodukt, und die
 Kategorie Finanzen zieht zusätzliche Prüfungen nach sich.*
 
-**Tags** (max. 5): Hausbau, Baukosten, Bautagebuch, Bauherren, Mängel
+**Tags** (max. 5) — *keine freien Stichwörter.* Play gibt je Kategorie eine
+feste Liste vor; die Begriffe unten wird man dort nicht wörtlich finden. Zu
+greifen ist, in dieser Reihenfolge, was davon angeboten wird:
+
+1. Heimwerken / DIY oder Hausbau / Bauen
+2. Immobilien
+3. Projektmanagement oder Aufgabenverwaltung
+4. Budget / Finanzplanung
+5. Dokumentenverwaltung
+
+Lieber drei treffende als fünf ungefähre: Tags steuern, in welchen Sammlungen
+und „Ähnliche Apps"-Listen die App auftaucht. Ein falscher bringt Besucher,
+die gleich wieder weg sind.
+
+Die eigentlichen Suchbegriffe stehen im App-Namen, in der Kurzbeschreibung
+und im Volltext. Die sind frei und wiegen für die Suche schwerer.
 
 **Kontaktangaben**
 - E-Mail: `info@atlanta-pfalz.de`
