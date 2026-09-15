@@ -20,6 +20,8 @@ import { fotofeld } from '../fotos.js';
 import { Blatt, pdfTeilen, bildLaden } from '../pdf.js';
 import { csvTeilen } from '../csv.js';
 import { unterschriftAufnehmen } from '../unterschrift.js';
+import { bauweise } from '../bauweise.js';
+import { eigenleistungStand } from '../eigenleistung.js';
 
 export const WETTER = {
   sonnig: 'Sonnig', bewoelkt: 'Bewölkt', regen: 'Regen',
@@ -72,7 +74,12 @@ export async function zeige(rahmen) {
 
 async function zeichne(rahmen) {
   rahmen.replaceChildren();
-  const [eintraege, kontakte] = await Promise.all([daten.alle('tagebuch'), daten.alle('kontakte')]);
+  const [eintraege, kontakte, art, plan] = await Promise.all([
+    daten.alle('tagebuch'), daten.alle('kontakte'), bauweise(), einstellung('eigenleistung_plan'),
+  ]);
+  // Gewerke, die als Eigenleistung markiert sind (Einstellungen). Nur dann
+  // fragt der Tageseintrag, woran gearbeitet wurde.
+  const eigen = art.eigenleistungen || [];
   const helfer = kontakte.filter((k) => k.art === 'helfer');
   const neu = () => zeichne(rahmen);
 
@@ -88,7 +95,7 @@ async function zeichne(rahmen) {
             'Danach hakst du im Tageseintrag nur noch ab, wer da war, und trägst die Stunden ein.'
         ),
         knopf('Helfer anlegen', () => { geheZu('#/kontakte'); }, 'knopf-haupt'),
-        knopf('Ohne Helfer beginnen', () => eintragBearbeiten({ datum: heute() }, helfer, eintraege, neu)),
+        knopf('Ohne Helfer beginnen', () => eintragBearbeiten({ datum: heute() }, helfer, eintraege, neu, eigen)),
       ]),
       hinweisKasten(
         'Wichtig für die Bauhelferversicherung: Wer unentgeltlich mithilft, ist über die ' +
@@ -117,7 +124,7 @@ async function zeichne(rahmen) {
       }),
       knopf('Eintrag für heute', () => {
         const vorhanden = eintraege.find((e) => e.datum === heute());
-        eintragBearbeiten(vorhanden || { datum: heute() }, helfer, eintraege, neu);
+        eintragBearbeiten(vorhanden || { datum: heute() }, helfer, eintraege, neu, eigen);
       }, 'knopf-haupt'),
     ])
   );
@@ -159,6 +166,10 @@ async function zeichne(rahmen) {
     );
   }
 
+  if (eigen.length) {
+    anhaengen(rahmen, eigenleistungKarte(eigen, plan || {}, eintraege, neu));
+  }
+
   if (sortiert.length) {
     anhaengen(
       rahmen,
@@ -178,7 +189,7 @@ async function zeichne(rahmen) {
           return el('li', {}, [
             el('button', {
               klasse: 'listenzeile',
-              onclick: () => eintragBearbeiten(e, helfer, eintraege, neu),
+              onclick: () => eintragBearbeiten(e, helfer, eintraege, neu, eigen),
             }, [
               url ? el('img', { klasse: 'vorschau', src: url, alt: '' }) : el('span', { klasse: 'vorschau' }),
               el('span', { klasse: 'zeilen-text' }, [
@@ -380,7 +391,73 @@ async function csvErzeugen(eintraege, kontakte) {
   }
 }
 
-function eintragBearbeiten(eintrag, helfer, alleEintraege, nachher) {
+// ------------------------------------------------------------ Eigenleistung
+
+/**
+ * Geplant gegen geleistet, je Gewerk in Eigenleistung.
+ *
+ * Die Stunden kommen aus den Tageseintraegen, denen ein Gewerk zugeordnet
+ * ist. Die Planung (Stunden und die Ersparnis gegenueber dem Angebot einer
+ * Firma) steht in der Einstellung "eigenleistung_plan" des Projekts.
+ */
+function eigenleistungKarte(eigen, plan, eintraege, neu) {
+  const zeilen = eigenleistungStand(plan, eigen, eintraege);
+  const h = (w) => zahl(w, w % 1 ? 1 : 0) + ' h';
+  return karte([
+    el('h2', { text: 'Eigenleistung: geplant und geleistet' }),
+    el('p', {
+      klasse: 'unterzeile',
+      text: 'Ordne im Tageseintrag zu, woran gearbeitet wurde. Dann siehst du hier, ob ' +
+        'die Stunden reichen und was die Ersparnis je Stunde wirklich wert war.',
+    }),
+    el('ul', { klasse: 'liste' }, zeilen.map((z) =>
+      el('li', {}, [
+        el('button', { klasse: 'listenzeile', onclick: () => eigenleistungPlanen(z.gewerk, plan, neu) }, [
+          el('span', { klasse: 'zeilen-text' }, [
+            el('span', { klasse: 'zeilen-titel', text: z.gewerk }),
+            el('span', {
+              klasse: 'zeilen-unter',
+              text: [
+                z.soll ? `${h(z.ist)} von ${h(z.soll)} geplant` : `${h(z.ist)} geleistet, noch nicht geplant`,
+                z.jeStunde ? `Ersparnis ${zahl(z.jeStunde, 0)} € je Stunde` : null,
+              ].filter(Boolean).join(' · '),
+            }),
+          ]),
+          z.drueber
+            ? el('span', { klasse: 'marke marke-offen', text: 'Über Plan' })
+            : el('span', { klasse: 'zeilen-wert', text: z.anteil !== null ? Math.round(z.anteil * 100) + ' %' : 'Planen' }),
+        ]),
+      ])
+    )),
+    zeilen.some((z) => z.drueber)
+      ? hinweisKasten(
+          'Mehr Stunden als geplant. Prüfe, ob die Eigenleistung den Zeitplan hält: Folgegewerke ' +
+            'warten sonst, und eine Firma für den Rest ist kurzfristig schwer zu bekommen.',
+          'warn'
+        )
+      : null,
+  ]);
+}
+
+function eigenleistungPlanen(gewerk, plan, nachher) {
+  const bisher = plan[gewerk] || {};
+  const stunden = el('input', { type: 'text', inputmode: 'decimal', value: bisher.stunden ?? '', placeholder: 'z. B. 60' });
+  const ersparnis = el('input', { type: 'text', inputmode: 'decimal', value: bisher.ersparnis ?? '', placeholder: 'z. B. 4500' });
+  blattOeffnen(
+    'Eigenleistung planen: ' + gewerk,
+    [
+      feld('Geplante Stunden', stunden, 'Alle Helfer zusammen. Lieber großzügig schätzen.'),
+      feld('Ersparnis in Euro', ersparnis, 'Was eine Firma laut Angebot dafür verlangt hätte, abzüglich Material.'),
+    ],
+    async () => {
+      const neu = { ...plan, [gewerk]: { stunden: zuZahl(stunden.value) || 0, ersparnis: zuZahl(ersparnis.value) || 0 } };
+      await einstellung('eigenleistung_plan', neu);
+      await nachher();
+    }
+  );
+}
+
+function eintragBearbeiten(eintrag, helfer, alleEintraege, nachher, eigen = []) {
   const datum = el('input', { type: 'date', value: eintrag.datum || heute() });
   const wetter = auswahl(
     [['', '– keine Angabe –'], ...Object.entries(WETTER)],
@@ -392,6 +469,7 @@ function eintragBearbeiten(eintrag, helfer, alleEintraege, nachher) {
   });
   const gemacht = el('textarea', {}, [eintrag.gemacht || '']);
   const offen = el('textarea', {}, [eintrag.offen || '']);
+  const gewerk = auswahl([['', '– kein bestimmtes Gewerk –'], ...eigen.map((g) => [g, g])], eintrag.gewerk || '');
 
   const wetterstand = el('p', { klasse: 'unterzeile' });
   const wetterknopf = knopf('\u{1F326} Wetter zu diesem Tag holen', async () => {
@@ -527,6 +605,7 @@ function eintragBearbeiten(eintrag, helfer, alleEintraege, nachher) {
       el('span', { klasse: 'feld-name', text: 'Wer war da, und wie lange?' }),
       helferliste,
       summenzeile,
+      eigen.length ? feld('Eigenleistung für', gewerk, 'Zählt die Stunden dieses Tages beim Gewerk mit.') : null,
       feld('Was wurde gemacht?', gemacht),
       feld('Was ist liegengeblieben?', offen),
       el('span', { klasse: 'feld-name', text: 'Fotos' }),
@@ -554,6 +633,7 @@ function eintragBearbeiten(eintrag, helfer, alleEintraege, nachher) {
         helferIds: helferstand.map((h) => h.id),
         gemacht: gemacht.value.trim(),
         offen: offen.value.trim(),
+        gewerk: eigen.length ? (gewerk.value || null) : (eintrag.gewerk ?? null),
         bildIds: bilder,
       };
       if (!wert.gemacht && !wert.helfer.length && !bilder.length) {

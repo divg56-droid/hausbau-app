@@ -373,7 +373,7 @@ const OHNE_PROJEKT = new Set(['einstellungen', 'projekte', 'bilder']);
 // stehen bleiben.
 const PROJEKTSACHEN = new Set([
   'projektname', 'baustelle', 'baubeginn', 'leitfaden_punkt', 'bauweise', 'bauphase',
-  'eigenleistungen',
+  'eigenleistungen', 'eigenleistung_plan',
   // Der gemerkte Wetterwert haengt an der Baustelle, also am Projekt.
   'wetter_stand',
   // Die Eingaben der Rechner beschreiben dieses Haus, nicht dieses Geraet.
