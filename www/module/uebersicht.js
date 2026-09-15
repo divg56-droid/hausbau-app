@@ -16,7 +16,7 @@
 
 import {
   el, eur, feld, eingabe, knopf, karte, kopfzeile, hinweisKasten, datumLang,
-  heute, zahl, fuellen,
+  heute, zahl, fuellen, kontaktName,
   anhaengen,
   geheZu,
 } from '../hilfen.js';
@@ -185,9 +185,11 @@ export async function zeige(rahmen) {
 
   const { faelligeFotos } = await import('../baustellenregeln.js');
   const fotos = faelligeFotos(geplantTermine, heute())[0] || null;
+  const { faelligeFristen } = await import('../fristen.js');
+  const frist = faelligeFristen(await daten.alle('kontakte'), heute())[0] || null;
 
   const schritte = naechsteSchritte({
-    leitfaden, offeneTodos, offeneMaengel, naechsterSchritt, stand, posten, fotos,
+    leitfaden, offeneTodos, offeneMaengel, naechsterSchritt, stand, posten, fotos, frist,
   });
   if (schritte.length) {
     anhaengen(
@@ -566,7 +568,7 @@ function phasenband(leitfaden) {
  * nichts -- eine Liste, die sich Schritte ausdenkt, verliert man nach dem
  * zweiten Mal aus den Augen.
  */
-function naechsteSchritte({ leitfaden, offeneTodos, offeneMaengel, naechsterSchritt, stand, posten, fotos }) {
+function naechsteSchritte({ leitfaden, offeneTodos, offeneMaengel, naechsterSchritt, stand, posten, fotos, frist }) {
   const schritte = [];
 
   // Fotos vor einem verdeckenden Schritt stehen vorn: Sie lassen sich als
@@ -593,6 +595,23 @@ function naechsteSchritte({ leitfaden, offeneTodos, offeneMaengel, naechsterSchr
       warum: 'Erst mit Positionen zeigt die App, wo das Budget hingeht.',
       wo: 'Kosten', ziel: '#/baukasse/kosten',
     });
+  }
+
+  // Eine Frist, die bald endet, laesst sich ebenfalls nicht nachholen.
+  if (frist) {
+    const name = kontaktName(frist.kontakt);
+    const wann = frist.tage < 0 ? `abgelaufen am ${datumLang(frist.datum)}` : `endet am ${datumLang(frist.datum)}`;
+    schritte.push(frist.art === 'gewaehrleistung'
+      ? {
+          titel: `Gewährleistung ${name}`,
+          warum: `${wann[0].toUpperCase() + wann.slice(1)}. Vorher begehen und Mängel schriftlich rügen.`,
+          wo: 'Firma', ziel: '#/kontakte/' + frist.kontakt.id, dringend: frist.tage <= 60,
+        }
+      : {
+          titel: `Festpreis ${name}`,
+          warum: `Bindung ${wann}. Prüfen, ob der Termin hält oder ob nachverhandelt werden muss.`,
+          wo: 'Firma', ziel: '#/kontakte/' + frist.kontakt.id, dringend: frist.tage <= 14,
+        });
   }
 
   const dringend = offeneTodos.find((t) => t.faellig && t.faellig < heute()) || offeneTodos[0];

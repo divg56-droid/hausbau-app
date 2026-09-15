@@ -1357,3 +1357,6 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
 .fotoliste li { margin: 3px 0; line-height: 1.45; }
 .haken-zeile { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-weight: 600; }
 .haken-zeile input { width: 20px; height: 20px; }
+
+/* Zwischentitel im Blatt, etwa "Vertrag und Fristen" unter den Kontaktdaten. */
+.blatt-zwischentitel { margin: 18px 0 4px; font-size: 15px; }

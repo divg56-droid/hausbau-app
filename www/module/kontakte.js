@@ -12,12 +12,13 @@
 
 import {
   el, feld, eingabe, auswahl, knopf, karte, kopfzeile, leerzustand,
-  wertzeile, hinweisKasten, melde, kontaktName, datumLang,
+  wertzeile, hinweisKasten, melde, kontaktName, datumLang, heute,
   anhaengen, kartengitter,
   geheZu,
   erreichbar,
 } from '../hilfen.js';
 import { daten } from '../daten.js';
+import { GEWAEHRLEISTUNG, gewaehrleistungsEnde, tageBis } from '../fristen.js';
 import { blattOeffnen } from '../blatt.js';
 import { zeichen, gewerkZeichen, kontaktZeichen } from '../zeichen.js';
 import {
@@ -196,6 +197,33 @@ async function zeigeKontakt(rahmen, kennung) {
     ])
   );
 
+  // Fristen, sobald eine davon eingetragen ist.
+  const ende = istFirma ? gewaehrleistungsEnde(k) : null;
+  if (istFirma && (ende || k.festpreisBis || k.abnahme)) {
+    const rest = (datum) => {
+      const tage = tageBis(heute(), datum);
+      if (tage < 0) return `abgelaufen am ${datumLang(datum)}`;
+      if (tage < 62) return `${datumLang(datum)}, noch ${tage} Tage`;
+      return `${datumLang(datum)}, noch ${Math.round(tage / 30.4)} Monate`;
+    };
+    anhaengen(
+      rahmen,
+      karte([
+        el('h2', { text: 'Vertrag und Fristen' }),
+        k.abnahme ? wertzeile('Abnahme', datumLang(k.abnahme)) : null,
+        ende ? wertzeile('Gewährleistung bis', rest(ende)) : null,
+        k.festpreisBis ? wertzeile('Festpreis bis', rest(k.festpreisBis)) : null,
+        ende
+          ? el('p', {
+              klasse: 'unterzeile',
+              text: 'Etwa ein halbes Jahr vor Ablauf lohnt eine Begehung mit Sachverständigem. ' +
+                'Mängel, die dann auffallen, schriftlich rügen, solange die Frist läuft.',
+            })
+          : null,
+      ])
+    );
+  }
+
   // Ansprechpartner: Personen, die auf diese Firma zeigen.
   if (istFirma) {
     const leute = alle.filter((x) => x.firmaId === k.id);
@@ -355,6 +383,18 @@ async function bearbeiten(kontakt, nachher) {
   const epost = el('input', { type: 'email', value: kontakt.epost || '', placeholder: 'name@betrieb.de' });
   const notiz = el('textarea', {}, [kontakt.notiz || '']);
 
+  // Fristen: nur fuer Firmen. Aus Abnahmedatum und Vertragsart rechnet
+  // fristen.js das Ende der Gewaehrleistung; die Uebersicht erinnert daran.
+  const abnahme = el('input', { type: 'date', value: kontakt.abnahme || '' });
+  const gewaehrleistung = auswahl(GEWAEHRLEISTUNG.map((g) => [g.id, g.name]), kontakt.gewaehrleistung || 'bgb');
+  const gewaehrleistungBis = el('input', { type: 'date', value: kontakt.gewaehrleistungBis || '' });
+  const eigenesEnde = feld('Gewährleistung endet am', gewaehrleistungBis);
+  const festpreisBis = el('input', { type: 'date', value: kontakt.festpreisBis || '' });
+  const eigenesSichtbar = () => { eigenesEnde.hidden = gewaehrleistung.value !== 'eigen'; };
+  gewaehrleistung.addEventListener('change', eigenesSichtbar);
+  eigenesSichtbar();
+  const istFirmaBlatt = (kontakt.art || 'firma') === 'firma';
+
   // Die Art steht beim Anlegen schon fest: Man kommt aus der Liste der
   // Firmen oder aus der der Privatpersonen und hat sie damit gewaehlt. Nur
   // beim Bearbeiten bleibt sie sichtbar -- ein falsch abgelegter Kontakt
@@ -379,6 +419,11 @@ async function bearbeiten(kontakt, nachher) {
       feld('Telefon', telefon),
       feld('E-Mail', epost),
       feld('Notiz', notiz),
+      istFirmaBlatt ? el('h3', { klasse: 'blatt-zwischentitel', text: 'Vertrag und Fristen' }) : null,
+      istFirmaBlatt ? feld('Abnahme am', abnahme, 'Ab der Abnahme läuft die Gewährleistung.') : null,
+      istFirmaBlatt ? feld('Gewährleistung', gewaehrleistung, 'Regelfall laut Gesetz. Was im Vertrag steht, gilt.') : null,
+      istFirmaBlatt ? eigenesEnde : null,
+      istFirmaBlatt ? feld('Festpreis gilt bis', festpreisBis, 'Steht meist im Vertrag. Die App erinnert zwei Monate vorher.') : null,
     ].filter(Boolean),
     async () => {
       const wert = {
@@ -392,6 +437,10 @@ async function bearbeiten(kontakt, nachher) {
         telefon: telefon.value.trim(),
         epost: epost.value.trim(),
         notiz: notiz.value.trim(),
+        abnahme: istFirmaBlatt ? abnahme.value || null : kontakt.abnahme ?? null,
+        gewaehrleistung: istFirmaBlatt ? gewaehrleistung.value : kontakt.gewaehrleistung ?? null,
+        gewaehrleistungBis: istFirmaBlatt ? gewaehrleistungBis.value || null : kontakt.gewaehrleistungBis ?? null,
+        festpreisBis: istFirmaBlatt ? festpreisBis.value || null : kontakt.festpreisBis ?? null,
       };
       // Eine Firma hat oft keinen Ansprechpartner, eine Privatperson keine
       // Firma. Pflicht ist deshalb nur, dass ueberhaupt etwas dasteht.
