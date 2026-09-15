@@ -151,6 +151,9 @@ function eintragsblock(eintrag, neu) {
   ]);
 }
 
+/** Fuer den Bauablauf: eine Aufnahme mit Vorgaben anlegen. */
+export const aufnahmeAnlegen = (vorgabe, nachher) => bearbeiten(vorgabe, nachher);
+
 function bearbeiten(eintrag, nachher) {
   const titel = eingabe({
     value: eintrag.titel || '', placeholder: 'z. B. Elektroleitungen Erdgeschoss',

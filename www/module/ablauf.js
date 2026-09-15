@@ -14,6 +14,9 @@ import {
 import { daten, einstellung } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
 import { Blatt, pdfTeilen, A4, RAND, INNEN } from '../pdf.js';
+import {
+  faelligeFotos, fotoregelFuer, reihenfolgeWarnungen, wetterWarnungen,
+} from '../baustellenregeln.js';
 
 export const PHASEN = [
   'Vorbereitung', 'Erdarbeiten', 'Rohbau', 'Dach', 'Fenster und Türen',
@@ -248,6 +251,8 @@ async function zeichne(rahmen, ansicht = 'liste') {
     anhaengen(rahmen, hinweisKasten('Noch kein Startdatum gesetzt. Trage es bei der ersten Aufgabe ein, der Rest rechnet sich daraus.', 'info'));
   }
 
+  hinweiseZeigen(rahmen, aufgaben, neu);
+
   if (ansicht === 'balken') {
     zeigeBalken(rahmen, aufgaben, roh, kontakte, maengel, neu);
     return;
@@ -264,6 +269,7 @@ async function zeichne(rahmen, ansicht = 'liste') {
         el('h2', { text: phase }),
         el('ul', { klasse: 'liste' }, drin.map((a) => {
           const kontakt = kontakte.find((k) => k.id === a.kontaktId);
+          const fotosOffen = a.status !== 'fertig' && !a.fotosErledigt && fotoregelFuer(a);
           const zeit = a.start
             ? `${datumLang(a.start)} – ${datumLang(a.ende)} (${a.dauer} T.)`
             : `${a.dauer} Tage, kein Termin`;
@@ -276,7 +282,8 @@ async function zeichne(rahmen, ansicht = 'liste') {
                 el('span', { klasse: 'zeilen-titel', text: a.titel }),
                 el('span', {
                   klasse: 'zeilen-unter',
-                  text: [zeit, kontakt ? kontaktName(kontakt) : null].filter(Boolean).join(' · '),
+                  text: [zeit, kontakt ? kontaktName(kontakt) : null, fotosOffen ? 'vorher fotografieren' : null]
+                    .filter(Boolean).join(' · '),
                 }),
               ]),
               el('span', {
@@ -295,6 +302,97 @@ async function zeichne(rahmen, ansicht = 'liste') {
     knopf('Arbeitsschritt hinzufügen', () => aufgabeBearbeiten({ status: 'offen' }, roh, kontakte, maengel, neu), 'knopf-haupt'),
     knopf('Plan als PDF teilen', () => pdfErzeugen(aufgaben, kontakte))
   );
+}
+
+// ----------------------------------------------------------------- Hinweise
+//
+// Drei Dinge, die ein Plan von allein nicht sagt: was vor dem naechsten
+// Schritt fotografiert werden muss, wo die Reihenfolge nicht stimmt und wo
+// das Wetter einen Schritt gefaehrdet. Die Regeln stehen in
+// baustellenregeln.js; hier wird nur gezeigt.
+
+function hinweiseZeigen(rahmen, aufgaben, neu) {
+  for (const { aufgabe, regel, inTagen } of faelligeFotos(aufgaben, heute())) {
+    const wann = aufgabe.status === 'laeuft' || inTagen <= 0
+      ? 'läuft bereits'
+      : inTagen === 1 ? 'beginnt morgen' : `beginnt in ${inTagen} Tagen`;
+    anhaengen(
+      rahmen,
+      karte([
+        el('p', { klasse: 'willkommen-marke', text: 'Jetzt fotografieren' }),
+        el('h2', { text: `Bevor ${regel.verdeckt} kommt` }),
+        el('p', {
+          klasse: 'unterzeile',
+          text: `„${aufgabe.titel}“ ${wann}. Danach ist nicht mehr zu sehen:`,
+        }),
+        el('ul', { klasse: 'fotoliste' }, regel.fotos.map((f) => el('li', { text: f }))),
+        el('p', {
+          klasse: 'unterzeile leise',
+          text: 'Mit Zollstock im Bild und aus mehreren Richtungen. So findest du Leitungen ' +
+            'auch in Jahren wieder und belegst den Zustand bei der Abnahme.',
+        }),
+        knopf('Fotos aufnehmen', async () => {
+          const { aufnahmeAnlegen } = await import('./baudoku.js');
+          aufnahmeAnlegen({
+            titel: `Vor ${regel.verdeckt}: ${aufgabe.titel}`,
+            phase: aufgabe.phase,
+            notiz: regel.fotos.map((f) => '– ' + f).join(String.fromCharCode(10)),
+          }, async () => {
+            await daten.sichern('aufgaben', { ...ohneRechnung(aufgabe), fotosErledigt: true });
+            melde('Fotos abgelegt, Aufgabe erledigt.');
+            await neu();
+          });
+        }, 'knopf-haupt'),
+        knopf('Schon erledigt', async () => {
+          await daten.sichern('aufgaben', { ...ohneRechnung(aufgabe), fotosErledigt: true });
+          await neu();
+        }, 'knopf-leise'),
+      ], 'fotoaufgabe')
+    );
+  }
+
+  for (const w of reihenfolgeWarnungen(aufgaben)) {
+    anhaengen(
+      rahmen,
+      hinweisKasten(
+        `Reihenfolge prüfen: „${w.nachher.titel}“ beginnt am ${datumLang(w.nachher.start)}, ` +
+          `„${w.vorher.titel}“ endet erst am ${datumLang(w.vorher.ende)}. ${w.text}`,
+        'warn'
+      )
+    );
+  }
+
+  // Das Wetter kommt aus dem Netz. Der Kasten steht sofort da und fuellt sich,
+  // damit der Plan nicht auf einen fremden Dienst wartet.
+  const wetterplatz = el('div');
+  anhaengen(rahmen, wetterplatz);
+  (async () => {
+    const ort = (await einstellung('baustelle')) || {};
+    if (!ort.lat || !ort.lon) return;
+    const von = heute();
+    const bis = new Date(Date.now() + 9 * TAG).toISOString().slice(0, 10);
+    const betroffen = aufgaben.filter((a) => a.status !== 'fertig' && a.start && a.start <= bis && (a.ende || a.start) >= von);
+    if (!betroffen.length) return;
+    try {
+      const { vorhersageHolen } = await import('../wetter.js');
+      const tage = await vorhersageHolen(ort.lat, ort.lon, von, bis);
+      for (const w of wetterWarnungen(betroffen, tage)) {
+        wetterplatz.append(hinweisKasten(
+          `Wetter am ${datumLang(w.datum)}: ${w.grund}. ${w.art} für „${w.aufgabe.titel}“ ` +
+            'ist dann heikel. Mit der Firma absprechen, ob verschoben oder geschützt wird.',
+          'warn'
+        ));
+      }
+    } catch {
+      // Ohne Netz keine Vorhersage und damit keine Warnung. Der Plan steht trotzdem.
+    }
+  })();
+}
+
+/** Ein Arbeitsschritt ohne die gerechneten Felder, so wie er gespeichert ist. */
+function ohneRechnung(aufgabe) {
+  const { start, ende, dauer, ring, ...rest } = aufgabe;
+  return { ...rest, start: aufgabe.vorgaengerId ? null : start, dauer };
 }
 
 // --------------------------------------------------------------- Balkenplan
@@ -568,6 +666,17 @@ function aufgabeBearbeiten(aufgabe, alleAufgaben, kontakte, maengel, nachher) {
 
   const verknuepfterMangel = aufgabe.mangelId ? maengel.find((m) => m.id === aufgabe.mangelId) : null;
 
+  // Verdeckt der Schritt etwas, steht im Blatt, was vorher ins Bild gehoert.
+  const fotoregel = fotoregelFuer({ titel: aufgabe.titel || '' });
+  const fotosErledigt = el('input', { type: 'checkbox', checked: Boolean(aufgabe.fotosErledigt) });
+  const fotofeldBlock = fotoregel
+    ? el('div', { klasse: 'kasten kasten-info' }, [
+        el('strong', { text: `Vorher fotografieren (${fotoregel.verdeckt})` }),
+        el('ul', { klasse: 'fotoliste' }, fotoregel.fotos.map((f) => el('li', { text: f }))),
+        el('label', { klasse: 'haken-zeile' }, [fotosErledigt, ' Fotos sind gemacht']),
+      ])
+    : null;
+
   blattOeffnen(
     aufgabe.id ? 'Arbeitsschritt bearbeiten' : 'Arbeitsschritt anlegen',
     [
@@ -582,6 +691,7 @@ function aufgabeBearbeiten(aufgabe, alleAufgaben, kontakte, maengel, nachher) {
       feld('Status', status),
       feld('Wer macht es?', kontakt),
       feld('Notiz', notiz),
+      fotofeldBlock,
     ].filter(Boolean),
     async () => {
       const wert = {
@@ -594,6 +704,7 @@ function aufgabeBearbeiten(aufgabe, alleAufgaben, kontakte, maengel, nachher) {
         kontaktId: kontakt.value || null,
         notiz: notiz.value.trim(),
         mangelId: aufgabe.mangelId ?? null,
+        fotosErledigt: fotoregel ? fotosErledigt.checked : Boolean(aufgabe.fotosErledigt),
       };
       if (!wert.titel) throw new Error('Bitte eintragen, was zu tun ist.');
       if (aufgabe.id) wert.id = aufgabe.id;

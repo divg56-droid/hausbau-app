@@ -104,3 +104,33 @@ export function wetterHinweis(w) {
   if (w.wetter === 'regen' && w.niederschlag >= 5) return `Regen, ${w.niederschlag} mm am Tag.`;
   return '';
 }
+
+/**
+ * Vorhersage je Tag fuer einen Zeitraum, fuer die Wetterwarnungen im Bauablauf.
+ *
+ * Bright Sky liefert fuer kuenftige Tage die Vorhersage des DWD aus
+ * demselben Aufruf wie die Messwerte, rund zehn Tage weit. Was dahinter
+ * liegt, kommt einfach nicht zurueck -- dafuer gibt es dann keine Warnung.
+ *
+ * @returns {Promise<Object<string, {min:number, max:number, niederschlag:number, wind:number}>>}
+ */
+export async function vorhersageHolen(lat, lon, von, bis) {
+  const adresse = `${BRIGHTSKY}?lat=${lat}&lon=${lon}&date=${von}&last_date=${bis}`;
+  const antwort = await fetch(adresse);
+  if (!antwort.ok) throw new Error('Der Wetterdienst antwortete mit ' + antwort.status + '.');
+  const daten = await antwort.json();
+
+  const tage = {};
+  for (const s of daten.weather || []) {
+    const datum = (s.timestamp || '').slice(0, 10);
+    if (!datum) continue;
+    const t = (tage[datum] ??= { min: null, max: null, niederschlag: 0, wind: 0 });
+    if (typeof s.temperature === 'number') {
+      t.min = t.min === null ? s.temperature : Math.min(t.min, s.temperature);
+      t.max = t.max === null ? s.temperature : Math.max(t.max, s.temperature);
+    }
+    if (typeof s.precipitation === 'number') t.niederschlag += s.precipitation;
+    if (typeof s.wind_speed === 'number') t.wind = Math.max(t.wind, s.wind_speed);
+  }
+  return tage;
+}

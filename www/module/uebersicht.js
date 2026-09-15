@@ -183,8 +183,11 @@ export async function zeige(rahmen) {
     .filter((a) => a.status !== 'fertig' && a.start)
     .sort((a, b) => a.start.localeCompare(b.start))[0];
 
+  const { faelligeFotos } = await import('../baustellenregeln.js');
+  const fotos = faelligeFotos(geplantTermine, heute())[0] || null;
+
   const schritte = naechsteSchritte({
-    leitfaden, offeneTodos, offeneMaengel, naechsterSchritt, stand, posten,
+    leitfaden, offeneTodos, offeneMaengel, naechsterSchritt, stand, posten, fotos,
   });
   if (schritte.length) {
     anhaengen(
@@ -563,8 +566,20 @@ function phasenband(leitfaden) {
  * nichts -- eine Liste, die sich Schritte ausdenkt, verliert man nach dem
  * zweiten Mal aus den Augen.
  */
-function naechsteSchritte({ leitfaden, offeneTodos, offeneMaengel, naechsterSchritt, stand, posten }) {
+function naechsteSchritte({ leitfaden, offeneTodos, offeneMaengel, naechsterSchritt, stand, posten, fotos }) {
   const schritte = [];
+
+  // Fotos vor einem verdeckenden Schritt stehen vorn: Sie lassen sich als
+  // einzige Aufgabe hier nicht nachholen.
+  if (fotos) {
+    schritte.push({
+      titel: `Fotografieren, bevor ${fotos.regel.verdeckt} kommt`,
+      warum: `„${fotos.aufgabe.titel}“ ` + (fotos.inTagen <= 0 ? 'läuft bereits.' : fotos.inTagen === 1
+        ? 'beginnt morgen.' : `beginnt in ${fotos.inTagen} Tagen.`) + ' ' + fotos.regel.fotos[0] + '.',
+      wo: 'Fotos', ziel: '#/ablauf',
+      dringend: fotos.inTagen <= 2,
+    });
+  }
 
   if (!stand.gesamt) {
     schritte.push({
