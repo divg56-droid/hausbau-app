@@ -751,6 +751,18 @@ html[data-thema="dunkel"] {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .wm-akzent { font-weight: 500; color: var(--akzent-dunkel); }
+.wm-de { font-size: 12px; font-weight: 500; letter-spacing: 0; color: var(--tinte-leise); }
+/* Schmale Telefone mit Zurueckpfeil: Menue, Pfeil, Marke und Themaschalter
+   passen bei 320 Punkten nicht nebeneinander, die Marke wurde abgeschnitten.
+   Der Pfeil fuehrt ohnehin zurueck, dort darf das Hauszeichen weichen, und
+   Schalter und Schrift ruecken eine Stufe kleiner. */
+@media (max-width: 380px) {
+  .wm-text { font-size: 18px; }
+  .thema-taste { width: 24px; }
+}
+@media (max-width: 359px) {
+  #kopf:has(.zurueck:not([hidden])) .wortmarke svg { display: none; }
+}
 
 /* ---------------------------------------------------------- Seitenleiste
 

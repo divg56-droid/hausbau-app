@@ -39,22 +39,18 @@ function wortmarke() {
     '<rect x="16" y="31" width="32" height="20" fill="none" stroke="#f5f7f6" stroke-width="4"></rect>' +
     '<rect x="28" y="40" width="8" height="11" fill="#f5f7f6"></rect>';
 
-/* Die Wortmarke traegt in der App kein ".de".
+/* Die Wortmarke heisst ueberall BauZeuge.de, auch in der App.
  *
- * Auf der Website ist es die Adresse und gehoert dazu. In der App ist es
- * keine mehr -- dort steht es nur noch im Weg: Der erste Bildschirm sah
- * dadurch aus wie die aufgerufene Internetseite, und man fragte sich, ob man
- * die App ueberhaupt vor sich hat.
- *
- * Wo weiterhin ".de" steht, ist die Website gemeint und nicht die App: der
- * Verweis in den Einstellungen, die Quellenangabe der Baukosten, der Hinweis
- * beim Konto ("in der App und auf BauZeuge.de") und die Marke auf den PDF.
- * Auf Papier ist die Adresse ein Hinweis, wo das herkommt. */
+ * Eine Zeit lang stand hier kein ".de". Andreas hat es am 15.09.2026
+ * zurueckgeholt: Die Marke soll auf Website, App, PDF und Bildern gleich
+ * aussehen. ".de" steht klein und leise wie im Kopf der Website, damit
+ * "BauZeuge" das Wort bleibt, das man liest. */
   return el('span', { klasse: 'wortmarke' }, [
     zeichen,
     el('span', { klasse: 'wm-text' }, [
       'Bau',
       el('span', { klasse: 'wm-akzent', text: 'Zeuge' }),
+      el('span', { klasse: 'wm-de', text: '.de' }),
     ]),
   ]);
 }
