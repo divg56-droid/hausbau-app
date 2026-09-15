@@ -1014,7 +1014,10 @@ console.log('To-Dos und Checklisten');
 
   // Die Vorlage wird in echte Eintraege kopiert; der Listenname ist der
   // Schluessel, ueber den sie danach zusammenbleiben.
-  pruef('Sechs Vorlagen', VORLAGEN.length === 6, String(VORLAGEN.length));
+  pruef('Dreizehn Vorlagen', VORLAGEN.length === 13, String(VORLAGEN.length));
+  pruef('Jede Vorlage hat Titel, Text und Punkte',
+    VORLAGEN.every((v) => v.titel && v.text && v.punkte.length >= 5));
+  pruef('Keine Vorlage doppelt', new Set(VORLAGEN.map((v) => v.titel)).size === VORLAGEN.length);
   // Der teuerste Nachmittag am Bau ist der, an dem man den Vertrag nicht
   // gelesen hat. Die Liste dazu muss es geben.
   pruef('Der Bauvertrag hat eine eigene Liste',

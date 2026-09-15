@@ -242,8 +242,8 @@ function zeigeChecklisten(rahmen, todos, raeume, neu) {
       karte([
         leerzustand(
           'Noch keine Checkliste',
-          'Sechs Vorlagen stehen bereit, vom Bauvertrag über die Unterlagen für den ' +
-            'Bauantrag bis zu dem, was man zur Abnahme mitnimmt. Geladen gehört die ' +
+          'Dreizehn Vorlagen stehen bereit, vom Grundstückskauf über den Bauvertrag und ' +
+            'die Termine vor Estrich, Fliesen und Bodenbelag bis zur Abnahme. Geladen gehört die ' +
             'Liste dir: ' +
             'Punkte streichen, umbenennen und eigene dazuschreiben geht danach.'
         ),

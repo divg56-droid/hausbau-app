@@ -11,6 +11,22 @@
 
 export const VORLAGEN = [
   {
+    titel: 'Grundstück vor dem Kauf prüfen',
+    text: 'Vor der Reservierung und lange vor dem Notar. Was hier übersehen wird, lässt sich nach der Unterschrift nicht mehr verhandeln.',
+    punkte: [
+      'Bebauungsplan beim Bauamt eingesehen: Geschosse, Dachform, Baufenster',
+      'Ohne Bebauungsplan: Bauvoranfrage gestellt oder geplant',
+      'Erschließung schriftlich bei der Gemeinde erfragt, offene Beiträge geklärt',
+      'Grundbuch Abteilung II gelesen: Wege-, Leitungs- und Wohnrechte',
+      'Baulastenverzeichnis bei der Bauaufsicht abgefragt',
+      'Bodengutachten beauftragt oder vorhandenes gelesen',
+      'Hochwasser- und Starkregenkarte des Landes angesehen',
+      'Bodenrichtwert verglichen, Preis eingeordnet',
+      'Grundstück zu verschiedenen Tageszeiten besucht',
+      'Vertragsentwurf vom Notar vorab erhalten und gelesen',
+    ],
+  },
+  {
     titel: 'Unterlagen für den Bauantrag',
     text: 'Was das Bauamt sehen will. Fehlt eines davon, liegt der Antrag liegen.',
     punkte: [
@@ -80,6 +96,31 @@ export const VORLAGEN = [
     ],
   },
   {
+    titel: 'Nachbarhäuser vor Baubeginn dokumentieren',
+    text: 'Bagger und Rüttelplatte können Risse verursachen. Wer den Zustand vorher festhält, muss später nicht über alte Schäden streiten.',
+    punkte: [
+      'Nachbarn über Baubeginn und Dauer informiert',
+      'Fassaden der Nachbarhäuser zur Baustelle hin fotografiert',
+      'Vorhandene Risse mit Zollstock im Bild und Datum aufgenommen',
+      'Zufahrt, Gehweg und Bordsteine vor der Baustelle fotografiert',
+      'Mauern, Zäune und Einfahrten an der Grenze festgehalten',
+      'Nachbarn gebeten, die Aufnahmen gegenzuzeichnen',
+    ],
+  },
+  {
+    titel: 'Haus teilbar vorbereiten',
+    text: 'Wer später eine Einliegerwohnung oder ein Geschoss für die Eltern will, legt die Leitungen heute. Nachträglich heißt das Stemmen.',
+    punkte: [
+      'Eingang und Treppe so geplant, dass zwei Einheiten getrennt erreichbar sind',
+      'Platz für einen zweiten Zähler im Zählerschrank vorgesehen',
+      'Leerrohre zwischen den Geschossen verlegt',
+      'Anschlüsse für eine zweite Küche vorgesehen',
+      'Wasser und Abwasser für ein zweites Bad vorbereitet',
+      'Heizkreise je Geschoss getrennt regelbar',
+      'Beim Bauamt geklärt, was für eine zweite Wohnung nötig wäre',
+    ],
+  },
+  {
     titel: 'Vor Baubeginn',
     text: 'Alles, was stehen muss, bevor der erste Bagger kommt.',
     punkte: [
@@ -107,6 +148,56 @@ export const VORLAGEN = [
       'Randdämmstreifen umlaufend, auch an Türzargen',
       'Fenster dicht, Haus trocken',
       'Estrichart und Aufbauhöhe schriftlich bestätigt',
+    ],
+  },
+  {
+    titel: 'Vor dem Beplanken',
+    text: 'Was hinter Gipskarton verschwindet, sieht niemand mehr. Dampfbremse und Verstärkungen zählen doppelt.',
+    punkte: [
+      'Dämmung vollflächig, ohne Lücken an Sparren und Ständern',
+      'Dampfbremse an allen Stößen und Anschlüssen verklebt',
+      'Durchführungen von Kabeln und Rohren abgedichtet',
+      'Leitungen im Ständerwerk fotografiert',
+      'Verstärkungen für Hängeschränke, Spiegel und Waschtisch eingebaut und fotografiert',
+      'Im Bad feuchtebeständige Platten vorgesehen',
+    ],
+  },
+  {
+    titel: 'Vor dem Fliesen',
+    text: 'Fliesen verdecken die Abdichtung. Ist sie undicht, merkt man es erst am Wasserschaden.',
+    punkte: [
+      'Estrich trocken, Belegreife gemessen und schriftlich bestätigt',
+      'Abdichtung in Dusche und Bad aufgebracht, Ecken mit Dichtband',
+      'Rohrdurchführungen mit Manschetten abgedichtet',
+      'Abdichtung fotografiert, bevor die erste Fliese liegt',
+      'Gefälle zum Ablauf bei bodengleicher Dusche geprüft',
+      'Bewegungsfugen im Estrich markiert, damit sie in der Fliesenfuge wiederkommen',
+      'Fliesen aus derselben Charge, Reserve eingelagert',
+    ],
+  },
+  {
+    titel: 'Vor dem Streichen',
+    text: 'Farbe zeigt jede Unebenheit. Vorher lässt sich nachbessern, danach nur neu streichen.',
+    punkte: [
+      'Putz und Spachtel vollständig trocken',
+      'Wände bei seitlichem Licht auf Unebenheiten und Risse geprüft',
+      'Fliesen und Fensterbänke fertig, damit nicht nachgestrichen werden muss',
+      'Grundierung passend zum Untergrund aufgetragen',
+      'Böden, Fenster und Treppe abgedeckt',
+      'Farbton und Farbart je Raum festgehalten, Rest aufbewahrt',
+    ],
+  },
+  {
+    titel: 'Vor dem Bodenbelag',
+    text: 'Der Belag ist das Letzte, was auf den Estrich kommt. Ist der zu feucht, wölbt sich der Boden.',
+    punkte: [
+      'Belegreife des Estrichs gemessen, Protokoll liegt vor',
+      'Aufheizprotokoll der Fußbodenheizung erhalten',
+      'Estrich eben und sauber, Risse dokumentiert',
+      'Randdämmstreifen stehen über und sind nicht abgeschnitten',
+      'Aufbauhöhe mit Türen, Treppe und Übergängen abgeglichen',
+      'Belag für Fußbodenheizung geeignet',
+      'Reservepakete aus derselben Charge beiseitegelegt',
     ],
   },
   {
