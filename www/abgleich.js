@@ -12,6 +12,7 @@
 // Normalfall und nicht die Ausnahme.
 
 import { daten } from './daten.js';
+import { istBeispielSatz } from './beispiel.js';
 import {
   ruf, angemeldet, standLesen, standSetzen, lokalLesen, lokalSetzen,
   bildHoch, bildRunter,
@@ -39,7 +40,10 @@ async function eigeneAenderungen(seit) {
   const hinaus = {};
   for (const speicher of SPEICHER) {
     const alle = await daten.alleMitGrabsteinen(speicher);
-    const offen = alle.filter((s) => !seit || String(s.geaendert || '') > seit);
+    // Das Beispielprojekt bleibt auf dem Geraet. Es ist erfunden und gehoert
+    // nicht auf den Server und schon gar nicht auf das zweite Geraet.
+    const offen = alle.filter((s) => (!seit || String(s.geaendert || '') > seit) &&
+      !istBeispielSatz(speicher, s));
     if (!offen.length) continue;
 
     hinaus[speicher] = offen.map((s) => {

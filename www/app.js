@@ -212,6 +212,14 @@ async function zeichne() {
   // haengt dessen Kennung hinten an. Ohne diesen Rueckfall landet jeder
   // solche Verweis auf der Uebersicht -- der Nutzer wird herausgeworfen,
   // statt in den Raum zu kommen.
+  // "#/beispiel" oeffnet das Beispielprojekt direkt, fuer QR-Codes und den
+  // Knopf auf der Website.
+  if (weg === 'beispiel') {
+    const { beispielOeffnen } = await import('./beispiel.js');
+    await beispielOeffnen();
+    return;
+  }
+
   const modul = MODULE.find((m) => m.weg === weg) || MODULE.find((m) => m.weg === datei);
   if (!modul) {
     location.hash = '';
@@ -234,10 +242,24 @@ async function zeichne() {
     if (inhalt.children.length === 0) notausgang('Das dauert ungewöhnlich lange.');
   }, 8000);
 
+  // Im Beispielprojekt steht ueber jedem Bereich ein Band. Der Bereich
+  // bekommt dann einen eigenen Rahmen darunter, weil die Module ihren Rahmen
+  // beim Neuzeichnen leeren und das Band sonst mit wegraeumten.
+  let rahmen = inhalt;
+  try {
+    const { istBeispielAktiv } = await import('./beispiel.js');
+    if (await istBeispielAktiv()) {
+      rahmen = el('div', { klasse: 'bereichsrahmen' });
+      inhalt.append(beispielband(), rahmen);
+    }
+  } catch (fehler) {
+    console.error(fehler);
+  }
+
   try {
     const geladen = await import('./module/' + (datei || 'uebersicht') + '.js');
-    await geladen.zeige(inhalt, unterweg);
-    if (inhalt.children.length === 0) {
+    await geladen.zeige(rahmen, unterweg);
+    if (rahmen.children.length === 0) {
       notausgang('Dieser Bereich hat nichts angezeigt.');
     }
   } catch (fehler) {
@@ -246,6 +268,20 @@ async function zeichne() {
   } finally {
     clearTimeout(wache);
   }
+}
+
+/** Das Band ueber jedem Bereich, solange das Beispielprojekt offen ist. */
+function beispielband() {
+  // Ein Knopf: Er schliesst das Beispiel. Danach steht entweder das eigene
+  // Projekt da oder, wenn es noch keins gibt, "Bauprojekt anlegen".
+  const schliessen = async () => (await import('./beispiel.js')).beispielSchliessen();
+  return el('div', { klasse: 'beispielband', role: 'status' }, [
+    el('p', {}, [
+      el('strong', { text: 'Beispielprojekt. ' }),
+      'Erfundene Zahlen, nur auf diesem Gerät.',
+    ]),
+    el('button', { klasse: 'knopf knopf-haupt', type: 'button', text: 'Beispiel beenden', onclick: schliessen }),
+  ]);
 }
 
 /**

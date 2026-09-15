@@ -470,6 +470,10 @@ export const daten = {
     );
   },
 
+  /** Einen Satz endgueltig entfernen, ohne Grabstein. Nur fuer Saetze, die
+   *  nie abgeglichen wurden: das Beispielprojekt. */
+  entfernen: (speicher, id) => lauf(speicher, 'readwrite', (s) => s.delete(id)),
+
   /** Wirklich alles weg, ohne Grabsteine. Fuer "alle Daten loeschen". */
   leeren: (speicher) => lauf(speicher, 'readwrite', (s) => s.clear()),
 

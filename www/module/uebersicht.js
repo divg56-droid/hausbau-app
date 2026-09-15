@@ -408,6 +408,12 @@ function willkommen() {
         'an einem Ort im Blick – von der ersten Schätzung bis zur Abnahme.',
     }),
     knopf('+ Bauprojekt anlegen', () => projektBlatt(), 'knopf-haupt knopf-gross'),
+    // Der Nutzen zeigt sich sonst erst nach vielen Eingaben. Das Beispiel
+    // zeigt ihn sofort und laesst sich mit einem Tipp wieder entfernen.
+    knopf('Beispielprojekt ansehen', async () => {
+      const { beispielOeffnen } = await import('../beispiel.js');
+      await beispielOeffnen();
+    }, 'knopf knopf-gross'),
     el('p', { klasse: 'unterzeile', text: 'Oder wähle gleich, wie gebaut wird:' }),
     el('div', { klasse: 'einstiege' }, BAUWEISEN.map((b) =>
       el('button', { klasse: 'einstieg', type: 'button', onclick: () => projektBlatt(b.id) }, [

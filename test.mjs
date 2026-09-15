@@ -713,7 +713,7 @@ console.log('Gliederung und Seitenleiste');
   const app = readFileSync('./www/app.js', 'utf8');
   pruef('Der Router zerlegt den Weg in Datei und Unterweg',
     app.includes('const [datei, unterweg] = weg.split(') &&
-    app.includes('geladen.zeige(inhalt, unterweg)'));
+    app.includes('geladen.zeige(rahmen, unterweg)'));
   pruef('Die Baukasse nimmt den Unterweg entgegen',
     readFileSync('./www/module/baukasse.js', 'utf8')
       .includes('export async function zeige(rahmen, unterweg)'));
