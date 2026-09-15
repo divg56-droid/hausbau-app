@@ -25,7 +25,7 @@ const ZURUECK = 'beispiel_zurueck';
 
 // Speicher mit projektbezogenen Saetzen. Bilder legt das Beispiel nicht an.
 const SPEICHER = [
-  'darlehen', 'posten', 'angebote', 'belege', 'geschosse',
+  'darlehen', 'leitfaden', 'posten', 'angebote', 'belege', 'geschosse',
   'raeume', 'pins', 'maengel', 'aufgaben', 'todos', 'tagebuch', 'dokumente',
   'baudoku', 'kontakte',
 ];
@@ -174,7 +174,15 @@ async function fuellen() {
     });
   }
 
-  // Keine Haken im Bauleitfaden: Dort ist die Kennung des Punktes zugleich
-  // die des Satzes, ueber alle Projekte hinweg. Ein Haken hier ueberschriebe
-  // den im echten Projekt, und das Schliessen des Beispiels loeschte ihn.
+  // Ein Teil des Bauleitfadens ist abgehakt, damit die Uebersicht einen
+  // Fortschritt zeigt. Kennung mit Projekt dahinter, wie in leitfaden.js:
+  // So bleiben die Haken des echten Projekts unberuehrt.
+  const { punkteFuer } = await import('./leitfaden-daten.js');
+  const alle = punkteFuer('einzelvergabe');
+  for (const punkt of alle.slice(0, Math.round(alle.length * 0.45))) {
+    await daten.sichern('leitfaden', {
+      id: punkt.id + '@' + BEISPIEL, punkt: punkt.id, projektId: BEISPIEL,
+      erledigt: true, am: tag(-30), notiz: '',
+    });
+  }
 }

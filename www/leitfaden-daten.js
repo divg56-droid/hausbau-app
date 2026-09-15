@@ -286,7 +286,8 @@ export const punkteFuer = (bauweise) => ALLE_PUNKTE.filter((p) => giltFuer(p, ba
  * @returns {{phasen: Array, erledigt: number, gesamt: number, naechster: object|null}}
  */
 export function leitfadenStand(stand, bauweise) {
-  const haken = new Map((stand || []).map((s) => [s.id, s]));
+  // "punkt" steht in neueren Saetzen; aeltere tragen den Punkt nur als Kennung.
+  const haken = new Map((stand || []).map((s) => [s.punkt || s.id, s]));
 
   const phasen = PHASEN.map((phase) => {
     const punkte = phase.punkte.filter((punkt) => giltFuer(punkt, bauweise)).map((punkt) => ({

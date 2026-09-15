@@ -19,7 +19,7 @@ import {
   datumLang, heute, zahl, anhaengen,
   geheZu,
 } from '../hilfen.js';
-import { daten, einstellung } from '../daten.js';
+import { daten, einstellung, projektAktiv, ERSTES_PROJEKT } from '../daten.js';
 import { leitfadenStand } from '../leitfaden-daten.js';
 import { bauweise } from '../bauweise.js';
 
@@ -295,16 +295,23 @@ function zeile(punkt, neu) {
 /**
  * Setzt oder entfernt den Haken.
  *
- * Die Kennung des Punktes ist zugleich die Kennung des Satzes. Damit gibt es
- * je Punkt genau einen Datensatz, auch wenn zwei Geraete ihn gleichzeitig
- * abhaken; der Abgleich fuehrt sie ueber dieselbe Kennung zusammen.
+ * Je Punkt und Projekt genau ein Datensatz, auch wenn zwei Geraete ihn
+ * gleichzeitig abhaken; der Abgleich fuehrt sie ueber dieselbe Kennung
+ * zusammen. Im ersten Projekt ist die Kennung die des Punktes, wie sie immer
+ * war. In jedem weiteren haengt das Projekt dahinter: Vorher hiess der Satz in
+ * allen Projekten gleich, und ein Haken im zweiten Projekt zog den Satz aus
+ * dem ersten heraus (gefunden am 15.09.2026). Das Feld "punkt" nennt den Punkt,
+ * damit leitfadenStand() ihn unabhaengig von der Kennung findet.
  *
  * Im Wizard rueckt der Haken zugleich eine Aufgabe weiter: Abhaken heisst
  * dort "fertig, was kommt jetzt".
  */
 async function abhaken(punkt, erledigt, flach, stelle, nachher) {
+  const projekt = await projektAktiv();
   await daten.sichern('leitfaden', {
-    id: punkt.id,
+    id: projekt === ERSTES_PROJEKT ? punkt.id : punkt.id + '@' + projekt,
+    punkt: punkt.id,
+    projektId: projekt,
     erledigt,
     am: erledigt ? heute() : null,
     notiz: punkt.notiz || '',
