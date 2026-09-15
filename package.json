@@ -14,7 +14,9 @@
     "durchklicken": "node test/durchklicken.mjs",
     "paket": "node test/paket.mjs",
     "anmeldung": "node test/anmeldung.mjs",
-    "zwei-geraete": "node test/zweiGeraete.mjs"
+    "zwei-geraete": "node test/zweiGeraete.mjs",
+    "regeln": "node test/baustellenregeln.mjs && node test/fristen.mjs && node test/eigenleistung.mjs",
+    "leitfaden-projekte": "node test/leitfadenProjekte.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
