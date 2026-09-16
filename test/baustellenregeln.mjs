@@ -70,5 +70,19 @@ pruef('Estrich bei 2 °C warnt', ww.some((x) => x.aufgabe.id === 'e' && /2 °C/.
 pruef('Dach bei Regen oder Sturm warnt', ww.some((x) => x.aufgabe.id === 'd'), JSON.stringify(ww));
 pruef('Maler ohne Wetterregel', !ww.some((x) => x.aufgabe.id === 'm'));
 
+// Aussentueren sind keine Innentueren: Der Fenstereinbau vor dem Bodenbelag
+// ist richtig und darf nicht warnen.
+const aussentuer = reihenfolgeWarnungen([
+  { id: 'f', titel: 'Fenster und Außentüren einbauen', start: '2026-03-01', ende: '2026-03-05' },
+  { id: 'b', titel: 'Bodenbeläge verlegen', start: '2026-06-01', ende: '2026-06-05' },
+  { id: 't', titel: 'Innentüren einbauen', start: '2026-06-10', ende: '2026-06-11' },
+]);
+pruef('Außentüren vor dem Bodenbelag warnen nicht', aussentuer.length === 0, JSON.stringify(aussentuer.map((x) => x.nachher.titel)));
+const innentuer = reihenfolgeWarnungen([
+  { id: 'b', titel: 'Bodenbeläge verlegen', start: '2026-06-01', ende: '2026-06-05' },
+  { id: 't', titel: 'Türen einbauen', start: '2026-05-20', ende: '2026-05-21' },
+]);
+pruef('Türen einbauen vor dem Belag warnt weiterhin', innentuer.length === 1, String(innentuer.length));
+
 console.log(fehler ? `\n${fehler} Fehler.` : '\nRegeln stimmen.');
 process.exitCode = fehler ? 1 : 0;

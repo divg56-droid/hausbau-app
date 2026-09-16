@@ -195,8 +195,14 @@ export async function zeige(rahmen) {
   const { faelligeFristen } = await import('../fristen.js');
   const frist = faelligeFristen(await daten.alle('kontakte'), heute())[0] || null;
 
+  const { belagOhneFreigabe } = await import('../estrich.js');
+  const belag = belagOhneFreigabe(geplantTermine, await einstellung('estrich_trocknung'), heute())[0] || null;
+  const bauLaeuft = art.phase === 'bau' ||
+    aufgaben.some((a) => a.status === 'laeuft' || a.status === 'fertig');
+
   const schritte = naechsteSchritte({
     leitfaden, offeneTodos, offeneMaengel, naechsterSchritt, stand, posten, fotos, frist,
+    belag, bauLaeuft,
   });
   if (schritte.length) {
     anhaengen(
@@ -205,8 +211,8 @@ export async function zeige(rahmen) {
         el('h2', { text: 'Deine nächsten Schritte' }),
         el('p', {
           klasse: 'unterzeile',
-          text: 'Aus dem Bauleitfaden, deinen To-Dos und den offenen Mängeln, nach ' +
-            'Dringlichkeit sortiert.',
+          text: 'Aus Bauablauf, To-Dos, Mängeln und Bauleitfaden, nach Dringlichkeit ' +
+            'und passend zum Stand deines Baus sortiert.',
         }),
         ...schritte.map((s) =>
           el('button', { klasse: 'listenzeile', onclick: () => { geheZu(s.ziel); } }, [
@@ -570,18 +576,30 @@ function phasenband(leitfaden) {
 /**
  * Die drei Dinge, die als Naechstes anstehen.
  *
- * Zusammengezogen aus dem, was ohnehin da ist: der offene Leitfadenpunkt,
- * die dringendste Aufgabe, der Mangel mit ablaufender Frist. Erfunden wird
- * nichts -- eine Liste, die sich Schritte ausdenkt, verliert man nach dem
- * zweiten Mal aus den Augen.
+ * Zusammengezogen aus dem, was ohnehin da ist: Bauablauf, Aufgaben, Maengel,
+ * Fristen, Leitfaden. Erfunden wird nichts -- eine Liste, die sich Schritte
+ * ausdenkt, verliert man nach dem zweiten Mal aus den Augen.
+ *
+ * Sortiert wird nach Rang, nicht nach Herkunft. Rang 0 ist, was sich nicht
+ * nachholen laesst (Fotos vor dem Verschliessen, Belag vor der Freigabe),
+ * dann Ueberfaelliges, dann was in den naechsten Tagen ansteht. Ganz hinten
+ * steht ein alter Grundlagenpunkt aus dem Leitfaden, wenn die Baustelle
+ * schon laeuft: Er bleibt im Leitfaden sichtbar, soll aber keinen Termin
+ * von morgen verdraengen.
  */
-function naechsteSchritte({ leitfaden, offeneTodos, offeneMaengel, naechsterSchritt, stand, posten, fotos, frist }) {
-  const schritte = [];
+const TAG_MS = 86400000;
+const tageBis = (iso) => Math.round((Date.parse(iso) - Date.parse(heute())) / TAG_MS);
+const VOR_DEM_BAU = new Set(['geld', 'grundstueck', 'behoerden', 'planung']);
 
-  // Fotos vor einem verdeckenden Schritt stehen vorn: Sie lassen sich als
-  // einzige Aufgabe hier nicht nachholen.
+function naechsteSchritte({
+  leitfaden, offeneTodos, offeneMaengel, naechsterSchritt, stand, posten, fotos, frist,
+  belag = null, bauLaeuft = false,
+}) {
+  const schritte = [];
+  const dazu = (rang, schritt) => schritte.push({ rang, ...schritt });
+
   if (fotos) {
-    schritte.push({
+    dazu(0, {
       titel: `Fotografieren, bevor ${fotos.regel.verdeckt} kommt`,
       warum: `„${fotos.aufgabe.titel}“ ` + (fotos.inTagen <= 0 ? 'läuft bereits.' : fotos.inTagen === 1
         ? 'beginnt morgen.' : `beginnt in ${fotos.inTagen} Tagen.`) + ' ' + fotos.regel.fotos[0] + '.',
@@ -590,50 +608,59 @@ function naechsteSchritte({ leitfaden, offeneTodos, offeneMaengel, naechsterSchr
     });
   }
 
+  if (belag) {
+    dazu(0, {
+      titel: 'Belegreife bestätigen lassen',
+      warum: `„${belag.aufgabe.titel}“ ` + (belag.inTagen <= 0 ? 'läuft bereits' : `beginnt in ${belag.inTagen} Tagen`) +
+        ', aber es liegt keine Freigabe vor.',
+      wo: 'Estrich', ziel: '#/ablauf', dringend: true,
+    });
+  }
+
   if (!stand.gesamt) {
-    schritte.push({
+    dazu(bauLaeuft ? 4 : 2, {
       titel: 'Budget festlegen',
       warum: 'Ohne Finanzrahmen rechnet nichts anderes mit: Restbudget, Abweichung, Puffer.',
       wo: 'Finanzierung', ziel: '#/finanzierung',
     });
   } else if (!posten.length) {
-    schritte.push({
+    dazu(bauLaeuft ? 4 : 3, {
       titel: 'Erste Kostenpositionen anlegen',
       warum: 'Erst mit Positionen zeigt die App, wo das Budget hingeht.',
       wo: 'Kosten', ziel: '#/baukasse/kosten',
     });
   }
 
-  // Eine Frist, die bald endet, laesst sich ebenfalls nicht nachholen.
   if (frist) {
     const name = kontaktName(frist.kontakt);
     const wann = frist.tage < 0 ? `abgelaufen am ${datumLang(frist.datum)}` : `endet am ${datumLang(frist.datum)}`;
-    schritte.push(frist.art === 'gewaehrleistung'
+    const gw = frist.art === 'gewaehrleistung';
+    const dringend = gw ? frist.tage <= 60 : frist.tage <= 14;
+    dazu(dringend ? 1 : 5, gw
       ? {
           titel: `Gewährleistung ${name}`,
           warum: `${wann[0].toUpperCase() + wann.slice(1)}. Vorher begehen und Mängel schriftlich rügen.`,
-          wo: 'Firma', ziel: '#/kontakte/' + frist.kontakt.id, dringend: frist.tage <= 60,
+          wo: 'Firma', ziel: '#/kontakte/' + frist.kontakt.id, dringend,
         }
       : {
           titel: `Festpreis ${name}`,
           warum: `Bindung ${wann}. Prüfen, ob der Termin hält oder ob nachverhandelt werden muss.`,
-          wo: 'Firma', ziel: '#/kontakte/' + frist.kontakt.id, dringend: frist.tage <= 14,
+          wo: 'Firma', ziel: '#/kontakte/' + frist.kontakt.id, dringend,
         });
   }
 
-  const dringend = offeneTodos.find((t) => t.faellig && t.faellig < heute()) || offeneTodos[0];
-  if (dringend) {
-    schritte.push({
-      titel: dringend.titel,
-      warum: dringend.tun
-        ? dringend.tun
-        : dringend.faellig
-          ? (dringend.faellig < heute()
-              ? 'Überfällig seit ' + datumLang(dringend.faellig)
-              : 'Fällig ' + datumLang(dringend.faellig))
+  const todo = offeneTodos.find((t) => t.faellig && t.faellig < heute()) || offeneTodos[0];
+  if (todo) {
+    const ueber = Boolean(todo.faellig && todo.faellig < heute());
+    const bald = Boolean(todo.faellig && tageBis(todo.faellig) <= 7);
+    dazu(ueber ? 1 : bald ? 3 : 7, {
+      titel: todo.titel,
+      warum: todo.tun
+        ? todo.tun
+        : todo.faellig
+          ? (ueber ? 'Überfällig seit ' + datumLang(todo.faellig) : 'Fällig ' + datumLang(todo.faellig))
           : 'Ohne Frist notiert.',
-      wo: 'To-Do', ziel: '#/todos',
-      dringend: Boolean(dringend.faellig && dringend.faellig < heute()),
+      wo: 'To-Do', ziel: '#/todos', dringend: ueber,
     });
   }
 
@@ -641,34 +668,52 @@ function naechsteSchritte({ leitfaden, offeneTodos, offeneMaengel, naechsterSchr
     .filter((m) => m.frist)
     .sort((a, b) => a.frist.localeCompare(b.frist))[0];
   if (mangel) {
-    schritte.push({
+    const ueber = mangel.frist < heute();
+    dazu(ueber ? 1 : tageBis(mangel.frist) <= 7 ? 2 : 6, {
       titel: mangel.titel,
-      warum: mangel.frist < heute()
+      warum: ueber
         ? 'Frist abgelaufen am ' + datumLang(mangel.frist) + '. Jetzt schriftlich nachfassen.'
         : 'Frist bis ' + datumLang(mangel.frist) + '.',
-      wo: 'Mangel', ziel: '#/maengel',
-      dringend: mangel.frist < heute(),
+      wo: 'Mangel', ziel: '#/maengel', dringend: ueber,
     });
   }
 
-  if (leitfaden.naechster) {
-    schritte.push({
+  if (naechsterSchritt) {
+    const laeuft = naechsterSchritt.start <= heute();
+    dazu(laeuft || tageBis(naechsterSchritt.start) <= 14 ? 3 : 8, {
+      titel: naechsterSchritt.titel,
+      warum: laeuft
+        ? 'Läuft seit ' + datumLang(naechsterSchritt.start) +
+          (naechsterSchritt.ende ? ', geplant bis ' + datumLang(naechsterSchritt.ende) + '.' : '.')
+        : 'Ab ' + datumLang(naechsterSchritt.start) + ', ' + naechsterSchritt.dauer + ' Tage.',
+      wo: 'Ablauf', ziel: '#/ablauf',
+    });
+  }
+
+  // Im Bau zaehlt der Leitfadenpunkt der Bauphase. Ein offener Punkt aus
+  // der Planung bleibt stehen, aber ganz hinten.
+  const bauPhase = leitfaden.phasen.find((ph) => ph.id === 'bau');
+  const imBau = bauLaeuft && bauPhase ? bauPhase.punkte.find((pk) => !pk.erledigt) : null;
+  if (imBau) {
+    dazu(4, {
+      titel: imBau.titel,
+      warum: imBau.text || bauPhase.titel,
+      wo: 'Leitfaden', ziel: '#/leitfaden',
+    });
+  } else if (leitfaden.naechster) {
+    const alt = bauLaeuft && VOR_DEM_BAU.has(leitfaden.laufend.id);
+    dazu(alt ? 9 : 4, {
       titel: leitfaden.naechster.titel,
       warum: leitfaden.naechster.text || leitfaden.laufend.titel,
       wo: 'Leitfaden', ziel: '#/leitfaden',
     });
   }
 
-  if (naechsterSchritt && schritte.length < 3) {
-    schritte.push({
-      titel: naechsterSchritt.titel,
-      warum: 'Ab ' + datumLang(naechsterSchritt.start) + ', ' + naechsterSchritt.dauer + ' Tage.',
-      wo: 'Ablauf', ziel: '#/ablauf',
-    });
-  }
-
   // Drei sind genug. Wer fuenf naechste Schritte sieht, hat keinen naechsten.
-  return schritte.slice(0, 3);
+  return schritte
+    .map((schritt, i) => ({ ...schritt, i }))
+    .sort((a, b) => a.rang - b.rang || a.i - b.i)
+    .slice(0, 3);
 }
 
 // ------------------------------------------------------------------ Wetter

@@ -196,7 +196,10 @@ export const REIHENFOLGE = [
   },
   {
     vorher: (t) => hat(t, /bodenbela/, /parkett/, /laminat/, /vinyl/),
-    nachher: (t) => hat(t, /innentuer/, /tueren einbau/, /zargen/),
+    // "Fenster und Aussentueren einbauen" enthaelt ebenfalls "tueren
+    // einbau" und ist trotzdem kein Innenausbau.
+    nachher: (t) => hat(t, /innentuer/, /zargen/) ||
+      (hat(t, /tueren einbau/) && !hat(t, /aussen/, /fenster/, /haustuer/)),
     text: 'Innentüren nach dem Bodenbelag: Erst dann steht die Fußbodenhöhe fest, sonst schleift die Tür oder der Spalt ist zu groß.',
   },
   {

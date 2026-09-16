@@ -215,10 +215,11 @@ async function zeichne() {
   // solche Verweis auf der Uebersicht -- der Nutzer wird herausgeworfen,
   // statt in den Raum zu kommen.
   // "#/beispiel" oeffnet das Beispielprojekt direkt, fuer QR-Codes und den
-  // Knopf auf der Website.
-  if (weg === 'beispiel') {
+  // Knopf auf der Website. "#/beispiel/angebote" oeffnet es gleich in dem
+  // Bereich, um den es auf der Website gerade ging.
+  if (datei === 'beispiel') {
     const { beispielOeffnen } = await import('./beispiel.js');
-    await beispielOeffnen();
+    await beispielOeffnen(weg.slice('beispiel/'.length));
     return;
   }
 

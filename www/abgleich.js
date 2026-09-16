@@ -112,7 +112,9 @@ async function einarbeiten(hinein) {
  * Runter muss, was der Server kennt, hier aber nur als Angabe vorliegt.
  */
 async function bilderNachziehen(melden) {
-  const alle = await daten.alle('bilder');
+  // Die gezeichneten Bilder des Beispielprojekts bleiben auf dem Geraet,
+  // wie alles andere aus dem Beispiel.
+  const alle = (await daten.alle('bilder')).filter((b) => !istBeispielSatz('bilder', b));
 
   const hoch = alle.filter((b) => b.blob && !b.groesse).slice(0, BILDER_JE_RUNDE);
   const runter = alle.filter((b) => !b.blob && b.groesse > 0).slice(0, BILDER_JE_RUNDE);

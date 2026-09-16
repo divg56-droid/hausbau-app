@@ -18,7 +18,8 @@
     "regeln": "node test/baustellenregeln.mjs && node test/fristen.mjs && node test/eigenleistung.mjs && node test/estrich.mjs",
     "leitfaden-projekte": "node test/leitfadenProjekte.mjs",
     "installieren": "node test/installieren.mjs",
-    "analyse": "node test/analyse.mjs"
+    "analyse": "node test/analyse.mjs",
+    "beispiel": "node test/beispiel.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
