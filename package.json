@@ -16,7 +16,8 @@
     "anmeldung": "node test/anmeldung.mjs",
     "zwei-geraete": "node test/zweiGeraete.mjs",
     "regeln": "node test/baustellenregeln.mjs && node test/fristen.mjs && node test/eigenleistung.mjs && node test/estrich.mjs",
-    "leitfaden-projekte": "node test/leitfadenProjekte.mjs"
+    "leitfaden-projekte": "node test/leitfadenProjekte.mjs",
+    "installieren": "node test/installieren.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",

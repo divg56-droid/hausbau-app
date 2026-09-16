@@ -7,6 +7,8 @@
 import { el, leeren } from './hilfen.js';
 import { BEREICHE, MODULE } from './bereiche.js';
 import { bildUrlsFreigeben, datenZustand, DB_WARTET } from './daten.js';
+// Frueh laden: Das Installationsangebot des Browsers kommt einmal beim Start.
+import './installieren.js';
 
 export { BEREICHE, MODULE };
 

@@ -21,6 +21,7 @@ import {
   geheZu,
 } from '../hilfen.js';
 import { blattOeffnen } from '../blatt.js';
+import { installKarte } from '../installieren.js';
 import { daten, einstellung } from '../daten.js';
 import { projekteListe, projektAnlegen } from '../projekte.js';
 import { finanzierungsstand } from './finanzierung.js';
@@ -73,6 +74,7 @@ export async function zeige(rahmen) {
   if (!projekt) {
     anhaengen(
       rahmen,
+      installKarte({ vorDemStart: true }),
       willkommen(),
       hinweisKasten(
         'Links in der Leiste stehen alle Bereiche. Auf dem Telefon öffnest du sie ' +
@@ -90,6 +92,7 @@ export async function zeige(rahmen) {
     anhaengen(
       rahmen,
       kopfzeile(projekt, null),
+      installKarte(),
       projektkopf(art, leitfaden, todos, ort || {}, baubeginn),
       karte([
         el('h2', { text: 'Fang mit dem Geld an' }),
@@ -115,6 +118,7 @@ export async function zeige(rahmen) {
   anhaengen(
     rahmen,
     kopfzeile(projekt || 'Dein Bauprojekt', null),
+    installKarte(),
     projektkopf(art, leitfaden, todos, ort || {}, baubeginn),
     // Mehrere Projekte gibt es nur noch fuer den, der sie schon hat: Ein
     // Bauherr baut ein Haus, und ein Knopf fuer das zweite stand nur im Weg.

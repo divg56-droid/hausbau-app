@@ -1360,3 +1360,14 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
 
 /* Zwischentitel im Blatt, etwa "Vertrag und Fristen" unter den Kontaktdaten. */
 .blatt-zwischentitel { margin: 18px 0 4px; font-size: 15px; }
+
+/* Installationshinweis auf der Uebersicht. Nummern statt Punkte, weil die
+   Reihenfolge der Handgriffe zaehlt und man sie beim Tippen mitzaehlt. */
+.install-karte { border-left: 4px solid var(--akzent); }
+.install-schritte { list-style: none; margin: 10px 0 8px; padding: 0; display: grid; gap: 10px; }
+.install-schritte li { display: flex; gap: 12px; align-items: flex-start; line-height: 1.45; }
+.install-nr {
+  flex: none; width: 28px; height: 28px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--band); color: var(--tinte); font-weight: 700; font-size: 14px;
+}
