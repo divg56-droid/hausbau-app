@@ -293,6 +293,8 @@ async function zeigeRaum(rahmen, kennung) {
     ])
   );
 
+  materialpassZeigen(rahmen, raum, neu);
+
   if (raum.notiz) {
     anhaengen(rahmen, karte([el('h2', { text: 'Notiz' }), el('p', { text: raum.notiz })]));
   }
@@ -427,6 +429,9 @@ function raumBearbeiten(raum, geschosse, nachher) {
         flaeche: Math.max(0, zuZahl(flaeche.value)),
         notiz: notiz.value.trim(),
         bildIds: raum.bildIds || [],
+        // Der Materialpass haengt am Raum und wird hier nicht bearbeitet.
+        // Ohne diese Zeile waere er nach der ersten Namensaenderung weg.
+        material: raum.material || [],
         x: gleichesGeschoss ? (raum.x ?? null) : null,
         y: gleichesGeschoss ? (raum.y ?? null) : null,
       };
@@ -454,6 +459,113 @@ function raumBearbeiten(raum, geschosse, nachher) {
             // aus der Liste. Beide Male fuehrt der Weg zur Liste zurueck --
             // geheZu zeichnet auch dann neu, wenn sie schon offen ist.
             geheZu('#/raeume');
+          }
+        : null,
+    }
+  );
+}
+
+// ------------------------------------------------------------ Materialpass
+//
+// Was in zehn Jahren niemand mehr weiss: welche Fliese das war, welcher
+// Farbton, welcher Belag, welche Charge. Genau danach sucht man, wenn eine
+// Fliese springt oder eine Wand nachgestrichen werden muss.
+//
+// Deshalb ein kurzer Steckbrief je Raum, direkt am Raum gespeichert. Kein
+// eigener Speicher: Ohne den Raum waere der Eintrag sinnlos, und mit dem
+// Raum wandert er von selbst mit.
+
+const MATERIALARTEN = [
+  'Bodenbelag', 'Wandfliese', 'Bodenfliese', 'Wandfarbe', 'Tapete',
+  'Innentür', 'Fensterbank', 'Sockelleiste', 'Sanitär', 'Armatur',
+  'Leuchte', 'Sonstiges',
+];
+
+function materialpassZeigen(rahmen, raum, neu) {
+  const material = raum.material || [];
+  anhaengen(
+    rahmen,
+    karte([
+      el('h2', { text: `Materialpass (${material.length})` }),
+      el('p', {
+        klasse: 'unterzeile',
+        text: 'Farbton, Produkt und Charge. Wer in zehn Jahren eine Fliese ersetzt oder ' +
+              'eine Wand nachstreicht, sucht genau diese Angaben.',
+      }),
+      material.length
+        ? el('ul', { klasse: 'liste' }, material.map((m, i) =>
+            el('li', {}, [
+              el('button', {
+                klasse: 'listenzeile', type: 'button',
+                onclick: () => materialBearbeiten(raum, i, neu),
+              }, [
+                el('span', { klasse: 'zeilen-text' }, [
+                  el('span', { klasse: 'zeilen-titel', text: m.produkt || m.art }),
+                  el('span', {
+                    klasse: 'zeilen-unter',
+                    text: [
+                      m.produkt ? m.art : null,
+                      m.farbe ? 'Farbe ' + m.farbe : null,
+                      m.charge ? 'Charge ' + m.charge : null,
+                      m.menge || null,
+                      m.notiz || null,
+                    ].filter(Boolean).join(' · ') || 'ohne weitere Angaben',
+                  }),
+                ]),
+              ]),
+            ])
+          ))
+        : el('p', { klasse: 'unterzeile', text: 'Noch nichts eingetragen.' }),
+      knopf('Material eintragen', () => materialBearbeiten(raum, -1, neu),
+        material.length ? 'knopf' : 'knopf-haupt'),
+    ])
+  );
+}
+
+/** Eintrag anlegen oder aendern. Index -1 heisst: neu. */
+function materialBearbeiten(raum, index, nachher) {
+  const vorhanden = index >= 0 ? (raum.material || [])[index] : {};
+  const eintrag = vorhanden || {};
+  const art = auswahl(MATERIALARTEN.map((a) => [a, a]), eintrag.art || 'Bodenbelag');
+  const produkt = eingabe({ value: eintrag.produkt || '', placeholder: 'Hersteller und Bezeichnung' });
+  const farbe = eingabe({ value: eintrag.farbe || '', placeholder: 'z. B. RAL 9010 oder Farbton laut Karte' });
+  const charge = eingabe({ value: eintrag.charge || '', placeholder: 'Charge oder Serie' });
+  const menge = eingabe({ value: eintrag.menge || '', placeholder: 'z. B. 24 m², Rest im Keller' });
+  const notiz = el('textarea', {}, [eintrag.notiz || '']);
+
+  blattOeffnen(
+    index >= 0 ? 'Material ändern' : 'Material eintragen',
+    [
+      feld('Art', art),
+      feld('Produkt', produkt, 'So, wie es auf der Rechnung oder auf der Verpackung steht.'),
+      feld('Farbe oder Dekor', farbe),
+      feld('Charge', charge, 'Bei Fliesen und Parkett der Unterschied zwischen passt und passt fast.'),
+      feld('Menge und Rest', menge, 'Wie viel verlegt wurde und wo der Rest liegt.'),
+      feld('Notiz', notiz),
+    ],
+    async () => {
+      const wert = {
+        art: art.value,
+        produkt: produkt.value.trim(),
+        farbe: farbe.value.trim(),
+        charge: charge.value.trim(),
+        menge: menge.value.trim(),
+        notiz: notiz.value.trim(),
+      };
+      if (!wert.produkt && !wert.farbe && !wert.charge) {
+        throw new Error('Bitte wenigstens Produkt, Farbe oder Charge eintragen.');
+      }
+      const liste = [...(raum.material || [])];
+      if (index >= 0) liste[index] = wert; else liste.push(wert);
+      await daten.sichern('raeume', { ...raum, material: liste });
+      await nachher();
+    },
+    {
+      loeschen: index >= 0
+        ? async () => {
+            const liste = (raum.material || []).filter((_, i) => i !== index);
+            await daten.sichern('raeume', { ...raum, material: liste });
+            await nachher();
           }
         : null,
     }

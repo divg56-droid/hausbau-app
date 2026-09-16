@@ -24,6 +24,18 @@ export function plusJahre(iso, jahre) {
   return d.toISOString().slice(0, 10);
 }
 
+/* ISO-Datum plus ganze Monate.
+ *
+ * Fuer die wiederkehrende Wartung: Der 31. Maerz plus einen Monat ist der
+ * 30. April und nicht der 1. Mai. Ohne diese Korrektur wandert ein Termin
+ * am Monatsende ueber die Jahre immer weiter nach vorn. */
+export function plusMonate(iso, monate) {
+  const [j, m, t] = iso.split('-').map(Number);
+  const d = new Date(Date.UTC(j, m - 1 + monate, t));
+  if (d.getUTCDate() !== t) d.setUTCDate(0);
+  return d.toISOString().slice(0, 10);
+}
+
 const TAG = 86400000;
 export const tageBis = (von, bis) =>
   Math.round((new Date(bis + 'T00:00:00Z') - new Date(von + 'T00:00:00Z')) / TAG);

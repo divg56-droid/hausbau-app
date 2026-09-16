@@ -21,6 +21,7 @@ import {
 import { daten } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
 import { VORLAGEN } from '../checklisten-daten.js';
+import { plusMonate } from '../fristen.js';
 
 /**
  * Sortiert Aufgaben so, wie man sie abarbeitet.
@@ -317,7 +318,12 @@ async function vorlageLaden(vorlage, nachher) {
     const p = typeof punkt === 'string' ? { titel: punkt } : punkt;
     await daten.sichern('todos', {
       titel: p.titel, warum: p.warum || '', tun: p.tun || '',
-      notiz: '', liste: vorlage.titel, erledigt: false, am: null, faellig: null,
+      notiz: '', liste: vorlage.titel, erledigt: false, am: null,
+      // Wiederkehrende Punkte bekommen ihr Intervall mit und gleich den
+      // ersten Termin. Ohne Datum stuende die Wartung ganz unten und waere
+      // damit genau das, was sie nicht sein soll: unsichtbar.
+      intervall: p.intervall || null,
+      faellig: p.intervall ? plusMonate(heute(), p.intervall) : null,
     });
   }
   melde(vorlage.punkte.length + ' Punkte angelegt.');
@@ -393,6 +399,7 @@ function zeile(todo, raeume, neu, mitListe) {
               ? (spaet ? 'überfällig seit ' : 'fällig ') + datumLang(todo.faellig)
               : null,
             todo.warum || null,
+            todo.intervall ? 'alle ' + todo.intervall + ' Monate' : null,
             (raeume.find((r) => r.id === todo.raumId) || {}).name || null,
             mitListe && todo.liste ? todo.liste : null,
             todo.erledigt && todo.am ? 'erledigt am ' + datumLang(todo.am) : null,
@@ -422,8 +429,25 @@ function zeile(todo, raeume, neu, mitListe) {
   ]);
 }
 
+/*
+ * Haken setzen oder wegnehmen.
+ *
+ * Bei einer wiederkehrenden Aufgabe entsteht beim Abhaken gleich die
+ * naechste, gerechnet ab heute und nicht ab dem alten Termin: Wer die
+ * Dachrinne zwei Monate zu spaet reinigt, will in einem halben Jahr wieder
+ * heran und nicht in vier Monaten. Die erledigte bleibt als Nachweis stehen,
+ * dass die Wartung gelaufen ist.
+ */
 async function abhaken(todo, erledigt, nachher) {
   await daten.sichern('todos', { ...todo, erledigt, am: erledigt ? heute() : null });
+  if (erledigt && todo.intervall > 0) {
+    const naechster = plusMonate(heute(), todo.intervall);
+    const { id, ...ohneKennung } = todo;
+    await daten.sichern('todos', {
+      ...ohneKennung, erledigt: false, am: null, faellig: naechster,
+    });
+    melde('Erledigt. Nächster Termin: ' + datumLang(naechster) + '.');
+  }
   await nachher();
 }
 
@@ -456,6 +480,9 @@ function bearbeiten(todo, raeume, nachher) {
         // sind sie nach der ersten Aenderung weg.
         ...(todo.warum ? { warum: todo.warum } : {}),
         ...(todo.tun ? { tun: todo.tun } : {}),
+        // Das Wartungsintervall gehoert zur Aufgabe und nicht in das
+        // Formular: Wer es aendern will, aendert es dort, wo es steht.
+        ...(todo.intervall ? { intervall: todo.intervall } : {}),
         titel: titel.value.trim(),
         faellig: faellig.value || null,
         liste: liste.value.trim(),

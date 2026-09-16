@@ -300,6 +300,10 @@ async function zeigeBebauung(rahmen) {
   const flaeche = zahlfeld({ value: String(gemerkt.flaeche ?? 600) });
   const grz = zahlfeld({ value: String(gemerkt.grz ?? 0.4).replace('.', ',') });
   const gfz = zahlfeld({ value: String(gemerkt.gfz ?? 0.8).replace('.', ',') });
+  // Der eigene Entwurf gegen die Vorgabe. Leer heisst: noch offen, dann
+  // rechnet die App nur die Grenzen aus und urteilt nicht.
+  const geplant = zahlfeld({ value: gemerkt.geplant ? String(gemerkt.geplant) : '' });
+  const neben = zahlfeld({ value: gemerkt.neben ? String(gemerkt.neben) : '' });
 
   const ausgabe = el('div');
 
@@ -308,8 +312,11 @@ async function zeigeBebauung(rahmen) {
       flaeche: Math.max(0, zuZahl(flaeche.value)),
       grz: Math.max(0, zuZahl(grz.value)),
       gfz: Math.max(0, zuZahl(gfz.value)),
+      geplant: Math.max(0, zuZahl(geplant.value)),
+      neben: Math.max(0, zuZahl(neben.value)),
     };
     const r = bebauung(eingaben);
+    const ampel = bebauungAmpel(eingaben, r);
 
     ausgabe.replaceChildren(
       karte([
@@ -349,13 +356,14 @@ async function zeigeBebauung(rahmen) {
           'das Dachgeschoss zählen anders. Als Faustzahl bleiben rund 80 Prozent ' +
           'der Geschossfläche als Wohnfläche übrig.',
         'info'
-      )
+      ),
+      ampel ? hinweisKasten(ampel.text, ampel.art) : null
     );
 
     await einstellung('bebauung_eingabe', eingaben);
   }
 
-  for (const f of [flaeche, grz, gfz]) {
+  for (const f of [flaeche, grz, gfz, geplant, neben]) {
     f.addEventListener('input', rechnen);
     f.addEventListener('change', rechnen);
   }
@@ -368,10 +376,64 @@ async function zeigeBebauung(rahmen) {
       feld('Grundflächenzahl GRZ', grz, 'Anteil der Fläche, den das Gebäude überdecken darf. Üblich 0,3 bis 0,4.'),
       feld('Geschossflächenzahl GFZ', gfz, 'Anteil, den alle Vollgeschosse zusammen haben dürfen. Üblich 0,6 bis 1,0.'),
     ]),
+    karte([
+      el('h2', { text: 'Dein Entwurf' }),
+      el('p', {
+        klasse: 'unterzeile',
+        text: 'Trag ein, was geplant ist, und die App sagt, ob es in den Rahmen passt. ' +
+          'Leer lassen, solange der Entwurf offen ist.',
+      }),
+      feld('Geplante Grundfläche des Hauses in m²', geplant, 'Außenkante Erdgeschoss.'),
+      feld('Garage, Stellplätze und Zufahrt in m²', neben, 'Alles, was versiegelt wird und nicht Haus ist.'),
+    ]),
     ausgabe
   );
 
   await rechnen();
+}
+
+/*
+ * Passt der Entwurf in den Rahmen?
+ *
+ * Zwei Grenzen, nicht eine: das Haus gegen die Grundflaechenzahl, Haus samt
+ * Garage und Zufahrt gegen die erhoehte. Wer nur die erste prueft, merkt
+ * erst beim Pflastern, dass die Einfahrt nicht mehr hineingeht.
+ */
+function bebauungAmpel(eingaben, r) {
+  const geplant = eingaben.geplant || 0;
+  const neben = eingaben.neben || 0;
+  if (!geplant && !neben) return null;
+
+  const gesamt = geplant + neben;
+  if (geplant > r.grundflaeche + 0.5) {
+    return {
+      art: 'warn',
+      text: 'Das Haus überschreitet die zulässige Grundfläche um ' +
+        zahl(geplant - r.grundflaeche, 0) + ' m². So ist es an dieser Stelle nicht ' +
+        'genehmigungsfähig, es sei denn, die Gemeinde erteilt eine Befreiung.',
+    };
+  }
+  if (gesamt > r.grundflaecheMitNebenanlagen + 0.5) {
+    return {
+      art: 'warn',
+      text: 'Haus, Garage und Zufahrt zusammen liegen ' +
+        zahl(gesamt - r.grundflaecheMitNebenanlagen, 0) + ' m² über der Grenze aus ' +
+        '§ 19 Abs. 4 BauNVO. Meist ist die Zufahrt der Posten, der sich verkleinern lässt.',
+    };
+  }
+  if (gesamt > r.grundflaecheMitNebenanlagen * 0.95) {
+    return {
+      art: 'info',
+      text: 'Das passt, aber knapp: Bis zur Grenze bleiben ' +
+        zahl(r.grundflaecheMitNebenanlagen - gesamt, 0) + ' m² für Terrasse, Wege und ' +
+        'Gartenhaus. Prüfe im Bebauungsplan, was davon mitzählt.',
+    };
+  }
+  return {
+    art: 'info',
+    text: 'Das passt. Für Haus und Nebenanlagen bleiben ' +
+      zahl(r.grundflaecheMitNebenanlagen - gesamt, 0) + ' m² Luft bis zur Grenze.',
+  };
 }
 
 // ------------------------------------------------------------ Kreditvergleich

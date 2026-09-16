@@ -380,6 +380,7 @@ const PROJEKTSACHEN = new Set([
   'wetter_stand',
   // Die Eingaben der Rechner beschreiben dieses Haus, nicht dieses Geraet.
   'baukosten_eingabe', 'nebenkosten_eingabe', 'finanzierung_kosten', 'fussboden_eingabe',
+  'bebauung_eingabe',
 ]);
 
 let aktivesProjekt = null;

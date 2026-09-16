@@ -1014,7 +1014,14 @@ console.log('To-Dos und Checklisten');
 
   // Die Vorlage wird in echte Eintraege kopiert; der Listenname ist der
   // Schluessel, ueber den sie danach zusammenbleiben.
-  pruef('Dreizehn Vorlagen', VORLAGEN.length === 13, String(VORLAGEN.length));
+  pruef('Vierzehn Vorlagen', VORLAGEN.length === 14, String(VORLAGEN.length));
+  // Die Wartungsliste ist die einzige mit Intervallen. Fehlt eines, stuende
+  // der Punkt einmal da und meldete sich nie wieder.
+  const wartung = VORLAGEN.find((v) => v.wartung);
+  pruef('Die Wartungsliste hat zu jedem Punkt ein Intervall',
+    !!wartung && wartung.punkte.every((p) => p.intervall > 0 && p.titel && p.warum && p.tun));
+  pruef('Nur die Wartungsliste hat Intervalle',
+    VORLAGEN.filter((v) => v.punkte.some((p) => p.intervall)).length === 1);
   pruef('Jede Vorlage hat Titel, Text und Punkte',
     VORLAGEN.every((v) => v.titel && v.text && v.punkte.length >= 5));
   pruef('Keine Vorlage doppelt', new Set(VORLAGEN.map((v) => v.titel)).size === VORLAGEN.length);
