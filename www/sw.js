@@ -61,6 +61,7 @@ const SCHALE = [
   './baustellenregeln.js',
   './fristen.js',
   './eigenleistung.js',
+  './estrich.js',
   './unterschrift.js',
   './wetter.js',
   './module/ablauf.js',

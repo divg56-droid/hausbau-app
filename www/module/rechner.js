@@ -1,11 +1,12 @@
-// Drei Rechner, die vor dem Kauf gebraucht werden. Jeder steht einzeln in der
+// Vier Rechner, die eine Entscheidung vorbereiten. Jeder steht einzeln in der
 // Seitenleiste und kommt als Unterweg hier an: "#/rechner/flaechen".
 //
 //   Kaufnebenkosten   Was zum Kaufpreis dazukommt, bevor das Haus steht
 //   Bebauung          Was auf das Grundstueck ueberhaupt darf, GRZ und GFZ
 //   Kreditvergleich   Zwei bis vier Angebote nebeneinander
+//   Fussbodenaufbau   Was der Boden Tuerhoehe und Bruestung wegnimmt
 //
-// Alle drei rechnen nur und speichern nichts ausser der letzten Eingabe. Sie
+// Alle vier rechnen nur und speichern nichts ausser der letzten Eingabe. Sie
 // beantworten Fragen, die man einmal stellt und dann entschieden hat.
 
 import {
@@ -17,6 +18,7 @@ import {
 import { einstellung } from '../daten.js';
 import { LAENDER } from './baukosten.js';
 import { annuitaet } from './finanzierung.js';
+import { SCHICHTEN, aufbauRechnen } from '../estrich.js';
 
 // Uebliche Saetze, Stand 2026. Sie stehen offen hier, damit man sie
 // nachschlagen und ueberschreiben kann; jeder Notar rechnet etwas anders.
@@ -82,7 +84,123 @@ export function bebauung({ flaeche, grz, gfz }) {
 export async function zeige(rahmen, unterweg) {
   if (unterweg === 'flaechen') return zeigeBebauung(rahmen);
   if (unterweg === 'kredite') return zeigeKredite(rahmen);
+  if (unterweg === 'fussboden') return zeigeFussboden(rahmen);
   return zeigeNebenkosten(rahmen);
+}
+
+// ----------------------------------------------------------- Fussbodenaufbau
+
+/*
+ * Der Aufbau des Fussbodens ist die unscheinbarste Zahl des Innenausbaus und
+ * die mit den meisten Folgen: Er bestimmt, wie hoch die Innentuer noch ist,
+ * wie hoch die Fensterbruestung bleibt und ob die Terrassentuer eine Stufe
+ * bekommt. Wer den Belag erst nach dem Rohbau waehlt, verschiebt alle drei.
+ *
+ * Gerechnet wird deshalb nicht der Boden, sondern das, was er den anderen
+ * Bauteilen wegnimmt. Mindesthoehen nennt der Rechner nicht: Sie stehen in
+ * der Landesbauordnung und sind je Land verschieden.
+ */
+async function zeigeFussboden(rahmen) {
+  const gemerkt = (await einstellung('fussboden_eingabe')) || {};
+  const felder = {};
+  for (const sch of SCHICHTEN) {
+    felder[sch.schluessel] = zahlfeld({ value: String(gemerkt[sch.schluessel] ?? sch.vorgabe) });
+  }
+  const geplant = zahlfeld({ value: String(gemerkt.geplant ?? 0) });
+  const rohbauTuer = zahlfeld({ value: String(gemerkt.rohbauTuer ?? 0) });
+  const rohbauBruestung = zahlfeld({ value: String(gemerkt.rohbauBruestung ?? 0) });
+
+  const ausgabe = el('div');
+
+  async function rechnen() {
+    const eingaben = { geplant: zuZahl(geplant.value), rohbauTuer: zuZahl(rohbauTuer.value), rohbauBruestung: zuZahl(rohbauBruestung.value) };
+    for (const sch of SCHICHTEN) eingaben[sch.schluessel] = zuZahl(felder[sch.schluessel].value);
+    const r = aufbauRechnen(eingaben);
+
+    const zeilen = [
+      el('h2', { text: 'Aufbauhöhe' }),
+      el('div', { klasse: 'wertzeile stark' }, [
+        el('span', { text: 'Rohdecke bis Oberkante Boden' }),
+        el('strong', { text: zahl(r.aufbau, 0) + ' mm' }),
+      ]),
+      ...r.schichten
+        .filter((s) => s.wert > 0)
+        .map((s) => wertzeile(s.name, zahl(s.wert, 0) + ' mm')),
+    ];
+
+    if (r.abweichung !== 0) {
+      zeilen.push(wertzeile(
+        r.abweichung > 0 ? 'Höher als geplant' : 'Niedriger als geplant',
+        zahl(Math.abs(r.abweichung), 0) + ' mm'
+      ));
+    }
+    if (r.tuerhoehe > 0) {
+      zeilen.push(el('div', { klasse: 'wertzeile stark' }, [
+        el('span', { text: 'Lichte Türhöhe danach' }),
+        el('strong', { text: zahl(r.tuerhoehe, 0) + ' mm' }),
+      ]));
+    }
+    if (r.bruestungshoehe > 0) {
+      zeilen.push(el('div', { klasse: 'wertzeile stark' }, [
+        el('span', { text: 'Brüstungshöhe danach' }),
+        el('strong', { text: zahl(r.bruestungshoehe, 0) + ' mm' }),
+      ]));
+    }
+
+    ausgabe.replaceChildren(
+      karte(zeilen),
+      r.abweichung > 0
+        ? hinweisKasten(
+            'Der Aufbau wird ' + zahl(r.abweichung, 0) + ' mm höher als im Rohbau vorgesehen. ' +
+              'Das geht zulasten von Türhöhe, Brüstung und der Schwelle zur Terrasse. ' +
+              'Vor der Bestellung mit dem Bauleiter klären.',
+            'warn'
+          )
+        : null,
+      r.tuerhoehe > 0
+        ? hinweisKasten(
+            'Türblätter werden in festen Höhen gefertigt. Gib die Höhe an den Türenlieferanten ' +
+              'weiter, bevor er aufmisst, sonst schleift die Tür oder es bleibt ein Spalt.',
+            'info'
+          )
+        : null,
+      r.bruestungshoehe > 0
+        ? hinweisKasten(
+            'Jeder Millimeter Aufbau senkt die Brüstung. Welche Höhe zur Absturzsicherung ' +
+              'nötig ist, steht in der Landesbauordnung und im Fensterplan. Diese Zahl gehört ' +
+              'zum Planer, nicht zum Bauchgefühl.',
+            'info'
+          )
+        : null
+    );
+
+    await einstellung('fussboden_eingabe', eingaben);
+  }
+
+  const alle = [...Object.values(felder), geplant, rohbauTuer, rohbauBruestung];
+  for (const f of alle) {
+    f.addEventListener('input', rechnen);
+    f.addEventListener('change', rechnen);
+  }
+
+  anhaengen(
+    rahmen,
+    kopfzeile('Fußbodenaufbau', 'Was der Boden der Tür, der Brüstung und der Schwelle wegnimmt.'),
+    karte([
+      el('h2', { text: 'Schichten in Millimetern' }),
+      ...SCHICHTEN.map((sch) => feld(sch.name, felder[sch.schluessel])),
+    ]),
+    karte([
+      el('h2', { text: 'Wogegen gerechnet wird' }),
+      feld('Im Rohbau vorgesehener Aufbau', geplant,
+        'Steht in der Baubeschreibung oder im Schnitt. Null lassen, wenn unbekannt.'),
+      feld('Türöffnung über Rohdecke', rohbauTuer, 'Lichte Höhe der Rohbauöffnung, in mm.'),
+      feld('Fensterbrüstung über Rohdecke', rohbauBruestung, 'Höhe der Brüstung im Rohbau, in mm.'),
+    ]),
+    ausgabe
+  );
+
+  await rechnen();
 }
 
 // ------------------------------------------------------------ Kaufnebenkosten

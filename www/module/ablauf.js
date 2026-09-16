@@ -17,6 +17,10 @@ import { Blatt, pdfTeilen, A4, RAND, INNEN } from '../pdf.js';
 import {
   faelligeFotos, fotoregelFuer, reihenfolgeWarnungen, wetterWarnungen,
 } from '../baustellenregeln.js';
+import {
+  trocknungStand, belagOhneFreigabe, ESTRICHARTEN,
+} from '../estrich.js';
+import { fotofeld } from '../fotos.js';
 
 export const PHASEN = [
   'Vorbereitung', 'Erdarbeiten', 'Rohbau', 'Dach', 'Fenster und Türen',
@@ -183,8 +187,9 @@ export async function zeige(rahmen) {
 
 async function zeichne(rahmen, ansicht = 'liste') {
   rahmen.replaceChildren();
-  const [roh, kontakte, maengel] = await Promise.all([
+  const [roh, kontakte, maengel, trocknung] = await Promise.all([
     daten.alle('aufgaben'), daten.alle('kontakte'), daten.alle('maengel'),
+    einstellung('estrich_trocknung'),
   ]);
   const neu = () => zeichne(rahmen, ansicht);
 
@@ -251,7 +256,8 @@ async function zeichne(rahmen, ansicht = 'liste') {
     anhaengen(rahmen, hinweisKasten('Noch kein Startdatum gesetzt. Trage es bei der ersten Aufgabe ein, der Rest rechnet sich daraus.', 'info'));
   }
 
-  hinweiseZeigen(rahmen, aufgaben, neu);
+  hinweiseZeigen(rahmen, aufgaben, neu, trocknung);
+  trocknungZeigen(rahmen, aufgaben, trocknung, neu);
 
   if (ansicht === 'balken') {
     zeigeBalken(rahmen, aufgaben, roh, kontakte, maengel, neu);
@@ -311,7 +317,7 @@ async function zeichne(rahmen, ansicht = 'liste') {
 // das Wetter einen Schritt gefaehrdet. Die Regeln stehen in
 // baustellenregeln.js; hier wird nur gezeigt.
 
-function hinweiseZeigen(rahmen, aufgaben, neu) {
+function hinweiseZeigen(rahmen, aufgaben, neu, trocknung) {
   for (const { aufgabe, regel, inTagen } of faelligeFotos(aufgaben, heute())) {
     const wann = aufgabe.status === 'laeuft' || inTagen <= 0
       ? 'läuft bereits'
@@ -362,6 +368,20 @@ function hinweiseZeigen(rahmen, aufgaben, neu) {
     );
   }
 
+  // Der Boden vor der Freigabe. Eigene Warnung und keine Reihenfolgeregel:
+  // Hier stimmt die Reihenfolge im Plan, es fehlt die Messung dazwischen.
+  for (const w of belagOhneFreigabe(aufgaben, trocknung, heute())) {
+    anhaengen(
+      rahmen,
+      hinweisKasten(
+        `„${w.aufgabe.titel}“ ${w.inTagen <= 0 ? 'läuft bereits' : 'beginnt in ' + w.inTagen + ' Tagen'}, ` +
+          `obwohl ${w.grund}. Der Bodenleger misst die Belegreife und bestätigt sie schriftlich. ` +
+          'Ein Belag auf zu feuchtem Estrich ist ein Schaden, den niemand ersetzt.',
+        'warn'
+      )
+    );
+  }
+
   // Das Wetter kommt aus dem Netz. Der Kasten steht sofort da und fuellt sich,
   // damit der Plan nicht auf einen fremden Dienst wartet.
   const wetterplatz = el('div');
@@ -387,6 +407,189 @@ function hinweiseZeigen(rahmen, aufgaben, neu) {
       // Ohne Netz keine Vorhersage und damit keine Warnung. Der Plan steht trotzdem.
     }
   })();
+}
+
+// --------------------------------------------------- Estrich und Belegreife
+//
+// Die Karte steht im Bauablauf und nicht in einem eigenen Bereich: Sie
+// gehoert zu genau einem Zeitraum des Baus und ist danach erledigt. Sie
+// erscheint, sobald ein Estrichschritt im Plan steht, und verschwindet nie
+// wieder, weil die Freigabe auch spaeter noch der Beleg ist.
+//
+// Gespeichert wird in der Einstellung "estrich_trocknung" des Projekts:
+// ein Satz je Bau, keine Liste, kein eigener Speicher.
+
+function trocknungZeigen(rahmen, aufgaben, trocknung, neu) {
+  const gibtEstrich = aufgaben.some((a) => /estrich/.test(String(a.titel || '').toLowerCase()));
+  const plan = trocknung || {};
+  if (!gibtEstrich && !plan.eingebaut) return;
+
+  const stand = trocknungStand(plan, heute());
+  const art = (ESTRICHARTEN.find(([w]) => w === plan.art) || [])[1];
+  const sichern = async (wert) => {
+    await einstellung('estrich_trocknung', wert);
+    await neu();
+  };
+
+  anhaengen(
+    rahmen,
+    karte([
+      el('h2', { text: 'Estrich und Belegreife' }),
+      el('p', {
+        klasse: 'unterzeile',
+        text: stand.freigegeben
+          ? 'Freigegeben am ' + datumLang(plan.freigabe.datum) +
+            (plan.freigabe.durch ? ' durch ' + plan.freigabe.durch : '') + '.'
+          : 'Der Belag wartet nicht auf ein Datum, sondern auf die gemessene Belegreife.',
+      }),
+      el('ul', { klasse: 'liste' }, stand.schritte.map((s) =>
+        el('li', {}, [
+          el('div', { klasse: 'leitfaden-zeile' }, [
+            el('span', {
+              klasse: 'marke ' + (s.stufe === 'fertig' ? 'marke-fertig' : 'marke-offen'),
+              text: s.stufe === 'fertig' ? 'erledigt' : 'offen',
+            }),
+            el('div', { klasse: 'zeilen-text' }, [
+              el('span', { klasse: 'zeilen-titel', text: s.text }),
+              el('span', { klasse: 'zeilen-unter', text: trocknungZeile(s.schluessel, plan, stand, art) }),
+            ]),
+          ]),
+        ])
+      )),
+      knopf(plan.eingebaut ? 'Trocknung ändern' : 'Estrich eintragen',
+        () => trocknungBearbeiten(plan, sichern), plan.eingebaut ? 'knopf' : 'knopf-haupt'),
+      plan.eingebaut ? knopf('Messung eintragen', () => messungBearbeiten(plan, sichern)) : null,
+      plan.eingebaut && !stand.freigegeben
+        ? knopf('Belegreife freigeben', () => freigabeBearbeiten(plan, sichern), 'knopf-haupt')
+        : null,
+    ]),
+    hinweisKasten(
+      'Wann ein Estrich belegreif ist, hängt von Estrichart, Dicke, Aufbau und Belag ab. ' +
+        'Gemessen wird vor dem Verlegen, üblicherweise vom Bodenleger, und das Ergebnis ' +
+        'gehört schriftlich zu deinen Unterlagen. Die App rechnet hier nichts aus, sie hält fest.',
+      'info'
+    )
+  );
+}
+
+/** Die Unterzeile je Schritt: was dazu bekannt ist. */
+function trocknungZeile(schluessel, plan, stand, art) {
+  if (schluessel === 'eingebaut') {
+    if (!plan.eingebaut) return 'Tag, an dem der Estrich eingebracht wurde.';
+    return [
+      datumLang(plan.eingebaut),
+      stand.tage !== null ? 'vor ' + stand.tage + ' Tagen' : null,
+      art || null,
+    ].filter(Boolean).join(' · ');
+  }
+  if (schluessel === 'heizen') {
+    if (!plan.heizbeginn) return 'Das Protokoll ist Voraussetzung für die Arbeit des Bodenlegers.';
+    return datumLang(plan.heizbeginn) +
+      (stand.heiztage !== null ? ' · seit ' + stand.heiztage + ' Tagen' : '');
+  }
+  if (schluessel === 'messung') {
+    if (!stand.letzte) return 'Feuchte messen lassen, bevor ein Termin für den Belag steht.';
+    return [
+      datumLang(stand.letzte.datum),
+      stand.letzte.wert ? String(stand.letzte.wert).replace('.', ',') + ' %' : null,
+      stand.letzte.raum || null,
+      stand.messungen > 1 ? stand.messungen + ' Messungen' : null,
+    ].filter(Boolean).join(' · ');
+  }
+  if (!plan.freigabe || !plan.freigabe.datum) {
+    return 'Erst danach wird verlegt. Ohne Freigabe trägst du den Schaden selbst.';
+  }
+  return datumLang(plan.freigabe.datum) +
+    (plan.freigabe.durch ? ' · ' + plan.freigabe.durch : '');
+}
+
+function trocknungBearbeiten(plan, sichern) {
+  const eingebaut = el('input', { type: 'date', value: plan.eingebaut || heute() });
+  const art = auswahl(ESTRICHARTEN, plan.art || 'unbekannt');
+  const heizbeginn = el('input', { type: 'date', value: plan.heizbeginn || '' });
+
+  blattOeffnen(
+    'Estrich und Trocknung',
+    [
+      feld('Eingebaut am', eingebaut, 'Der Tag, an dem der Estrich kam.'),
+      feld('Estrichart', art, 'Steht in der Baubeschreibung oder auf dem Lieferschein.'),
+      feld('Funktionsheizen begonnen am', heizbeginn,
+        'Leer lassen, solange nicht geheizt wurde. Das Protokoll kommt von der Heizungsfirma.'),
+    ],
+    async () => {
+      if (!eingebaut.value) throw new Error('Bitte den Einbautag eintragen.');
+      await sichern({
+        ...plan,
+        eingebaut: eingebaut.value,
+        art: art.value,
+        heizbeginn: heizbeginn.value || null,
+      });
+    }
+  );
+}
+
+function messungBearbeiten(plan, sichern) {
+  const datum = el('input', { type: 'date', value: heute() });
+  const wert = zahlfeld({ placeholder: 'z. B. 2,4' });
+  const raum = eingabe({ placeholder: 'z. B. Wohnen EG' });
+  const bilder = [];
+  const bild = fotofeld(bilder, () => {}, { text: 'Foto vom Messgerät oder Protokoll', mehrere: true });
+
+  blattOeffnen(
+    'Messung eintragen',
+    [
+      feld('Gemessen am', datum),
+      feld('Messwert in Prozent', wert, 'So, wie er im Protokoll steht. Das Verfahren notierst du beim Raum.'),
+      feld('Raum oder Messstelle', raum),
+      el('span', { klasse: 'feld-name', text: 'Beleg' }),
+      bild,
+    ],
+    async () => {
+      const messungen = [...(plan.messungen || []), {
+        datum: datum.value || heute(),
+        wert: zuZahl(wert.value) || null,
+        raum: raum.value.trim(),
+        bildIds: bilder,
+      }];
+      await sichern({ ...plan, messungen });
+      melde('Messung festgehalten.');
+    }
+  );
+}
+
+function freigabeBearbeiten(plan, sichern) {
+  const datum = el('input', { type: 'date', value: heute() });
+  const durch = eingabe({ placeholder: 'z. B. Bodenleger Meier' });
+  const bilder = [];
+  const bild = fotofeld(bilder, () => {}, { text: 'Freigabe anhängen', mehrere: true, pdfErlaubt: true });
+
+  blattOeffnen(
+    'Belegreife freigeben',
+    [
+      feld('Freigegeben am', datum),
+      feld('Durch', durch, 'Wer die Belegreife bestätigt hat.'),
+      el('span', { klasse: 'feld-name', text: 'Schriftliche Freigabe' }),
+      bild,
+      hinweisKasten(
+        'Erst mit dieser Freigabe verschwindet die Warnung vor dem Bodenbelag. ' +
+          'Trag sie nur ein, wenn sie dir wirklich vorliegt.',
+        'info'
+      ),
+    ],
+    async () => {
+      if (!durch.value.trim()) throw new Error('Bitte eintragen, wer freigegeben hat.');
+      await sichern({
+        ...plan,
+        freigabe: { datum: datum.value || heute(), durch: durch.value.trim(), bildIds: bilder },
+      });
+      melde('Freigabe abgelegt.');
+    },
+    {
+      loeschen: plan.freigabe && plan.freigabe.datum
+        ? async () => sichern({ ...plan, freigabe: null })
+        : null,
+    }
+  );
 }
 
 /** Ein Arbeitsschritt ohne die gerechneten Felder, so wie er gespeichert ist. */

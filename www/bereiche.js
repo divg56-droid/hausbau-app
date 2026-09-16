@@ -115,6 +115,8 @@ export const BEREICHE = [
         text: 'Grunderwerbsteuer, Notar, Makler: was zum Kaufpreis dazukommt.' },
       { weg: 'rechner/flaechen', titel: 'GRZ und GFZ',
         text: 'Was auf das Grundstück überhaupt gebaut werden darf.' },
+      { weg: 'rechner/fussboden', titel: 'Fußbodenaufbau',
+        text: 'Wie hoch der Boden wird und was das für Türen und Brüstungen heißt.' },
     ],
   },
   {

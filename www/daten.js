@@ -374,10 +374,12 @@ const OHNE_PROJEKT = new Set(['einstellungen', 'projekte', 'bilder']);
 const PROJEKTSACHEN = new Set([
   'projektname', 'baustelle', 'baubeginn', 'leitfaden_punkt', 'bauweise', 'bauphase',
   'eigenleistungen', 'eigenleistung_plan',
+  // Die Spur der Estrichtrocknung gehoert zum Haus, nicht zum Geraet.
+  'estrich_trocknung',
   // Der gemerkte Wetterwert haengt an der Baustelle, also am Projekt.
   'wetter_stand',
   // Die Eingaben der Rechner beschreiben dieses Haus, nicht dieses Geraet.
-  'baukosten_eingabe', 'nebenkosten_eingabe', 'finanzierung_kosten',
+  'baukosten_eingabe', 'nebenkosten_eingabe', 'finanzierung_kosten', 'fussboden_eingabe',
 ]);
 
 let aktivesProjekt = null;
