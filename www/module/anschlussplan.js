@@ -29,6 +29,10 @@ export const PIN_ARTEN = {
   abfluss:    { name: 'Abfluss',        zeichen: '\u{1F30A}', farbe: '#0891b2' },
   heizung:    { name: 'Heizkörper',     zeichen: '\u{1F525}', farbe: '#dc2626' },
   leerrohr:   { name: 'Leerrohr',       zeichen: '\u{27B0}', farbe: '#4b5563' },
+  // Wo im Staenderwerk eine Latte oder Platte sitzt, haelt spaeter der
+  // Haengeschrank. Nach dem Beplanken sieht man es nie wieder, und gebohrt
+  // wird dann auf gut Glueck.
+  verstaerkung: { name: 'Wandverstärkung', zeichen: '\u{1F529}', farbe: '#8b5e34' },
   sonstiges:  { name: 'Sonstiges',      zeichen: '\u{1F4CC}', farbe: '#2e7d4f' },
 };
 

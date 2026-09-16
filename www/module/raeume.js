@@ -294,6 +294,7 @@ async function zeigeRaum(rahmen, kennung) {
   );
 
   materialpassZeigen(rahmen, raum, neu);
+  tuerlisteZeigen(rahmen, raum, neu);
 
   if (raum.notiz) {
     anhaengen(rahmen, karte([el('h2', { text: 'Notiz' }), el('p', { text: raum.notiz })]));
@@ -429,9 +430,11 @@ function raumBearbeiten(raum, geschosse, nachher) {
         flaeche: Math.max(0, zuZahl(flaeche.value)),
         notiz: notiz.value.trim(),
         bildIds: raum.bildIds || [],
-        // Der Materialpass haengt am Raum und wird hier nicht bearbeitet.
-        // Ohne diese Zeile waere er nach der ersten Namensaenderung weg.
+        // Materialpass und Tuerliste haengen am Raum und werden hier nicht
+        // bearbeitet. Ohne diese Zeilen waeren sie nach der ersten
+        // Namensaenderung weg.
         material: raum.material || [],
+        tueren: raum.tueren || [],
         x: gleichesGeschoss ? (raum.x ?? null) : null,
         y: gleichesGeschoss ? (raum.y ?? null) : null,
       };
@@ -565,6 +568,115 @@ function materialBearbeiten(raum, index, nachher) {
         ? async () => {
             const liste = (raum.material || []).filter((_, i) => i !== index);
             await daten.sichern('raeume', { ...raum, material: liste });
+            await nachher();
+          }
+        : null,
+    }
+  );
+}
+
+// ---------------------------------------------------------------- Tuerliste
+//
+// Die Tuerliste entsteht am Bau zweimal: einmal beim Aufmass des
+// Tuerenlieferanten und einmal in zehn Jahren, wenn ein Blatt ersetzt werden
+// soll und niemand mehr weiss, welches Mass und welcher Anschlag das war.
+//
+// Vier Angaben machen den Unterschied: lichtes Mass, Anschlag, Wandstaerke
+// der Zarge und das Dekor. Alles andere ist Notiz.
+
+const ANSCHLAEGE = [
+  ['DIN links', 'DIN links'],
+  ['DIN rechts', 'DIN rechts'],
+  ['Schiebetür', 'Schiebetür'],
+  ['offen', 'ohne Tür'],
+];
+
+function tuerlisteZeigen(rahmen, raum, neu) {
+  const tueren = raum.tueren || [];
+  anhaengen(
+    rahmen,
+    karte([
+      el('h2', { text: `Türen (${tueren.length})` }),
+      el('p', {
+        klasse: 'unterzeile',
+        text: 'Maß, Anschlag und Wandstärke. Der Türenlieferant fragt danach beim Aufmaß, ' +
+              'und beim Nachbestellen fragt es niemand mehr, weil es niemand mehr weiß.',
+      }),
+      tueren.length
+        ? el('ul', { klasse: 'liste' }, tueren.map((t, i) =>
+            el('li', {}, [
+              el('button', {
+                klasse: 'listenzeile', type: 'button',
+                onclick: () => tuerBearbeiten(raum, i, neu),
+              }, [
+                el('span', { klasse: 'zeilen-text' }, [
+                  el('span', { klasse: 'zeilen-titel', text: t.wohin || 'Tür' }),
+                  el('span', {
+                    klasse: 'zeilen-unter',
+                    text: [
+                      t.breite && t.hoehe ? t.breite + ' × ' + t.hoehe + ' mm' : null,
+                      t.anschlag || null,
+                      t.wandstaerke ? 'Wand ' + t.wandstaerke + ' mm' : null,
+                      t.ausfuehrung || null,
+                      t.notiz || null,
+                    ].filter(Boolean).join(' · ') || 'ohne weitere Angaben',
+                  }),
+                ]),
+              ]),
+            ])
+          ))
+        : el('p', { klasse: 'unterzeile', text: 'Noch keine Tür eingetragen.' }),
+      knopf('Tür eintragen', () => tuerBearbeiten(raum, -1, neu),
+        tueren.length ? 'knopf' : 'knopf-haupt'),
+    ])
+  );
+}
+
+/** Tuer anlegen oder aendern. Index -1 heisst: neu. */
+function tuerBearbeiten(raum, index, nachher) {
+  const tuer = (index >= 0 ? (raum.tueren || [])[index] : {}) || {};
+  const wohin = eingabe({ value: tuer.wohin || '', placeholder: 'z. B. zum Flur' });
+  const breite = zahlfeld({ value: tuer.breite ? String(tuer.breite) : '', placeholder: 'z. B. 861' });
+  const hoehe = zahlfeld({ value: tuer.hoehe ? String(tuer.hoehe) : '', placeholder: 'z. B. 1985' });
+  const anschlag = auswahl(ANSCHLAEGE, tuer.anschlag || 'DIN links');
+  const wandstaerke = zahlfeld({ value: tuer.wandstaerke ? String(tuer.wandstaerke) : '', placeholder: 'z. B. 100' });
+  const ausfuehrung = eingabe({ value: tuer.ausfuehrung || '', placeholder: 'Dekor, Beschlag, Glasausschnitt' });
+  const notiz = el('textarea', {}, [tuer.notiz || '']);
+
+  blattOeffnen(
+    index >= 0 ? 'Tür ändern' : 'Tür eintragen',
+    [
+      feld('Führt wohin', wohin),
+      feld('Lichte Breite in mm', breite, 'Das Maß der Zarge, nicht der Rohbauöffnung.'),
+      feld('Lichte Höhe in mm', hoehe, 'Sie hängt am Fußbodenaufbau: erst der Belag, dann die Türhöhe.'),
+      feld('Anschlag', anschlag, 'Von der Seite gesehen, auf der die Tür zu dir aufgeht.'),
+      feld('Wandstärke für die Zarge in mm', wandstaerke, 'Rohbauwand samt Putz auf beiden Seiten.'),
+      feld('Ausführung', ausfuehrung),
+      feld('Notiz', notiz),
+    ],
+    async () => {
+      const wert = {
+        wohin: wohin.value.trim(),
+        breite: zuZahl(breite.value) || null,
+        hoehe: zuZahl(hoehe.value) || null,
+        anschlag: anschlag.value,
+        wandstaerke: zuZahl(wandstaerke.value) || null,
+        ausfuehrung: ausfuehrung.value.trim(),
+        notiz: notiz.value.trim(),
+      };
+      if (!wert.wohin && !wert.breite) {
+        throw new Error('Bitte eintragen, wohin die Tür führt, oder wenigstens das Maß.');
+      }
+      const liste = [...(raum.tueren || [])];
+      if (index >= 0) liste[index] = wert; else liste.push(wert);
+      await daten.sichern('raeume', { ...raum, tueren: liste });
+      await nachher();
+    },
+    {
+      loeschen: index >= 0
+        ? async () => {
+            const liste = (raum.tueren || []).filter((_, i) => i !== index);
+            await daten.sichern('raeume', { ...raum, tueren: liste });
             await nachher();
           }
         : null,

@@ -98,8 +98,8 @@ finden, dort allerdings nur nach Anmeldung.
 | Tilgungsverlauf | Restschuld Jahr für Jahr, mit Sondertilgung, als PDF |
 | Baukasse | Budget, Kostenaufstellung geplant gegen tatsächlich, Rechnungen, Gliederung nach DIN 276 |
 | Angebote | Mehrere Angebote je Position, Spanne, beauftragen mit Übernahme in die Baukasse |
-| Räume | Jeder Raum mit Fotos, Mängeln, Fläche und Kosten je m², dazu der Materialpass mit Produkt, Farbton und Charge |
-| Anschlussplan | Grundriss hochladen, Anschlüsse markieren, als PDF mit Plan |
+| Räume | Jeder Raum mit Fotos, Mängeln, Fläche und Kosten je m², dazu der Materialpass mit Produkt, Farbton und Charge und die Türliste mit Maß, Anschlag und Wandstärke |
+| Anschlussplan | Grundriss hochladen, Anschlüsse und Wandverstärkungen markieren, als PDF mit Plan |
 | Mängelliste | Mängel je Raum mit Foto und Status, als PDF und als Mängelrüge |
 | Bauablauf | Gewerke in der richtigen Reihenfolge, Termine rechnen sich, Balkenplan |
 | Bauhelfertagebuch | Tageseinträge mit Fotos, Helferstunden, Wetter vom DWD, öffentlicher Verweis zum Mitlesen |

@@ -10,7 +10,7 @@
 // beantworten Fragen, die man einmal stellt und dann entschieden hat.
 
 import {
-  el, eur, zahl, feld, zahlfeld, auswahl, knopf, karte, kopfzeile, wertzeile,
+  el, eur, zahl, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile, wertzeile,
   hinweisKasten, zuZahl,
   anhaengen,
   geheZu,
@@ -295,6 +295,25 @@ async function zeigeNebenkosten(rahmen) {
 
 // ------------------------------------------------------------------ Bebauung
 
+/* Die Festsetzungen, die im Bebauungsplan neben GRZ und GFZ stehen.
+ *
+ * Freitext und keine Auswahl: Jede Gemeinde schreibt es anders auf, und eine
+ * Liste, die den eigenen Plan nicht abbildet, laedt zum Raten ein. */
+const STECKBRIEF = [
+  { schluessel: 'geschosse', name: 'Zahl der Vollgeschosse', beispiel: 'z. B. II',
+    hinweis: 'Ob das Dachgeschoss mitzählt, hängt an der Landesbauordnung.' },
+  { schluessel: 'dachform', name: 'Dachform und Neigung', beispiel: 'z. B. Satteldach 38 bis 45 Grad' },
+  { schluessel: 'firstrichtung', name: 'Firstrichtung', beispiel: 'z. B. parallel zur Straße',
+    hinweis: 'Sie dreht den Grundriss, wenn man sie zu spät liest.' },
+  { schluessel: 'traufhoehe', name: 'Traufhöhe', beispiel: 'z. B. 6,50 m über Straßenoberkante',
+    hinweis: 'Immer mit dem Bezugspunkt notieren, sonst ist die Zahl wertlos.' },
+  { schluessel: 'firsthoehe', name: 'Firsthöhe', beispiel: 'z. B. 9,50 m über Straßenoberkante' },
+  { schluessel: 'stellplaetze', name: 'Stellplätze', beispiel: 'z. B. 2 je Wohnung, auf dem Grundstück' },
+  { schluessel: 'versickerung', name: 'Niederschlagswasser', beispiel: 'z. B. Versickerung auf dem Grundstück',
+    hinweis: 'Rigole oder Zisterne stehen in keinem Hausangebot und kosten trotzdem.' },
+  { schluessel: 'weiteres', name: 'Material, Farben, Bäume, Einfriedung', beispiel: 'was sonst vorgeschrieben ist' },
+];
+
 async function zeigeBebauung(rahmen) {
   const gemerkt = (await einstellung('bebauung_eingabe')) || {};
   const flaeche = zahlfeld({ value: String(gemerkt.flaeche ?? 600) });
@@ -304,6 +323,14 @@ async function zeigeBebauung(rahmen) {
   // rechnet die App nur die Grenzen aus und urteilt nicht.
   const geplant = zahlfeld({ value: gemerkt.geplant ? String(gemerkt.geplant) : '' });
   const neben = zahlfeld({ value: gemerkt.neben ? String(gemerkt.neben) : '' });
+
+  // Die uebrigen Festsetzungen rechnen nicht mit, sie werden festgehalten.
+  // Genau daran scheitert es sonst: Die Zahlen stehen im Plan bei der
+  // Gemeinde, und auf der Baustelle erinnert sie niemand.
+  const steckbrief = STECKBRIEF.map((angabe) => ({
+    ...angabe,
+    feld: eingabe({ value: gemerkt[angabe.schluessel] || '', placeholder: angabe.beispiel }),
+  }));
 
   const ausgabe = el('div');
 
@@ -315,6 +342,7 @@ async function zeigeBebauung(rahmen) {
       geplant: Math.max(0, zuZahl(geplant.value)),
       neben: Math.max(0, zuZahl(neben.value)),
     };
+    for (const angabe of steckbrief) eingaben[angabe.schluessel] = angabe.feld.value.trim();
     const r = bebauung(eingaben);
     const ampel = bebauungAmpel(eingaben, r);
 
@@ -363,7 +391,7 @@ async function zeigeBebauung(rahmen) {
     await einstellung('bebauung_eingabe', eingaben);
   }
 
-  for (const f of [flaeche, grz, gfz, geplant, neben]) {
+  for (const f of [flaeche, grz, gfz, geplant, neben, ...steckbrief.map((a) => a.feld)]) {
     f.addEventListener('input', rechnen);
     f.addEventListener('change', rechnen);
   }
@@ -385,6 +413,15 @@ async function zeigeBebauung(rahmen) {
       }),
       feld('Geplante Grundfläche des Hauses in m²', geplant, 'Außenkante Erdgeschoss.'),
       feld('Garage, Stellplätze und Zufahrt in m²', neben, 'Alles, was versiegelt wird und nicht Haus ist.'),
+    ]),
+    karte([
+      el('h2', { text: 'Weitere Festsetzungen' }),
+      el('p', {
+        klasse: 'unterzeile',
+        text: 'Was sonst noch im Bebauungsplan steht. Die App rechnet damit nicht, ' +
+          'sie hält es fest: beim Entwurf, beim Bauantrag und bei jeder Frage auf der Baustelle.',
+      }),
+      ...steckbrief.map((angabe) => feld(angabe.name, angabe.feld, angabe.hinweis)),
     ]),
     ausgabe
   );
