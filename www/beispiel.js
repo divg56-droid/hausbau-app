@@ -108,7 +108,8 @@ export async function beispielSchliessen() {
 }
 
 async function fuellen() {
-  await einstellung('projektname', 'Beispiel: Neubau Ahornweg 12');
+  // Kurz genug fuer eine Zeile auf dem Telefon.
+  await einstellung('projektname', 'Beispiel: Ahornweg 12');
   await einstellung('bauweise', 'einzelvergabe');
   await einstellung('bauphase', 'bau');
   await einstellung('baubeginn', tag(-150));

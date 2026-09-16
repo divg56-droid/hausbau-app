@@ -29,6 +29,7 @@ try {
   await warte(300);
   const angebote = await s.werten(`document.body.innerText`);
   pruef('Ein beauftragtes Angebot ist zu sehen', /Beauftragt/.test(angebote));
+  pruef('Keine Warnung „nur ein Angebot“ bei verglichenen Positionen', !/nur ein Angebot vor/.test(angebote));
   pruef('Der offene Vergleich warnt beim günstigsten Angebot',
     /Garten Kern/.test(angebote) && /Nicht enthalten: Entwässerung und Rigole/.test(angebote) && /Ungeklärt: Zaun zur Straße/.test(angebote),
     angebote.slice(0, 400));

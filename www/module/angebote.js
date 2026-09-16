@@ -199,7 +199,11 @@ async function zeichne(rahmen) {
   }
 
   const gesamtErsparnis = jePosten.reduce((s, g) => s + g.ersparnis, 0);
-  const einzeln = jePosten.filter((g) => g.anzahl === 1);
+  // Nur ein Angebot ist kein Vergleich. Wer aber drei eingeholt und zwei
+  // abgelehnt hat, hat verglichen, und wer beauftragt hat, hat entschieden.
+  // Beides soll nicht mehr warnen; gezaehlt wird deshalb alles, was je
+  // eingegangen ist, nicht nur das, was noch im Rennen ist.
+  const einzeln = jePosten.filter((g) => g.angebote.length === 1 && !g.beauftragt);
 
   anhaengen(
     rahmen,
