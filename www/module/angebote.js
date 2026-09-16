@@ -89,12 +89,21 @@ export function leistungsvergleich(leistungen, angebote) {
 
   // Guenstigstes zuerst, wie in der Liste darunter: So steht die Spalte,
   // auf die man schaut, links.
+  //
+  // Drei Zustaende je Leistung: enthalten, ausdruecklich nicht enthalten,
+  // und ungeklaert. Das Dritte ist der haeufigste Fall und der wichtigste:
+  // Steht eine Taetigkeit nicht im Angebot, ist sie noch keine Zusage, aber
+  // auch nicht automatisch ausgeschlossen. Genau daraus entsteht die
+  // Rueckfrage. "fehlt" fasst beides zusammen, was nicht enthalten ist.
   const spalten = [...zaehlend].sort((a, b) => (a.betrag || 0) - (b.betrag || 0)).map((a) => {
     const drin = leistungen.filter((l) => (a.enthalten || []).includes(l.id));
+    const fehlt = leistungen.filter((l) => !(a.enthalten || []).includes(l.id));
     return {
       angebot: a,
       drin: drin.length,
-      fehlt: leistungen.filter((l) => !(a.enthalten || []).includes(l.id)),
+      fehlt,
+      ohne: fehlt.filter((l) => (a.ausgeschlossen || []).includes(l.id)),
+      ungeklaert: fehlt.filter((l) => !(a.ausgeschlossen || []).includes(l.id)),
     };
   });
 
@@ -104,6 +113,9 @@ export function leistungsvergleich(leistungen, angebote) {
     ...l,
     von: spalten
       .filter((s) => (s.angebot.enthalten || []).includes(l.id))
+      .map((s) => s.angebot.id),
+    ohne: spalten
+      .filter((s) => (s.angebot.ausgeschlossen || []).includes(l.id))
       .map((s) => s.angebot.id),
   }));
 
@@ -412,6 +424,9 @@ function angebotBearbeiten(angebot, posten, kontakte, nachher) {
     ],
     async () => {
       const wert = {
+        // Was das Formular nicht zeigt, bleibt: der Leistungsumfang und das
+        // Projekt. Ohne das loeschte jede Aenderung am Betrag alle Haken.
+        ...angebot,
         postenId: zuPosten.value || null,
         firma: firma.value.trim(),
         kontaktId: kontakt.value || null,
@@ -505,16 +520,23 @@ function leistungsblock(gruppe, kontakte, neu) {
             el('tbody', {}, zeilen.map((z) =>
               el('tr', {}, [
                 el('td', { text: z.titel }),
-                ...spalten.map((s) =>
-                  el('td', {}, [
-                    el('input', {
-                      type: 'checkbox',
-                      checked: z.von.includes(s.angebot.id),
-                      'aria-label': z.titel + ' bei ' + firmenname(s.angebot, kontakte),
-                      onchange: (e) => hakenSetzen(s.angebot, z.id, e.target.checked, p.id, neu),
+                ...spalten.map((s) => {
+                  const stand = z.von.includes(s.angebot.id) ? 'drin'
+                    : z.ohne.includes(s.angebot.id) ? 'ohne' : 'offen';
+                  const zeichenFuer = { drin: '✓', ohne: '✕', offen: '?' };
+                  const wortFuer = { drin: 'enthalten', ohne: 'nicht enthalten', offen: 'ungeklärt' };
+                  return el('td', {}, [
+                    el('button', {
+                      type: 'button',
+                      klasse: 'umfang umfang-' + stand,
+                      text: zeichenFuer[stand],
+                      title: wortFuer[stand] + ', antippen zum Ändern',
+                      'aria-label': z.titel + ' bei ' + firmenname(s.angebot, kontakte) + ': ' +
+                        wortFuer[stand] + '. Antippen zum Ändern.',
+                      onclick: () => umfangSetzen(s.angebot, z.id, NAECHSTER[stand], p.id, neu),
                     }),
-                  ])
-                ),
+                  ]);
+                }),
                 el('td', {}, [
                   el('button', {
                     type: 'button', klasse: 'sortknopf', text: '✕',
@@ -528,8 +550,8 @@ function leistungsblock(gruppe, kontakte, neu) {
         ])
       : el('p', {
           klasse: 'unterzeile',
-          text: 'Trage die Tätigkeiten ein, die zu dieser Position gehören, und hake ' +
-            'ab, wer sie angeboten hat. Erst dann sind die Summen vergleichbar.',
+          text: 'Trage die Tätigkeiten ein, die zu dieser Position gehören, und markiere je ' +
+            'Angebot: enthalten, nicht enthalten oder ungeklärt. Erst dann sind die Summen vergleichbar.',
         }),
 
     el('div', { klasse: 'filterleiste' }, [
@@ -537,12 +559,21 @@ function leistungsblock(gruppe, kontakte, neu) {
       knopf('Leistung hinzufügen', hinzu, 'knopf-leise'),
     ]),
 
+    leistungen.length
+      ? el('p', {
+          klasse: 'unterzeile leise',
+          text: '✓ enthalten · ✕ nicht enthalten · ? ungeklärt. Antippen wechselt den Stand. ' +
+            'Ungeklärt ist keine Zusage und kein Ausschluss, sondern eine Rückfrage.',
+        })
+      : null,
+
     luecke
       ? hinweisKasten(
           'Das günstigste Angebot von ' + firmenname(luecke.angebot, kontakte) +
-            ' deckt ' + luecke.drin + ' von ' + leistungen.length + ' Leistungen ab. Es fehlt: ' +
-            luecke.fehlt.map((l) => l.titel).join(', ') +
-            '. Frag nach, bevor du vergleichst.',
+            ' deckt ' + luecke.drin + ' von ' + leistungen.length + ' Leistungen ab.' +
+            (luecke.ohne.length ? ' Nicht enthalten: ' + luecke.ohne.map((l) => l.titel).join(', ') + '.' : '') +
+            (luecke.ungeklaert.length ? ' Ungeklärt: ' + luecke.ungeklaert.map((l) => l.titel).join(', ') + '.' : '') +
+            ' Kläre das, bevor du nach dem Preis entscheidest.',
           'warn'
         )
       : null,
@@ -550,17 +581,23 @@ function leistungsblock(gruppe, kontakte, neu) {
 }
 
 /**
- * Setzt oder entfernt den Haken einer Leistung bei einem Angebot.
+ * Setzt den Stand einer Leistung bei einem Angebot: enthalten, nicht
+ * enthalten oder ungeklaert (in keiner der beiden Listen).
  *
  * Gespeichert wird die Kennung der Leistung, nicht ihr Text. So bleibt der
- * Haken stehen, wenn die Bezeichnung spaeter geaendert wird.
+ * Stand erhalten, wenn die Bezeichnung spaeter geaendert wird.
  */
-async function hakenSetzen(angebot, leistungId, an, postenId, nachher) {
+const NAECHSTER = { offen: 'drin', drin: 'ohne', ohne: 'offen' };
+
+async function umfangSetzen(angebot, leistungId, stand, postenId, nachher) {
   const drin = new Set(angebot.enthalten || []);
-  if (an) drin.add(leistungId);
-  else drin.delete(leistungId);
+  const ohne = new Set(angebot.ausgeschlossen || []);
+  drin.delete(leistungId);
+  ohne.delete(leistungId);
+  if (stand === 'drin') drin.add(leistungId);
+  if (stand === 'ohne') ohne.add(leistungId);
   aufgeklappt.add(postenId);
-  await daten.sichern('angebote', { ...angebot, enthalten: [...drin] });
+  await daten.sichern('angebote', { ...angebot, enthalten: [...drin], ausgeschlossen: [...ohne] });
   await nachher();
 }
 
@@ -575,9 +612,13 @@ async function leistungLoeschen(posten, leistung, angebote, nachher) {
   // Sonst blieben in den Angeboten Haken auf eine Leistung stehen, die es
   // nicht mehr gibt, und taeuchten beim naechsten Anlegen wieder auf.
   for (const a of angebote) {
-    if (!(a.enthalten || []).includes(leistung.id)) continue;
+    const hatte = (a.enthalten || []).includes(leistung.id) ||
+      (a.ausgeschlossen || []).includes(leistung.id);
+    if (!hatte) continue;
     await daten.sichern('angebote', {
-      ...a, enthalten: a.enthalten.filter((x) => x !== leistung.id),
+      ...a,
+      enthalten: (a.enthalten || []).filter((x) => x !== leistung.id),
+      ausgeschlossen: (a.ausgeschlossen || []).filter((x) => x !== leistung.id),
     });
   }
   aufgeklappt.add(posten.id);
@@ -653,7 +694,8 @@ async function pdfErzeugen(jePosten, kontakte) {
         ['Leistung', ...spalten.map((s) => firmenname(s.angebot, kontakte))],
         leistungen.map((l) => [
           l.titel,
-          ...spalten.map((s) => ((s.angebot.enthalten || []).includes(l.id) ? 'ja' : '–')),
+          ...spalten.map((s) => ((s.angebot.enthalten || []).includes(l.id) ? 'ja'
+            : (s.angebot.ausgeschlossen || []).includes(l.id) ? 'nein' : 'ungeklärt')),
         ]),
         [3.4, 1.3, 1.3, 1.3].slice(0, spalten.length + 1),
         spalten.map((_, i) => i + 1)
@@ -663,7 +705,7 @@ async function pdfErzeugen(jePosten, kontakte) {
 
   blatt.absatz(
     'Angebote sind nur vergleichbar, wenn sie denselben Leistungsumfang haben. ' +
-      'Prüfe vor der Entscheidung, was im günstigsten Angebot fehlt.',
+      'Prüfe vor der Entscheidung, was im günstigsten Angebot fehlt oder ungeklärt ist.',
     9
   );
 

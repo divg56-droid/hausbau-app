@@ -22,6 +22,7 @@ import {
 } from '../hilfen.js';
 import { blattOeffnen } from '../blatt.js';
 import { installKarte } from '../installieren.js';
+import { angemeldet } from '../konto.js';
 import { daten, einstellung } from '../daten.js';
 import { projekteListe, projektAnlegen } from '../projekte.js';
 import { finanzierungsstand } from './finanzierung.js';
@@ -37,7 +38,7 @@ import { todoStand, todosSortieren } from './todos.js';
 
 export async function zeige(rahmen) {
   const [projekt, stand, posten, belege, aufgaben, maengel, tagebuch, haken, todos, art,
-    projekte, ort, baubeginn] =
+    projekte, ort, baubeginn, letzteSicherung] =
     await Promise.all([
     einstellung('projektname'),
     finanzierungsstand(),
@@ -52,6 +53,7 @@ export async function zeige(rahmen) {
     projekteListe(),
     einstellung('baustelle'),
     einstellung('baubeginn'),
+    einstellung('letzte_sicherung'),
   ]);
   const leitfaden = leitfadenStand(haken, art.id);
 
@@ -119,6 +121,7 @@ export async function zeige(rahmen) {
     rahmen,
     kopfzeile(projekt || 'Dein Bauprojekt', null),
     installKarte(),
+    await sicherungsHinweis(letzteSicherung),
     projektkopf(art, leitfaden, todos, ort || {}, baubeginn),
     // Mehrere Projekte gibt es nur noch fuer den, der sie schon hat: Ein
     // Bauherr baut ein Haus, und ein Knopf fuer das zweite stand nur im Weg.
@@ -883,4 +886,39 @@ function kennzahlLeer(name, text, aktion, ziel) {
     el('span', { klasse: 'name', text: name }),
     el('span', { klasse: 'kennzahl-aktion', text: aktion + ' →' }),
   ]);
+}
+
+/*
+ * Erinnerung an die Sicherung.
+ *
+ * Ohne Konto liegen die Daten nur auf diesem Geraet. Ein verlorenes Telefon,
+ * ein geloeschtes Symbol auf dem iPhone oder ein aufgeraeumter Browser, und
+ * das Bautagebuch ist fort. Deshalb steht hier ein Hinweis, solange es keine
+ * Sicherung gibt oder die letzte aelter als 30 Tage ist. Mit Konto gleicht
+ * die App ohnehin ab, und im Beispielprojekt gibt es nichts zu verlieren.
+ */
+const SICHERUNG_TAGE = 30;
+
+async function sicherungsHinweis(letzte) {
+  if (angemeldet()) return null;
+  const { istBeispielAktiv } = await import('../beispiel.js');
+  if (await istBeispielAktiv()) return null;
+  if (letzte) {
+    const alter = (Date.parse(heute()) - Date.parse(letzte)) / 86400000;
+    if (alter < SICHERUNG_TAGE) return null;
+  }
+  return karte([
+    el('p', {
+      klasse: 'unterzeile',
+      text: letzte
+        ? 'Deine letzte Sicherung ist vom ' + datumLang(letzte) + '. Deine Daten liegen nur auf ' +
+          'diesem Gerät; eine neue Sicherung dauert eine Minute.'
+        : 'Deine Daten liegen nur auf diesem Gerät, und es gibt noch keine Sicherung. ' +
+          'Eine Sicherungsdatei samt Fotos ist in einer Minute erstellt.',
+    }),
+    el('div', { klasse: 'knopf-reihe' }, [
+      knopf('Jetzt sichern', () => { geheZu('#/einstellungen'); }, 'knopf-leise'),
+      knopf('Konto für zweites Gerät', () => { geheZu('#/konto'); }, 'knopf-leise'),
+    ]),
+  ], 'sicherungshinweis');
 }

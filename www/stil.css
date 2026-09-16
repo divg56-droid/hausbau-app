@@ -1371,3 +1371,13 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
   display: inline-flex; align-items: center; justify-content: center;
   background: var(--band); color: var(--tinte); font-weight: 700; font-size: 14px;
 }
+
+/* Leistungsumfang im Angebotsvergleich: drei Zustaende, nicht zwei.
+   Ungeklaert ist der Normalfall und soll auffallen, ohne zu warnen. */
+.umfang {
+  min-width: 40px; min-height: 36px; border-radius: 8px; border: 1px solid var(--linie);
+  background: var(--karte); color: var(--tinte-leise); font-weight: 700; font-size: 16px; cursor: pointer;
+}
+.umfang-drin { background: #2e7d4f; border-color: #2e7d4f; color: #fff; }
+.umfang-ohne { background: var(--band); color: var(--tinte); text-decoration: none; }
+.umfang-offen { border-style: dashed; }

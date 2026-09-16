@@ -293,9 +293,12 @@ async function zeichne(rahmen, gewaehltesGeschoss = null) {
 // ---------------------------------------------------------------- Geschosse
 
 async function geschossAnlegen(datei, reihenfolge, nachher) {
+  // Kein Eingabefenster: Es fehlt in manchen WebViews, und ein Abbruch
+  // liesse das schon abgelegte Bild verwaist zurueck. Der Vorschlag passt
+  // meist, umbenennen geht danach mit einem Tipp.
   const bildId = await bildAblegen(datei);
-  const name = window.prompt('Name des Geschosses', vorschlagName(reihenfolge)) || vorschlagName(reihenfolge);
-  const id = await daten.sichern('geschosse', { name: name.trim(), bildId, reihenfolge });
+  const id = await daten.sichern('geschosse', { name: vorschlagName(reihenfolge), bildId, reihenfolge });
+  melde('Geschoss angelegt. Den Namen änderst du über „Umbenennen“.');
   await nachher(id);
 }
 

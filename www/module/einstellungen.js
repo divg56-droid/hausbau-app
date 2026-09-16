@@ -15,7 +15,7 @@ const PLAY_STORE = null;
 // const PLAY_STORE = 'https://play.google.com/store/apps/details?id=de.bauzeuge.app';
 
 import {
-  el, feld, eingabe, knopf, karte, kopfzeile, wertzeile, hinweisKasten, melde, heute,
+  el, feld, eingabe, knopf, karte, kopfzeile, wertzeile, hinweisKasten, melde, heute, datumLang,
   kontaktName,
   anhaengen,
   geheZu,
@@ -39,6 +39,7 @@ export async function zeige(rahmen) {
 
 async function zeichne(rahmen) {
   rahmen.replaceChildren();
+  const letzteSicherung = await einstellung('letzte_sicherung');
 
   const projektname = eingabe({
     value: (await einstellung('projektname')) || '',
@@ -173,7 +174,16 @@ async function zeichne(rahmen) {
           'Die Sicherung enthält alle Daten samt Fotos in einer Datei. Sie kann groß ' +
           'werden. Lege sie über das Teilen-Menü in einer Cloud oder auf dem Rechner ab.',
       }),
-      knopf('Sicherung erstellen', sicherungErstellen),
+      // Wann zuletzt gesichert wurde, steht sichtbar da. Auf dem iPhone ist
+      // das keine Nebensache: Die installierte App hat eigene Daten, und
+      // wer das Symbol loescht, loescht sie mit.
+      el('p', {
+        klasse: 'unterzeile' + (letzteSicherung ? '' : ' mehr'),
+        text: letzteSicherung
+          ? 'Letzte Sicherung auf diesem Stand: ' + datumLang(letzteSicherung) + '.'
+          : 'Noch keine Sicherung erstellt.',
+      }),
+      knopf('Sicherung erstellen', () => sicherungErstellen(rahmen)),
       knopf('Sicherung einlesen', () => sicherungEinlesen(rahmen)),
     ]),
 
@@ -549,7 +559,7 @@ async function csvKontakte() {
 
 // ------------------------------------------------------------------ Sicherung
 
-async function sicherungErstellen() {
+async function sicherungErstellen(rahmen) {
   melde('Sicherung wird erstellt …');
   const inhalt = { version: 1, erstellt: heute(), einstellungen: {}, speicher: {}, bilder: [] };
 
@@ -574,7 +584,11 @@ async function sicherungErstellen() {
   const { pdfTeilen } = await import('../pdf.js');
   try {
     await pdfTeilen(blob, 'bauzeuge-sicherung-' + heute() + '.json', 'Sicherung');
+    // Vermerkt wird, dass die Datei erstellt und weitergegeben wurde. Ob sie
+    // danach wirklich abgelegt wurde, kann die App nicht sehen.
+    await einstellung('letzte_sicherung', heute());
     melde('Sicherung bereit.');
+    if (rahmen) await zeichne(rahmen);
   } catch (fehler) {
     console.error(fehler);
     melde('Sicherung konnte nicht geteilt werden.');

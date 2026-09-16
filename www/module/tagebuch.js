@@ -9,7 +9,7 @@
 // zwei Leute an einem Tag arbeiten selten gleich lang.
 
 import {
-  el, feld, auswahl, knopf, karte, kopfzeile, hinweisKasten,
+  el, feld, eingabe, auswahl, knopf, karte, kopfzeile, hinweisKasten,
   leerzustand, melde, datumLang, heute, zahl, zuZahl, kontaktName,
   anhaengen,
   geheZu,
@@ -296,14 +296,27 @@ function freigabekarte() {
 
   async function anschalten() {
     const vorgabe = (await einstellung('projektname')) || 'Unser Bautagebuch';
-    const titel = window.prompt(
-      'Überschrift der öffentlichen Seite:\n\n' +
-      'Vermeide die genaue Adresse der Baustelle. Wer den Verweis hat, kann die Seite lesen.',
-      vorgabe
+    const ueberschrift = eingabe({ value: vorgabe });
+    // Ein Blatt statt window.prompt: Das Eingabefenster fehlt in manchen
+    // eingebetteten Browsern, und dann liesse sich nichts freischalten.
+    blattOeffnen(
+      'Öffentlich schalten',
+      [
+        feld('Überschrift der öffentlichen Seite', ueberschrift,
+          'Vermeide die genaue Adresse der Baustelle. Wer den Verweis hat, kann die Seite lesen.'),
+      ],
+      async () => {
+        const titel = ueberschrift.value.trim();
+        if (!titel) throw new Error('Bitte eine Überschrift eintragen.');
+        await freischalten(titel);
+      },
+      { sicherText: 'Öffentlich schalten' }
     );
-    if (titel === null) return;
+  }
+
+  async function freischalten(titel) {
     try {
-      const antwort = await konto.freigabeAnlegen(titel.trim());
+      const antwort = await konto.freigabeAnlegen(titel);
       melde('Öffentlich geschaltet.');
       zeigen(true, antwort.verweis, { aufrufe: 0, zuletzt: null });
       // Ohne Abgleich stünde die Seite leer da: Sie liest vom Server.

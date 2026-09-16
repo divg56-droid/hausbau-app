@@ -908,6 +908,18 @@ console.log('Leistungsvergleich');
   pruef('Und sie sagt, was fehlt',
     v.luecke.fehlt.map((l) => l.id).join(',') === 'l2,l3');
 
+  // Nicht enthalten und ungeklaert sind zwei verschiedene Antworten: Das
+  // eine ist ein Ausschluss, das andere eine Rueckfrage.
+  const geklaert = leistungsvergleich(L, [{ ...billig, ausgeschlossen: ['l2'] }, mittel]);
+  pruef('Ausdruecklich nicht enthalten steht getrennt',
+    geklaert.luecke.ohne.map((l) => l.id).join(',') === 'l2');
+  pruef('Der Rest ist ungeklaert, nicht ausgeschlossen',
+    geklaert.luecke.ungeklaert.map((l) => l.id).join(',') === 'l3');
+  pruef('Eine Zeile weiss auch, wer sie ausgeschlossen hat',
+    geklaert.zeilen[1].ohne.join(',') === 'a');
+  pruef('Ohne Angabe ist alles Fehlende ungeklaert',
+    v.luecke.ungeklaert.length === 2 && v.luecke.ohne.length === 0);
+
   const ohneLuecke = leistungsvergleich(L, [{ ...billig, enthalten: ['l1', 'l2', 'l3'] }, teuer]);
   pruef('Deckt das guenstigste alles ab, gibt es keine Warnung', ohneLuecke.luecke === null);
 

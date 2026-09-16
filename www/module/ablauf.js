@@ -337,22 +337,36 @@ function hinweiseZeigen(rahmen, aufgaben, neu, trocknung) {
           text: 'Mit Zollstock im Bild und aus mehreren Richtungen. So findest du Leitungen ' +
             'auch in Jahren wieder und belegst den Zustand bei der Abnahme.',
         }),
-        knopf('Fotos aufnehmen', async () => {
+        aufgabe.fotosAbgelegt
+          ? el('p', {
+              klasse: 'unterzeile',
+              text: aufgabe.fotosAbgelegt === 1
+                ? 'Eine Aufnahme ist abgelegt. Ist alles aus der Liste im Bild?'
+                : aufgabe.fotosAbgelegt + ' Aufnahmen sind abgelegt. Ist alles aus der Liste im Bild?',
+            })
+          : null,
+        // Eine gespeicherte Aufnahme heisst nicht, dass jede Stelle drauf
+        // ist. Deshalb erledigt erst die ausdrueckliche Bestaetigung die
+        // Aufgabe, nicht das Speichern.
+        knopf(aufgabe.fotosAbgelegt ? 'Weitere Aufnahme' : 'Fotos aufnehmen', async () => {
           const { aufnahmeAnlegen } = await import('./baudoku.js');
           aufnahmeAnlegen({
             titel: `Vor ${regel.verdeckt}: ${aufgabe.titel}`,
             phase: aufgabe.phase,
             notiz: regel.fotos.map((f) => '– ' + f).join(String.fromCharCode(10)),
           }, async () => {
-            await daten.sichern('aufgaben', { ...ohneRechnung(aufgabe), fotosErledigt: true });
-            melde('Fotos abgelegt, Aufgabe erledigt.');
+            await daten.sichern('aufgaben', {
+              ...ohneRechnung(aufgabe), fotosAbgelegt: (aufgabe.fotosAbgelegt || 0) + 1,
+            });
+            melde('Aufnahme abgelegt. Wenn alles im Bild ist: „Alles fotografiert“.');
             await neu();
           });
-        }, 'knopf-haupt'),
-        knopf('Schon erledigt', async () => {
+        }, aufgabe.fotosAbgelegt ? 'knopf' : 'knopf-haupt'),
+        knopf('Alles fotografiert', async () => {
           await daten.sichern('aufgaben', { ...ohneRechnung(aufgabe), fotosErledigt: true });
+          melde('Fotoaufgabe erledigt.');
           await neu();
-        }, 'knopf-leise'),
+        }, aufgabe.fotosAbgelegt ? 'knopf-haupt' : 'knopf-leise'),
       ], 'fotoaufgabe')
     );
   }
@@ -804,15 +818,29 @@ async function balkenPdf(plan) {
   }
 }
 
-async function vorlageLaden(nachher) {
-  const start = window.prompt('Wann geht es los? (TT.MM.JJJJ)', datumLang(heute()));
-  if (start === null) return;
+/*
+ * Die Vorlage braucht genau eine Angabe: den Start. Gefragt wird in einem
+ * Blatt und nicht mit window.prompt: Eingebettete Browser und manche
+ * WebViews lassen das Eingabefenster nicht zu, und dann passierte beim
+ * Tippen auf "Vorlage laden" schlicht nichts.
+ */
+function vorlageLaden(nachher) {
+  const start = el('input', { type: 'date', value: heute() });
+  blattOeffnen(
+    'Vorlage laden',
+    [
+      feld('Wann geht es los?', start,
+        'Der erste Schritt beginnt an diesem Tag, alle weiteren rechnen sich daraus.'),
+    ],
+    async () => {
+      await vorlageAnlegen(start.value || heute());
+      await nachher();
+    },
+    { sicherText: 'Vorlage laden' }
+  );
+}
 
-  const teile = start.trim().split('.');
-  const startIso = teile.length === 3
-    ? `${teile[2]}-${teile[1].padStart(2, '0')}-${teile[0].padStart(2, '0')}`
-    : heute();
-
+async function vorlageAnlegen(startIso) {
   // Die Vorlage ist eine Kette: jede Aufgabe haengt an der vorherigen.
   // Wer parallel arbeiten laesst, loest den Vorgaenger einzeln auf.
   let vorherId = null;
@@ -830,7 +858,6 @@ async function vorlageLaden(nachher) {
     vorherId = id;
   }
   melde('Vorlage geladen.');
-  await nachher();
 }
 
 function aufgabeBearbeiten(aufgabe, alleAufgaben, kontakte, maengel, nachher) {

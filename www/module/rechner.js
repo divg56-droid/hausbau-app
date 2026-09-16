@@ -446,8 +446,8 @@ function bebauungAmpel(eingaben, r) {
     return {
       art: 'warn',
       text: 'Das Haus überschreitet die zulässige Grundfläche um ' +
-        zahl(geplant - r.grundflaeche, 0) + ' m². So ist es an dieser Stelle nicht ' +
-        'genehmigungsfähig, es sei denn, die Gemeinde erteilt eine Befreiung.',
+        zahl(geplant - r.grundflaeche, 0) + ' m². So ist es an dieser Stelle nur mit ' +
+        'einer Befreiung genehmigungsfähig, und darauf besteht kein Anspruch.',
     };
   }
   if (gesamt > r.grundflaecheMitNebenanlagen + 0.5) {
