@@ -250,7 +250,8 @@ async function zeichne() {
   // beim Neuzeichnen leeren und das Band sonst mit wegraeumten.
   let rahmen = inhalt;
   try {
-    const { istBeispielAktiv } = await import('./beispiel.js');
+    const { istBeispielAktiv, beispielAktualisieren } = await import('./beispiel.js');
+    if (await beispielAktualisieren()) return;
     if (await istBeispielAktiv()) {
       rahmen = el('div', { klasse: 'bereichsrahmen' });
       inhalt.append(beispielband(), rahmen);

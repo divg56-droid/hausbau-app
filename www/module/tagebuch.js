@@ -20,6 +20,7 @@ import { fotofeld } from '../fotos.js';
 import { Blatt, pdfTeilen, bildLaden } from '../pdf.js';
 import { csvTeilen } from '../csv.js';
 import { unterschriftAufnehmen } from '../unterschrift.js';
+import { zeichen, wetterZeichen } from '../zeichen.js';
 import { bauweise } from '../bauweise.js';
 import { eigenleistungStand } from '../eigenleistung.js';
 
@@ -191,7 +192,11 @@ async function zeichne(rahmen) {
               klasse: 'listenzeile',
               onclick: () => eintragBearbeiten(e, helfer, eintraege, neu, eigen),
             }, [
-              url ? el('img', { klasse: 'vorschau', src: url, alt: '' }) : el('span', { klasse: 'vorschau' }),
+              url
+                ? el('img', { klasse: 'vorschau', src: url, alt: '' })
+                : el('span', { klasse: 'vorschau vorschau-zeichen' }, [
+                    zeichen(e.wetter ? wetterZeichen(e.wetter) : 'klemmbrett', { groesse: 26 }),
+                  ]),
               el('span', { klasse: 'zeilen-text' }, [
                 el('span', { klasse: 'zeilen-titel', text: datumLang(e.datum) }),
                 el('span', {

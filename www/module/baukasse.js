@@ -617,7 +617,11 @@ function zeigeKostenaufstellung(rahmen, gerechnet, kontakte, raeume, gewerkeReih
             }, [
               el('td', { text: p.name }),
               el('td', { text: p.gewerk || 'Sonstiges' }),
-              art.zeigtKostengruppen ? el('td', { text: p.kostengruppe || '–' }) : null,
+              art.zeigtKostengruppen
+                ? el('td', kostengruppeName(p.kostengruppe)
+                  ? { text: p.kostengruppe + ' KG', title: kostengruppeLang(p.kostengruppe) }
+                  : { text: '–' })
+                : null,
               el('td', { text: p.geplant ? eur.format(p.geplant) : '–' }),
               el('td', { text: p.massgeblich ? eur.format(p.massgeblich) : '–' }),
               el('td', {}, [abweichung(p.differenz)]),
@@ -1497,7 +1501,16 @@ async function zeigeRechnungen(rahmen, belege, posten, stand, kontakte, neu) {
         klasse: 'listenzeile',
         onclick: () => belegBearbeiten(b, posten, stand, kontakte, neu),
       }, [
-        url ? el('img', { klasse: 'vorschau', src: url, alt: '' }) : el('span', { klasse: 'vorschau' }),
+        // Foto des Belegs, sonst das Zeichen der Position: Wer eine Liste
+        // ueberfliegt, erkennt Grundstueck oder Dach schneller als am Text.
+        url
+          ? el('img', { klasse: 'vorschau', src: url, alt: '' })
+          : el('span', { klasse: 'vorschau vorschau-zeichen' }, [
+              zeichen(zu
+                ? gewerkZeichen(zu.gewerk + ' ' + zu.name)
+                : gewerkZeichen(b.beschreibung) === 'werkzeug' ? 'euro' : gewerkZeichen(b.beschreibung),
+              { groesse: 26 }),
+            ]),
         el('span', { klasse: 'zeilen-text' }, [
           el('span', { klasse: 'zeilen-titel', text: b.beschreibung || 'Rechnung' }),
           el('span', {

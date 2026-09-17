@@ -85,6 +85,23 @@ try {
   })()`);
   pruef('Die Beispielbilder sind als Beispiel markiert', bilder.anzahl === 3 && bilder.alleBeispiel, JSON.stringify(bilder));
 
+  // Rechnungen: statt leerer Kaestchen passende Zeichen.
+  await s.hin('baukasse/rechnungen', 1800);
+  const rechnungen = await s.werten(`({
+    leer: document.querySelectorAll('.listenzeile span.vorschau:not(.vorschau-zeichen)').length,
+    zeichen: document.querySelectorAll('.listenzeile .vorschau-zeichen svg').length,
+  })`);
+  pruef('Rechnungen ohne Foto zeigen ein Zeichen', rechnungen.leer === 0 && rechnungen.zeichen >= 4, JSON.stringify(rechnungen));
+
+  // Kostenaufstellung: Kostengruppe als "440 KG", kein "kg400".
+  // Die Tabelle gibt es nur in Rechnerbreite; auf dem Telefon stehen Karten.
+  await s.groesse(1280, 1400, 1);
+  await s.hin('baukasse/kosten', 1800);
+  const kg = await s.werten(`document.body.innerText`);
+  await s.groesse(390, 1800, 2);
+  pruef('Kostengruppe steht als Zahl mit KG dahinter', kg.includes('440 KG') && !/kg[0-9]00/.test(kg), JSON.stringify({ zelle: kg.includes('440 KG'), alt: (kg.match(/kg[0-9]00/) || [])[0], teil: kg.replace(/[ 
+	]+/g, ' ').slice(0, 300) }));
+
   // Schliessen: alles weg, auch die Bilder.
   await s.werten(`[...document.querySelectorAll('.beispielband button')][0].click()`);
   await warte(4000);
@@ -99,6 +116,24 @@ try {
   pruef('Nach dem Schließen bleibt nichts liegen',
     danach.bilder === 0 && danach.raeume === 0 && danach.aufgaben === 0 && danach.angebote === 0 && !danach.band,
     JSON.stringify(danach));
+  // Ein altes Beispiel (ohne Fassung, mit "kg400") wird beim Start erneuert,
+  // auch wenn es offen ist und niemand den Knopf drueckt.
+  await s.werten(`(async () => {
+    const d = await import('/daten.js');
+    await d.daten.sichern('projekte', { id: 'beispielprojekt', name: 'Beispielprojekt', beispiel: true });
+    await d.projektWechseln('beispielprojekt');
+    await d.daten.sichern('posten', { name: 'Alt', gewerk: 'Elektro', kostengruppe: 'kg400', geplant: 1, tatsaechlich: 0 });
+    location.reload();
+  })()`);
+  await warte(7000);
+  const erneuert = await s.werten(`(async () => {
+    const d = await import('/daten.js');
+    const posten = await d.daten.alle('posten');
+    const projekt = await d.daten.holen('projekte', 'beispielprojekt');
+    return { alt: posten.some((p) => p.name === 'Alt' || /^kg/.test(p.kostengruppe || '')), anzahl: posten.length, fassung: projekt && projekt.fassung };
+  })()`);
+  pruef('Ein altes Beispiel wird beim Start erneuert',
+    !erneuert.alt && erneuert.anzahl === 10 && erneuert.fassung > 0, JSON.stringify(erneuert));
 } finally {
   s.schliessen();
 }

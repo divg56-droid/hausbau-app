@@ -36,6 +36,9 @@ const ZEICHEN = {
   haus: ['M3 11 12 4l9 7', 'M5 11v9h14v-9', 'M10 20v-6h4v6'],
 
   // Gewerke
+  // Grundstueck: Flurstueck mit Grenzpfahl. Schaufel: Erdarbeiten.
+  grundstueck: ['M3 19 6 8l8-3 7 4-2 10z', 'M12 9v6', 'M12 9l3 1-3 1'],
+  schaufel: ['M17 3l4 4', 'M19 5l-8 8', 'M8.5 10.5l5 5-2.5 2.5a3.5 3.5 0 0 1-5 0l0 0a3.5 3.5 0 0 1 0-5z'],
   mauer: ['M3 6h18v12H3z', 'M3 12h18', 'M9 6v6', 'M15 6v6', 'M6 12v6', 'M12 12v6', 'M18 12v6'],
   fenster: ['M4 4h16v16H4z', 'M12 4v16', 'M4 12h16'],
   blitz: ['M13 2 5 14h6l-2 8 8-12h-6z'],
@@ -112,7 +115,9 @@ const RAEUME = [
 ];
 
 const GEWERKE = [
-  [['rohbau', 'mauer', 'beton', 'erdarbeit', 'gründ', 'gruend'], 'mauer'],
+  [['grundstück', 'grundstueck', 'kaufpreis', 'notar', 'grunderwerb'], 'grundstueck'],
+  [['erdarbeit', 'erdbau', 'baugrube', 'aushub'], 'schaufel'],
+  [['rohbau', 'mauer', 'beton', 'gründ', 'gruend'], 'mauer'],
   [['dach', 'klempner', 'spengler'], 'dach'],
   [['fenster', 'tür', 'tuer'], 'fenster'],
   [['elektro', 'blitz', 'strom', 'photovoltaik', 'pv'], 'blitz'],

@@ -21,6 +21,11 @@ import {
 } from './daten.js';
 
 export const BEISPIEL = 'beispielprojekt';
+
+// Fassung des Beispiels. Wer das Beispiel schon einmal geoeffnet hat,
+// behaelt es auf dem Geraet, auch wenn die App inzwischen ein besseres
+// mitbringt. Weicht die Fassung ab, wird es beim Oeffnen neu angelegt.
+const FASSUNG = 3;
 const ZURUECK = 'beispiel_zurueck';
 
 // Speicher mit projektbezogenen Saetzen. Die Bilder des Beispiels tragen
@@ -70,10 +75,13 @@ export async function beispielOeffnen(ziel = '') {
     await daten.sichern('einstellungen', { name: ZURUECK, wert: vorher });
   }
 
-  if (!(await daten.holen('projekte', BEISPIEL))) {
+  const vorhanden = await daten.holen('projekte', BEISPIEL);
+  if (vorhanden && vorhanden.fassung !== FASSUNG) await beispielLeeren();
+
+  if (!vorhanden || vorhanden.fassung !== FASSUNG) {
     await daten.sichern('projekte', {
       id: BEISPIEL, name: 'Beispielprojekt', angelegt: new Date().toISOString(),
-      notiz: '', beispiel: true,
+      notiz: '', beispiel: true, fassung: FASSUNG,
     });
     await projektWechseln(BEISPIEL);
     await fuellen();
@@ -88,6 +96,41 @@ export async function beispielOeffnen(ziel = '') {
 
 /** Entfernt das Beispiel restlos und kehrt ins vorherige Projekt zurueck. */
 export async function beispielSchliessen() {
+  await beispielLeeren();
+
+  const zurueck = await daten.holen('einstellungen', ZURUECK);
+  await daten.loeschen('einstellungen', ZURUECK);
+  const ziel = zurueck && zurueck.wert && zurueck.wert !== BEISPIEL ? zurueck.wert : ERSTES_PROJEKT;
+  await projektWechseln(ziel);
+
+  location.hash = '';
+  location.reload();
+}
+
+/**
+ * Frischt ein offenes Beispiel alter Fassung auf.
+ *
+ * Wer das Beispiel beim letzten Besuch offen gelassen hat, kommt direkt
+ * wieder hinein, ohne den Knopf zu druecken. Deshalb wird die Fassung auch
+ * beim Start geprueft. Gibt true zurueck, wenn neu geladen wird.
+ */
+export async function beispielAktualisieren() {
+  if (!(await istBeispielAktiv())) return false;
+  const vorhanden = await daten.holen('projekte', BEISPIEL);
+  if (vorhanden && vorhanden.fassung === FASSUNG) return false;
+  await beispielLeeren();
+  await daten.sichern('projekte', {
+    id: BEISPIEL, name: 'Beispielprojekt', angelegt: new Date().toISOString(),
+    notiz: '', beispiel: true, fassung: FASSUNG,
+  });
+  await projektWechseln(BEISPIEL);
+  await fuellen();
+  location.reload();
+  return true;
+}
+
+/** Entfernt alle Saetze des Beispiels, ohne das offene Projekt zu wechseln. */
+async function beispielLeeren() {
   for (const speicher of SPEICHER) {
     for (const satz of await daten.alleMitGrabsteinen(speicher)) {
       if (satz.projektId === BEISPIEL) await daten.entfernen(speicher, satz.id);
@@ -97,14 +140,6 @@ export async function beispielSchliessen() {
     if (String(satz.name).endsWith('@' + BEISPIEL)) await daten.loeschen('einstellungen', satz.name);
   }
   await daten.entfernen('projekte', BEISPIEL);
-
-  const zurueck = await daten.holen('einstellungen', ZURUECK);
-  await daten.loeschen('einstellungen', ZURUECK);
-  const ziel = zurueck && zurueck.wert && zurueck.wert !== BEISPIEL ? zurueck.wert : ERSTES_PROJEKT;
-  await projektWechseln(ziel);
-
-  location.hash = '';
-  location.reload();
 }
 
 async function fuellen() {
