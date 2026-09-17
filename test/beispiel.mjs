@@ -99,8 +99,8 @@ try {
   await s.hin('baukasse/kosten', 1800);
   const kg = await s.werten(`document.body.innerText`);
   await s.groesse(390, 1800, 2);
-  pruef('Kostengruppe steht als Zahl mit KG dahinter', kg.includes('440 KG') && !/kg[0-9]00/.test(kg), JSON.stringify({ zelle: kg.includes('440 KG'), alt: (kg.match(/kg[0-9]00/) || [])[0], teil: kg.replace(/[ 
-	]+/g, ' ').slice(0, 300) }));
+  pruef('Kostengruppe steht als Zahl mit KG dahinter', kg.includes('440 KG') && !/kg[0-9]00/.test(kg),
+    JSON.stringify({ zelle: kg.includes('440 KG'), alt: (kg.match(/kg[0-9]00/) || [])[0] }));
 
   // Schliessen: alles weg, auch die Bilder.
   await s.werten(`[...document.querySelectorAll('.beispielband button')][0].click()`);
