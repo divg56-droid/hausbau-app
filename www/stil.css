@@ -1119,7 +1119,13 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
   flex-wrap: wrap;
 }
 .leitfaden-zeile .knopf-schmal { white-space: nowrap; }
-.zeilen-aktionen { display: flex; gap: 8px; flex: none; margin-left: auto; }
+/* Drei Knoepfe in einer Zeile (Oeffnen, Umbenennen, Loeschen) passen auf ein
+   schmales Telefon nicht nebeneinander. Sie duerfen umbrechen und bleiben
+   dabei rechts. */
+.zeilen-aktionen {
+  display: flex; gap: 8px; flex: 0 1 auto; margin-left: auto;
+  flex-wrap: wrap; justify-content: flex-end;
+}
 
 /* Checklistenpunkte: Zwei ausgewachsene Knoepfe je Zeile machen aus neun
    Punkten eine Bildschirmhoehe. Hier stehen sie klein und ruhig unter dem
