@@ -26,7 +26,7 @@ import { bauweise } from '../bauweise.js';
 import { zeichen, gewerkZeichen } from '../zeichen.js';
 import {
   kostengruppenOptionen, kostengruppeLang, kostengruppeName, kostengruppeVorschlag,
-  hauptgruppe, nachHauptgruppen,
+  hauptgruppe, hauptgruppeLang, nachHauptgruppen,
 } from '../din276.js';
 import { csvTeilen } from '../csv.js';
 
@@ -759,9 +759,7 @@ function zeigeStatistik(rahmen, gerechnet, summe, stand, belege, art, neu) {
       zusammenziehen(mitPlan, (p) => p.gewerk || 'Sonstiges')));
     if (art.zeigtKostengruppen) {
       anhaengen(rahmen, mehrkostenkarte('Je Kostengruppe',
-        zusammenziehen(mitPlan, (p) => (p.kostengruppe
-          ? hauptgruppe(p.kostengruppe) + ' ' + kostengruppeName(hauptgruppe(p.kostengruppe))
-          : 'Ohne Kostengruppe'))));
+        zusammenziehen(mitPlan, (p) => hauptgruppeLang(p.kostengruppe))));
     }
     anhaengen(rahmen, el('div', { klasse: 'knopf-reihe' }, [
       knopf('Mehrkosten als PDF', () => mehrkostenPdf(mitPlan, art)),
@@ -958,9 +956,7 @@ async function mehrkostenPdf(gerechnet, art) {
     eur.format(jeGewerk.reduce((s, e) => s + e.differenz, 0)), true);
 
   if (art.zeigtKostengruppen) {
-    const jeGruppe = zusammenziehen(gerechnet, (p) => (p.kostengruppe
-      ? hauptgruppe(p.kostengruppe) + ' ' + kostengruppeName(hauptgruppe(p.kostengruppe))
-      : 'Ohne Kostengruppe'));
+    const jeGruppe = zusammenziehen(gerechnet, (p) => hauptgruppeLang(p.kostengruppe));
     blatt.ueberschrift('Je Kostengruppe');
     blatt.tabelle(['Kostengruppe', 'Geplant', 'Tatsächlich', 'Abweichung'],
       zeilen(jeGruppe), [2.4, 1.2, 1.3, 1.3], [1, 2, 3]);
@@ -981,9 +977,7 @@ async function mehrkostenTabelle(gerechnet, art) {
     const zeilen = zusammenziehen(gerechnet, (p) => p.gewerk || 'Sonstiges')
       .map((e) => ['Gewerk', e.name, e.geplant, e.tatsaechlich, e.differenz]);
     if (art.zeigtKostengruppen) {
-      for (const e of zusammenziehen(gerechnet, (p) => (p.kostengruppe
-        ? hauptgruppe(p.kostengruppe) + ' ' + kostengruppeName(hauptgruppe(p.kostengruppe))
-        : 'Ohne Kostengruppe'))) {
+      for (const e of zusammenziehen(gerechnet, (p) => hauptgruppeLang(p.kostengruppe))) {
         zeilen.push(['Kostengruppe', e.name, e.geplant, e.tatsaechlich, e.differenz]);
       }
     }

@@ -136,7 +136,20 @@ export function kostengruppeLang(nr) {
 }
 
 /** Die Hauptgruppe einer beliebigen Kostengruppe: 330 gehoert zu 300. */
-export const hauptgruppe = (nr) => (String(nr || '')[0] || '') + '00';
+// Nur dreistellige Nummern der DIN 276 zaehlen. Alles andere, etwa ein
+// "kg300" aus einer alten Datei, ist keine Kostengruppe: Frueher wurde
+// daraus "k00", und die Aufstellung zeigte eine Gruppe, die es nicht gibt.
+export const hauptgruppe = (nr) => {
+  const text = String(nr || '').trim();
+  return /^[1-8]\d\d$/.test(text) ? text[0] + '00' : '';
+};
+
+/** "300 Bauwerk – Baukonstruktionen", oder "Ohne Kostengruppe". */
+export function hauptgruppeLang(nr) {
+  const haupt = hauptgruppe(nr);
+  const name = kostengruppeName(haupt);
+  return haupt && name ? `${haupt} ${name}` : 'Ohne Kostengruppe';
+}
 
 /** Auswahlliste fuers Formular, zweite Ebene unter ihrer Hauptgruppe. */
 export function kostengruppenOptionen() {

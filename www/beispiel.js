@@ -127,16 +127,16 @@ async function fuellen() {
 
   // Positionen: geplant gegen tatsaechlich, damit Mehrkosten sichtbar werden.
   const posten = [
-    ['Grundstück', 'Grundstück', 'kg100', 132000, 132000, 'bezahlt'],
-    ['Erdarbeiten und Baugrube', 'Erdbau', 'kg300', 18400, 21150, 'bezahlt'],
-    ['Rohbau Mauerwerk', 'Rohbau', 'kg300', 94500, 98720, 'bezahlt'],
-    ['Dachstuhl und Eindeckung', 'Zimmerer', 'kg300', 48200, 47390, 'bezahlt'],
-    ['Fenster und Haustür', 'Fenster', 'kg300', 31500, 34280, 'beauftragt'],
-    ['Elektroinstallation', 'Elektro', 'kg400', 22400, 0, 'beauftragt'],
-    ['Heizung und Sanitär', 'Sanitär', 'kg400', 38900, 0, 'beauftragt'],
-    ['Estrich', 'Estrich', 'kg300', 11200, 0, 'geplant'],
-    ['Innenputz und Maler', 'Putz', 'kg300', 26200, 0, 'beauftragt'],
-    ['Außenanlagen', 'Garten', 'kg500', 19600, 0, 'geplant'],
+    ['Grundstück', 'Grundstück', '110', 132000, 132000, 'bezahlt'],
+    ['Erdarbeiten und Baugrube', 'Erdbau', '310', 18400, 21150, 'bezahlt'],
+    ['Rohbau Mauerwerk', 'Rohbau', '330', 94500, 98720, 'bezahlt'],
+    ['Dachstuhl und Eindeckung', 'Zimmerer', '360', 48200, 47390, 'bezahlt'],
+    ['Fenster und Haustür', 'Fenster', '330', 31500, 34280, 'beauftragt'],
+    ['Elektroinstallation', 'Elektro', '440', 22400, 0, 'beauftragt'],
+    ['Heizung und Sanitär', 'Sanitär', '410', 38900, 0, 'beauftragt'],
+    ['Estrich', 'Estrich', '350', 11200, 0, 'geplant'],
+    ['Innenputz und Maler', 'Putz', '340', 26200, 0, 'beauftragt'],
+    ['Außenanlagen', 'Garten', '510', 19600, 0, 'geplant'],
   ];
   const ids = [];
   for (const [name, gewerk, kostengruppe, geplant, tatsaechlich, status] of posten) {

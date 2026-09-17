@@ -31,7 +31,7 @@ import {
 } from './www/zeichen.js';
 import { xlsxBytes, spalte } from './www/xlsx.js';
 import {
-  KOSTENGRUPPEN, kostengruppeName, kostengruppeLang, hauptgruppe,
+  KOSTENGRUPPEN, kostengruppeName, kostengruppeLang, hauptgruppe, hauptgruppeLang,
   kostengruppenOptionen, kostengruppeVorschlag, nachHauptgruppen,
 } from './www/din276.js';
 
@@ -457,20 +457,29 @@ console.log('Zusammenfassung nach Hauptgruppen');
       { kostengruppe: '360', betrag: 50 },
       { kostengruppe: '440', betrag: 30 },
       { betrag: 7 },
+      // Kein gueltiger Wert: gehoert zu "Ohne Kostengruppe", nicht zu "k00".
+      { kostengruppe: 'kg300', betrag: 3 },
     ],
     (x) => x.betrag
   );
+  pruef('Ein ungültiger Wert wird keine eigene Gruppe',
+    !gruppen.some((g) => g.nr === 'k00') && gruppen.find((g) => g.nr === '').summe === 10,
+    JSON.stringify(gruppen.map((g) => [g.nr, g.summe])));
+  pruef('hauptgruppe nimmt nur DIN-Nummern', hauptgruppe('kg300') === '' && hauptgruppe('341') === '300' && hauptgruppe('') === '');
+  pruef('hauptgruppeLang benennt sauber',
+    hauptgruppeLang('361') === '300 Bauwerk – Baukonstruktionen' && hauptgruppeLang('kg400') === 'Ohne Kostengruppe',
+    hauptgruppeLang('361') + ' / ' + hauptgruppeLang('kg400'));
   const dreihundert = gruppen.find((g) => g.nr === '300');
   pruef('330 und 360 fallen in dieselbe Hauptgruppe',
     dreihundert.summe === 150 && dreihundert.saetze.length === 2,
     dreihundert.summe + '/' + dreihundert.saetze.length);
   pruef('Unzugeordnetes bekommt einen eigenen Korb',
-    gruppen.some((g) => g.nr === '' && g.summe === 7));
+    gruppen.some((g) => g.nr === '' && g.summe === 10));
   pruef('Unzugeordnetes steht am Ende', gruppen[gruppen.length - 1].nr === '');
   pruef('Die Hauptgruppen stehen aufsteigend',
     gruppen.filter((g) => g.nr).every((g, i, f) => i === 0 || f[i - 1].nr < g.nr));
   pruef('Nichts geht verloren',
-    gruppen.reduce((sum, g) => sum + g.summe, 0) === 187);
+    gruppen.reduce((sum, g) => sum + g.summe, 0) === 190);
 }
 
 // ------------------------------------------------------- Webfassung und Offline
