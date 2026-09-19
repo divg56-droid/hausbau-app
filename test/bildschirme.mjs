@@ -29,6 +29,7 @@ try {
   console.log(`${wege.length} Bildschirme\n`);
 
   const schlecht = [];
+  const gesammelt = [];
   for (const weg of wege) {
     await s.hin(weg, 1600);
     const r = await s.werten(`(() => {
@@ -43,13 +44,14 @@ try {
         knoepfe: document.querySelectorAll('button').length,
       };
     })()`);
-    const klagen = s.klagen ? s.klagen() : [];
+    const klagen = s.klagenHolen();
+    gesammelt.push(...klagen);
     const name = weg || '(Übersicht)';
     if (r.leer || r.notausgang || r.muell.length || r.leereKaesten) {
       schlecht.push([name, JSON.stringify(r)]);
     }
     pruef(`Bildschirm ${name}`.padEnd(34) + `${r.laenge} Zeichen, ${r.knoepfe} Knöpfe`,
-      !r.leer && !r.notausgang && r.muell.length === 0 && r.leereKaesten === 0,
+      !r.leer && !r.notausgang && r.muell.length === 0 && r.leereKaesten === 0 && klagen.length === 0,
       JSON.stringify(r) + (klagen.length ? ' | Konsole: ' + JSON.stringify(klagen).slice(0, 200) : ''));
   }
 
@@ -78,7 +80,7 @@ try {
   await s.groesse(390, 1600, 2);
 
   // Konsolenfehler ueber alles gesammelt.
-  const konsole = s.klagen ? s.klagen() : [];
+  const konsole = [...gesammelt, ...s.klagenHolen()];
   pruef('Keine Konsolenfehler', konsole.length === 0, JSON.stringify(konsole).slice(0, 400));
 
   if (schlecht.length) {
