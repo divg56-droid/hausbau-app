@@ -33,7 +33,8 @@ try {
                       bilder_bytes: 1024, freigaben: 0, freigabe_aufrufe: 0, neu: 1 },
             nutzer: [{ id: 7, epost: 'an…lz@beispiel.de', angelegt: '2026-09-01', passwort: true,
                        anfragen: 12, bytes: 2048, tage_aktiv: 3, zuletzt: '2026-09-18', saetze: 5,
-                       bilder: 1, bilder_bytes: 1024, geraete: 1, freigabe_aufrufe: 0, einblick: null }],
+                       bilder: 1, bilder_bytes: 1024, geraete: 1, freigabe_aufrufe: 0, einblick: null,
+                       ort: 'Kaiserslautern' }],
             verlauf: [{ tag: '2026-09-18', anfragen: 12, bytes: 2048, nutzer: 1 }],
           };
       return new Response(JSON.stringify(inhalt), { status: 200, headers: { 'Content-Type': 'application/json' } });
@@ -48,6 +49,7 @@ try {
   })()`);
   pruef('Die Verwaltung zeigt die Kurzform', vorher.text.includes('an…lz@beispiel.de'), vorher.text.slice(0, 200));
   pruef('Es gibt einen Knopf "Adresse zeigen"', vorher.knopf);
+  pruef('Die Baustelle steht in der Zeile', vorher.text.includes('Kaiserslautern'), vorher.text.slice(0, 300));
   pruef('Die volle Adresse steht noch nicht da', !vorher.text.includes('andreas.volz@beispiel.de'));
 
   await s.werten(`[...document.querySelectorAll('button')].find((b) => b.textContent === 'Adresse zeigen').click()`);

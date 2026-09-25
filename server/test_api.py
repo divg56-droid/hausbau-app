@@ -292,10 +292,18 @@ else:
     code, _ = ruf('/admin.php', {'tun': 'adresse', 'id': eigene['id']})
     pruef('Ohne Anmeldung gibt es keine Adresse', code == 401, code)
 
+    # Der Ort der Baustelle kommt aus den abgeglichenen Einstellungen.
+    ruf('/abgleich.php', {'seit': '', 'saetze': {'einstellungen': [
+        {'name': 'baustelle', 'ort': 'Kaiserslautern', 'lat': 49.44, 'lon': 7.77,
+         'geaendert': '2026-09-20T08:00:00.000Z', 'geloescht': False},
+    ]}}, marke=handy)
+
     code, c = ruf('/admin.php', {'tun': 'ueberblick', 'tage': 30}, marke=handy)
     danach = next((z for z in c['nutzer'] if z['id'] == eigene['id']), {})
     pruef('Der Einblick steht danach in der Zeile',
           bool(danach.get('einblick')), danach.get('einblick'))
+    pruef('Die Baustelle steht in der Zeile',
+          danach.get('ort') == 'Kaiserslautern', danach.get('ort'))
 
 
 print('\nFEHLGESCHLAGEN: ' + str(len(fehler)) if fehler else '\nAlle Pruefungen bestanden.')

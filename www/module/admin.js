@@ -201,7 +201,7 @@ function nutzertabelle({ nutzer, tage }) {
   }
 
   const spalten = [
-    ['Konto', 'links'], ['Angelegt', 'links'], ['Zuletzt', 'links'],
+    ['Konto', 'links'], ['Baustelle', 'links'], ['Angelegt', 'links'], ['Zuletzt', 'links'],
     ['Geräte', 'rechts'], ['Anfragen', 'rechts'], ['Verkehr', 'rechts'],
     ['Sätze', 'rechts'], ['Fotos', 'rechts'], ['Tagebuch', 'rechts'],
   ];
@@ -219,6 +219,11 @@ function nutzertabelle({ nutzer, tage }) {
           const zahlen = (wert) => el('td', { text: wert, stil: { textAlign: 'right' } });
           return el('tr', {}, [
             el('td', {}, kontozelle(n)),
+            // Der Ort der Baustelle, so wie er fuers Wetter eingetippt wurde.
+            el('td', {
+              text: n.ort || '—',
+              stil: n.ort ? null : { color: 'var(--tinte-leise)' },
+            }),
             el('td', { text: datumLang(n.angelegt) }),
             el('td', {
               text: n.zuletzt ? datumLang(n.zuletzt) : '—',
@@ -241,7 +246,9 @@ function nutzertabelle({ nutzer, tage }) {
       text: 'Anfragen, Verkehr und "Zuletzt" beziehen sich auf die letzten '
         + tage + ' Tage. Sätze, Fotos und Tagebuch-Aufrufe sind Gesamtstände. '
         + 'Adressen stehen verkürzt; "Adresse zeigen" holt eine einzelne nach '
-        + 'und vermerkt das auf dem Server.',
+        + 'und vermerkt das auf dem Server. Die Baustelle ist der Ort aus den '
+        + 'Einstellungen des zuletzt bearbeiteten Projekts; ohne Konto-Abgleich '
+        + 'steht dort nichts.',
     }),
   ]);
 }

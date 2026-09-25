@@ -84,8 +84,39 @@ foreach ($db->query(
         'passwort' => (bool)$z['hat_passwort'],
         'anfragen' => 0, 'bytes' => 0, 'tage_aktiv' => 0, 'zuletzt' => null,
         'saetze' => 0, 'bilder' => 0, 'bilder_bytes' => 0,
-        'geraete' => 0, 'freigabe_aufrufe' => 0, 'einblick' => null,
+        'geraete' => 0, 'freigabe_aufrufe' => 0, 'einblick' => null, 'ort' => null,
     ];
+}
+
+/*
+ * Wo gebaut wird.
+ *
+ * Der Ort steht als Einstellung "baustelle" im Abgleich, je Projekt eine
+ * ("baustelle@projekt-2"). Genommen wird der zuletzt geaenderte: Wer zwei
+ * Projekte hat, sieht hier das, woran er gerade arbeitet.
+ *
+ * Herausgegeben wird allein der eingetippte Ortsname -- das ist eine Stadt,
+ * kein Grundstueck. Die App fragt damit das Wetter ab; eine Strasse steht
+ * dort nicht drin.
+ */
+$ortsatz = $db->query(
+    "SELECT nutzer_id, inhalt, geaendert FROM saetze
+      WHERE speicher = 'einstellungen' AND geloescht = 0
+        AND (kennung = 'baustelle' OR kennung LIKE 'baustelle@%')
+      ORDER BY geaendert"
+);
+foreach ($ortsatz as $z) {
+    $id = (int)$z['nutzer_id'];
+    if (!isset($nutzer[$id])) {
+        continue;
+    }
+    $satz = json_decode((string)$z['inhalt'], true);
+    $ort = is_array($satz) ? trim((string)($satz['ort'] ?? '')) : '';
+    if ($ort !== '') {
+        // Spaeter geaendert gewinnt, deshalb ohne Pruefung ueberschreiben:
+        // die Abfrage liefert aufsteigend.
+        $nutzer[$id]['ort'] = mb_substr($ort, 0, 60);
+    }
 }
 
 // Wann wurde die volle Adresse zuletzt angesehen? Steht in derselben Zeile
