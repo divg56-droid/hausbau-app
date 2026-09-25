@@ -104,6 +104,25 @@ try {
   pruef('Die Seite zeigt den Endpreis an', text.includes('356.000') && text.includes('Vergleichbarer Endpreis'), text.slice(-400));
   pruef('Offene Positionen werden gemeldet', /ungeklärt|unfertig/i.test(text));
 
+  // Die Spalten duerfen sich nicht ueberlappen: Mit automatischer Verteilung
+  // zog die Positionsspalte die ganze Breite an sich, und ihr Text lief in
+  // die Auswahl daneben.
+  const spalten = await s.werten(`(() => {
+    const zeile = [...document.querySelectorAll('.vergleich tbody tr')].find((z) => z.textContent.includes('Kanal: Schmutz'));
+    const kopf = zeile.querySelector('.vergleich-kopf').getBoundingClientRect();
+    const zelle = zeile.querySelector('td').getBoundingClientRect();
+    const wahl = zeile.querySelector('select').getBoundingClientRect();
+    return {
+      kopfBreite: Math.round(kopf.width),
+      ueberlappt: kopf.right > zelle.left + 1,
+      wahlZuBreit: wahl.width > 460,
+      quer: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    };
+  })()`);
+  pruef('Die Positionsspalte bleibt bei 260 px und läuft nicht in die Auswahl',
+    spalten.kopfBreite === 260 && !spalten.ueberlappt && !spalten.wahlZuBreit && !spalten.quer,
+    JSON.stringify(spalten));
+
   // Auf dem Telefon rollt die Tabelle in sich, die Seite steht still.
   await s.groesse(320, 1400, 2);
   await s.hin('anbieter', 1600);

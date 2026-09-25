@@ -76,13 +76,21 @@ async function zeichne(rahmen) {
   );
 }
 
+/**
+ * Wie breit die Tabelle mindestens sein muss.
+ *
+ * 260 px fuer die Position, 170 je Anbieter. Darunter wird die Auswahl zu
+ * schmal fuer ihre laengste Beschriftung. Passt es nicht, rollt der Rahmen.
+ */
+const breite = (spalten) => ({ minWidth: 260 + spalten.length * 170 + 'px' });
+
 /* ------------------------------------------------------------- Kopfbereich */
 
 function kopfkarte(liste, neu) {
   return karte([
     el('h2', { text: 'Die Angebote' }),
     el('div', { klasse: 'tabelle-rolle' }, [
-      el('table', { klasse: 'vergleich' }, [
+      el('table', { klasse: 'vergleich', stil: breite(liste) }, [
         el('tbody', {}, [
           el('tr', {}, [
             el('th', { klasse: 'vergleich-kopf', text: 'Anbieter' }),
@@ -161,7 +169,7 @@ function gruppenkarte(gruppe, liste, neu) {
     el('h2', { text: gruppe.titel }),
     el('p', { klasse: 'unterzeile', text: gruppe.text }),
     el('div', { klasse: 'tabelle-rolle' }, [
-      el('table', { klasse: 'vergleich' }, [
+      el('table', { klasse: 'vergleich', stil: breite(liste) }, [
         el('thead', {}, [
           el('tr', {}, [
             el('th', { klasse: 'vergleich-kopf', text: 'Position' }),
@@ -250,7 +258,7 @@ function summenkarte(liste) {
   return karte([
     el('h2', { text: 'Vergleichbarer Endpreis' }),
     el('div', { klasse: 'tabelle-rolle' }, [
-      el('table', { klasse: 'vergleich' }, [
+      el('table', { klasse: 'vergleich', stil: breite(stand) }, [
         el('thead', {}, [
           el('tr', {}, [
             el('th', { klasse: 'vergleich-kopf', text: '' }),

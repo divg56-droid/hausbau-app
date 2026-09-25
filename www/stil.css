@@ -1390,27 +1390,39 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
 
 /* Anbietervergleich: eine Tabelle, die von links gelesen wird.
  *
- * Die erste Spalte traegt die Position und bleibt beim Rollen stehen --
- * ohne sie weiss man nach der zweiten Spalte nicht mehr, worum es geht.
- * Die Anbieterspalten bekommen eine feste Breite, sonst zieht eine lange
- * Frage die Tabelle auseinander. */
-.vergleich { border-collapse: collapse; width: 100%; }
+ * table-layout: fixed ist hier keine Feinheit, sondern Bedingung. Mit der
+ * automatischen Verteilung zieht die erste Spalte die ganze Breite an sich
+ * -- die Fragen darin sind lang --, die Anbieterspalten rutschen aus dem
+ * Bild, und der Text laeuft in die Auswahl hinein. Fest verteilt bekommt
+ * die Position ihre 260 px, den Rest teilen sich die Anbieter.
+ *
+ * Die Mindestbreite setzt das Modul je nach Zahl der Anbieter. Reicht der
+ * Platz nicht, rollt der Rahmen darum, nicht die Seite. */
+.vergleich { border-collapse: collapse; width: 100%; table-layout: fixed; }
 .vergleich th, .vergleich td {
   border-bottom: 1px solid var(--linie); padding: 8px 10px; vertical-align: top; text-align: left;
+  overflow-wrap: anywhere;
 }
 .vergleich thead th { font-size: 13px; color: var(--tinte-leise); }
 .vergleich-kopf {
-  position: sticky; left: 0; background: var(--karte); min-width: 190px; max-width: 260px;
-  font-weight: 400;
+  position: sticky; left: 0; z-index: 2; background: var(--karte);
+  width: 260px; font-weight: 400;
 }
-.vergleich td { min-width: 150px; }
-.vergleich td.zahl { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.vergleich .zeilen-unter { display: block; }
+.vergleich td.zahl { text-align: right; font-variant-numeric: tabular-nums; }
+.vergleich .zeilen-titel { display: block; }
+.vergleich .zeilen-unter { display: block; margin-top: 2px; }
 .vergleich-summe td, .vergleich-summe th { font-weight: 700; border-top: 2px solid var(--akzent); }
-.vergleich-wahl { width: 100%; min-height: 44px; }
+/* Bei nur einem Anbieter bekaeme die Spalte die ganze Breite. Ein Feld,
+   das ueber einen Meter Bildschirm laeuft, liest sich schlecht. */
+.vergleich-wahl { width: 100%; max-width: 420px; min-height: 44px; }
 .vergleich-wahl.art-drin { border-color: #2e7d4f; }
 .vergleich-wahl.art-betrag { border-color: var(--akzent); }
-.vergleich input { width: 100%; margin-top: 6px; }
+.vergleich input { width: 100%; max-width: 420px; margin-top: 6px; }
+/* Auf dem Telefon bliebe von einer festgepinnten 260-px-Spalte nichts
+   uebrig. Dort rollt die Tabelle ganz normal mit. */
+@media (max-width: 700px) {
+  .vergleich-kopf { position: static; width: 180px; }
+}
 .anbieter-neu { margin-top: 12px; }
 .anbieter-neu input { flex: 1 1 160px; min-width: 0; }
 .knopf-leise { margin-top: 6px; color: var(--tinte-leise); }
