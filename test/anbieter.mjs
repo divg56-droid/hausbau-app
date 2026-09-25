@@ -112,15 +112,20 @@ try {
     const kopf = zeile.querySelector('.vergleich-kopf').getBoundingClientRect();
     const zelle = zeile.querySelector('td').getBoundingClientRect();
     const wahl = zeile.querySelector('select').getBoundingClientRect();
+    const th = zeile.querySelector('.vergleich-kopf');
     return {
       kopfBreite: Math.round(kopf.width),
+      // Der Kasten allein sagt nichts: Laeuft der Text aus ihm heraus, steht
+      // er trotzdem quer ueber der Auswahl daneben.
+      textLaeuftRaus: th.scrollWidth > th.clientWidth + 1,
       ueberlappt: kopf.right > zelle.left + 1,
       wahlZuBreit: wahl.width > 460,
       quer: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
     };
   })()`);
   pruef('Die Positionsspalte bleibt bei 260 px und läuft nicht in die Auswahl',
-    spalten.kopfBreite === 260 && !spalten.ueberlappt && !spalten.wahlZuBreit && !spalten.quer,
+    spalten.kopfBreite === 260 && !spalten.ueberlappt && !spalten.textLaeuftRaus
+      && !spalten.wahlZuBreit && !spalten.quer,
     JSON.stringify(spalten));
 
   // Auf dem Telefon rollt die Tabelle in sich, die Seite steht still.

@@ -1399,9 +1399,12 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
  * Die Mindestbreite setzt das Modul je nach Zahl der Anbieter. Reicht der
  * Platz nicht, rollt der Rahmen darum, nicht die Seite. */
 .vergleich { border-collapse: collapse; width: 100%; table-layout: fixed; }
+/* white-space normal ist hier Pflicht: Die allgemeine Tabellenregel weiter
+   oben setzt th und td auf nowrap. Ohne diese Zeile laeuft die Frage in der
+   ersten Spalte ueber ihren Rand hinaus quer in die Auswahl daneben. */
 .vergleich th, .vergleich td {
   border-bottom: 1px solid var(--linie); padding: 8px 10px; vertical-align: top; text-align: left;
-  overflow-wrap: anywhere;
+  white-space: normal; overflow-wrap: anywhere;
 }
 .vergleich thead th { font-size: 13px; color: var(--tinte-leise); }
 .vergleich-kopf {
