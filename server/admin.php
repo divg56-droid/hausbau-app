@@ -6,17 +6,22 @@ require __DIR__ . '/_start.php';
  * Verwaltung: wer nutzt die App, und wie viel.
  *
  *   POST { tun: "ueberblick", tage?: 30 }
+ *   POST { tun: "adresse", id: 7 }
  *
  * Wer hier hereindarf, steht als Liste von Adressen in geheim.php unter
  * "admins". Es gibt keine zweite Anmeldung und kein zweites Passwort: Der
  * Betreiber meldet sich wie jeder andere an, und diese Datei prueft nur
  * zusaetzlich, ob seine Adresse auf der Liste steht.
  *
- * Alle Adressen gehen ausschliesslich verkuerzt heraus ("an…as@example.de").
- * Das ist kein Vorhang vor der Anzeige, sondern die Grenze: Die vollen
- * Adressen bleiben in der Datenbank. Zum Wiedererkennen reicht die Kurzform,
- * und fuer alles andere gibt es keinen Grund, den ganzen Bestand durch einen
- * Browser zu schicken.
+ * Die Liste geht ausschliesslich verkuerzt heraus ("an…as@example.de").
+ * Zum Wiedererkennen reicht die Kurzform, und es gibt keinen Grund, den
+ * ganzen Bestand bei jedem Aufruf durch einen Browser zu schicken.
+ *
+ * Wer eine volle Adresse braucht, holt sie einzeln ("adresse") -- eine
+ * Anfrage, eine Kennung, eine Adresse. Jede davon steht danach in
+ * "einblicke", mit Zeitpunkt und dem Konto, das nachgesehen hat. Der
+ * Eintrag wird vor der Antwort geschrieben: Schlaegt er fehl, geht auch
+ * die Adresse nicht heraus.
  */
 
 $n = nutzer();
@@ -33,11 +38,32 @@ $tun = (string)($eingang['tun'] ?? 'ueberblick');
 // hinaus wird die Abfrage teuer und die Anzeige unlesbar.
 $tage = max(1, min(365, (int)($eingang['tage'] ?? 30)));
 
-if ($tun !== 'ueberblick') {
+if ($tun !== 'ueberblick' && $tun !== 'adresse') {
     fehler(400, 'Unbekannte Aktion.');
 }
 
 $db = db();
+
+/* ------------------------------------------------------- Eine volle Adresse */
+
+if ($tun === 'adresse') {
+    $id = (int)($eingang['id'] ?? 0);
+    $s = $db->prepare('SELECT epost FROM nutzer WHERE id = ?');
+    $s->execute([$id]);
+    $epost = $s->fetchColumn();
+    if ($epost === false) {
+        fehler(404, 'Nicht vorhanden.');
+    }
+    try {
+        $p = $db->prepare('INSERT INTO einblicke (admin_id, nutzer_id, zeit) VALUES (?, ?, NOW())');
+        $p->execute([(int)$n['id'], $id]);
+    } catch (Throwable $ex) {
+        // Meist die fehlende Tabelle auf einem Server, der noch vor dieser
+        // Aenderung eingerichtet wurde. Ohne Protokoll keine Adresse.
+        fehler(500, 'Der Einblick liess sich nicht protokollieren; bitte einrichten.php aufrufen.');
+    }
+    antwort(['id' => $id, 'epost' => (string)$epost]);
+}
 
 /* ------------------------------------------------------------ Nutzerliste
  *
@@ -58,8 +84,20 @@ foreach ($db->query(
         'passwort' => (bool)$z['hat_passwort'],
         'anfragen' => 0, 'bytes' => 0, 'tage_aktiv' => 0, 'zuletzt' => null,
         'saetze' => 0, 'bilder' => 0, 'bilder_bytes' => 0,
-        'geraete' => 0, 'freigabe_aufrufe' => 0,
+        'geraete' => 0, 'freigabe_aufrufe' => 0, 'einblick' => null,
     ];
+}
+
+// Wann wurde die volle Adresse zuletzt angesehen? Steht in derselben Zeile
+// wie die Adresse, damit das Nachsehen nicht unsichtbar bleibt.
+try {
+    foreach ($db->query('SELECT nutzer_id, MAX(zeit) AS zeit FROM einblicke GROUP BY nutzer_id') as $z) {
+        if (isset($nutzer[(int)$z['nutzer_id']])) {
+            $nutzer[(int)$z['nutzer_id']]['einblick'] = substr((string)$z['zeit'], 0, 10);
+        }
+    }
+} catch (Throwable $ex) {
+    // Tabelle noch nicht angelegt: dann gab es auch noch keinen Einblick.
 }
 
 $fenster = $db->prepare(

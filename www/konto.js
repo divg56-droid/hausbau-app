@@ -210,6 +210,9 @@ export async function kontoLoeschen(passwort, adresse = '') {
 export const adminUeberblick = (tage = 30) =>
   ruf('/admin.php', { tun: 'ueberblick', tage });
 
+/** Die volle Adresse eines einzelnen Kontos. Der Server protokolliert das. */
+export const adminAdresse = (id) => ruf('/admin.php', { tun: 'adresse', id });
+
 // ------------------------------------------------------------------ Freigabe
 
 export const freigabeStand = () => ruf('/freigabe.php', { tun: 'stand' });

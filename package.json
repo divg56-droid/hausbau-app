@@ -20,7 +20,8 @@
     "installieren": "node test/installieren.mjs",
     "analyse": "node test/analyse.mjs",
     "beispiel": "node test/beispiel.mjs",
-    "bildschirme": "node test/bildschirme.mjs"
+    "bildschirme": "node test/bildschirme.mjs",
+    "verwaltung": "node test/verwaltung.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",

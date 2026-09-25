@@ -261,5 +261,42 @@ code, _ = ruf('/oeffentlich.php?k=' + zweiter, methode='GET')
 pruef('Nach dem Aufheben ist nichts mehr zu sehen', code == 404, code)
 
 
+# ----------------------------------------------------- Verwaltung: Adressen
+#
+# Laeuft nur, wenn das Testkonto in geheim.php unter "admins" steht. Sonst
+# antwortet der Server absichtlich mit 404, und es gibt hier nichts zu
+# pruefen.
+code, a = ruf('/admin.php', {'tun': 'ueberblick', 'tage': 30}, marke=handy)
+if code == 404:
+    print('  --   Verwaltung uebersprungen (Testkonto steht nicht unter "admins")')
+else:
+    pruef('Die Verwaltung antwortet', code == 200 and 'nutzer' in a, a)
+    mit_adresse = [z for z in a.get('nutzer', []) if '@' in z.get('epost', '')]
+    pruef('Die Liste nennt Adressen nur verkuerzt',
+          all('\u2026' in z['epost'] for z in mit_adresse),
+          [z['epost'] for z in mit_adresse][:3])
+
+    eigene = next((z for z in a['nutzer'] if z['epost'].endswith('@beispiel.de')), None)
+    pruef('Das eigene Konto steht in der Liste', eigene is not None)
+
+    code, b = ruf('/admin.php', {'tun': 'adresse', 'id': eigene['id']}, marke=handy)
+    pruef('Eine einzelne Adresse kommt vollstaendig',
+          code == 200 and b.get('epost') == 'andreas@beispiel.de', (code, b))
+
+    code, _ = ruf('/admin.php', {'tun': 'adresse', 'id': 999999}, marke=handy)
+    pruef('Eine unbekannte Kennung fuehrt ins Leere', code == 404, code)
+
+    code, _ = ruf('/admin.php', {'tun': 'adressen'}, marke=handy)
+    pruef('Eine unbekannte Aktion wird abgewiesen', code == 400, code)
+
+    code, _ = ruf('/admin.php', {'tun': 'adresse', 'id': eigene['id']})
+    pruef('Ohne Anmeldung gibt es keine Adresse', code == 401, code)
+
+    code, c = ruf('/admin.php', {'tun': 'ueberblick', 'tage': 30}, marke=handy)
+    danach = next((z for z in c['nutzer'] if z['id'] == eigene['id']), {})
+    pruef('Der Einblick steht danach in der Zeile',
+          bool(danach.get('einblick')), danach.get('einblick'))
+
+
 print('\nFEHLGESCHLAGEN: ' + str(len(fehler)) if fehler else '\nAlle Pruefungen bestanden.')
 raise SystemExit(1 if fehler else 0)

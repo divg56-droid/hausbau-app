@@ -210,6 +210,20 @@ CREATE TABLE zugriffe (
     CONSTRAINT zugriff_nutzer FOREIGN KEY (nutzer_id) REFERENCES nutzer (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
 
+// Wer hat wann wessen volle Adresse angesehen. Die Verwaltung zeigt
+// Adressen sonst nur verkuerzt; wird eine einzelne aufgedeckt, steht das
+// hier. Ohne Eintrag keine Adresse -- die Reihenfolge ist in admin.php so
+// herum, damit es kein stilles Nachschlagen gibt.
+'einblicke' => "
+CREATE TABLE einblicke (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    admin_id INT UNSIGNED NOT NULL,
+    nutzer_id INT UNSIGNED NOT NULL,
+    zeit DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    KEY nach_nutzer (nutzer_id, zeit)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+
 ];
 
 $meldungen = [];

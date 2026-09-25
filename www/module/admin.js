@@ -4,14 +4,14 @@
 // in geheim.php unter "admins" steht. Diese Pruefung hier ist die Anzeige;
 // das Schloss sitzt in server/admin.php, das jedem anderen mit 404 antwortet.
 //
-// Alle Adressen kommen schon verkuerzt vom Server ("an…as@example.de"). Die
-// vollen stehen in der Datenbank und haben in einem Browserfenster nichts zu
-// suchen -- auch nicht in meinem.
+// Die Liste kommt verkuerzt vom Server ("an…as@example.de"). Wer eine volle
+// Adresse braucht, holt sie mit dem Knopf in der Zeile einzeln nach; der
+// Server schreibt jeden dieser Einblicke mit und zeigt das Datum daneben.
 
 import {
   el, karte, kopfzeile, hinweisKasten, leerzustand, anhaengen, zahl, datumLang,
 } from '../hilfen.js';
-import { adminUeberblick, angemeldet } from '../konto.js';
+import { adminAdresse, adminUeberblick, angemeldet } from '../konto.js';
 
 const FENSTER = [
   { tage: 7, titel: '7 Tage' },
@@ -161,6 +161,40 @@ function verlauf({ verlauf: tage, tage: fenster }) {
   ]);
 }
 
+/*
+ * Die Zelle mit der Adresse.
+ *
+ * Der Knopf holt genau diese eine Adresse und ersetzt die Kurzform. Danach
+ * ist er weg: Ein zweiter Druck haette nur einen zweiten Protokolleintrag
+ * erzeugt und dieselbe Adresse gezeigt.
+ */
+function kontozelle(n) {
+  const titel = el('span', { klasse: 'zeilen-titel', text: n.epost });
+  const unter = el('span', {
+    klasse: 'zeilen-unter',
+    text: '#' + n.id + (n.passwort ? ' · mit Passwort' : ' · nur per Anmeldelink')
+      + (n.einblick ? ' · angesehen ' + datumLang(n.einblick) : ''),
+  });
+  const knopf = el('button', {
+    klasse: 'knopf knopf-schmal', type: 'button', text: 'Adresse zeigen',
+    onclick: async () => {
+      knopf.disabled = true;
+      knopf.textContent = 'Einen Moment …';
+      try {
+        const antwort = await adminAdresse(n.id);
+        titel.textContent = antwort.epost;
+        unter.textContent = unter.textContent.replace(/ · angesehen .*$/, '') + ' · eben angesehen';
+        knopf.remove();
+      } catch (fehler) {
+        knopf.disabled = false;
+        knopf.textContent = 'Adresse zeigen';
+        unter.textContent = 'Ging nicht: ' + fehler.message;
+      }
+    },
+  });
+  return [titel, unter, knopf];
+}
+
 function nutzertabelle({ nutzer, tage }) {
   if (!nutzer.length) {
     return karte([leerzustand('Noch keine Konten', 'Sobald sich jemand anmeldet, steht er hier.')]);
@@ -184,13 +218,7 @@ function nutzertabelle({ nutzer, tage }) {
         el('tbody', {}, nutzer.map((n) => {
           const zahlen = (wert) => el('td', { text: wert, stil: { textAlign: 'right' } });
           return el('tr', {}, [
-            el('td', {}, [
-              el('span', { klasse: 'zeilen-titel', text: n.epost }),
-              el('span', {
-                klasse: 'zeilen-unter',
-                text: '#' + n.id + (n.passwort ? ' · mit Passwort' : ' · nur per Anmeldelink'),
-              }),
-            ]),
+            el('td', {}, kontozelle(n)),
             el('td', { text: datumLang(n.angelegt) }),
             el('td', {
               text: n.zuletzt ? datumLang(n.zuletzt) : '—',
@@ -211,7 +239,9 @@ function nutzertabelle({ nutzer, tage }) {
     el('p', {
       klasse: 'unterzeile',
       text: 'Anfragen, Verkehr und "Zuletzt" beziehen sich auf die letzten '
-        + tage + ' Tage. Sätze, Fotos und Tagebuch-Aufrufe sind Gesamtstände.',
+        + tage + ' Tage. Sätze, Fotos und Tagebuch-Aufrufe sind Gesamtstände. '
+        + 'Adressen stehen verkürzt; "Adresse zeigen" holt eine einzelne nach '
+        + 'und vermerkt das auf dem Server.',
     }),
   ]);
 }
