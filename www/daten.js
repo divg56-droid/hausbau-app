@@ -16,7 +16,7 @@
 //              Abgleich vom anderen Geraet zurueck, weil der ihn noch kennt.
 
 const DB_NAME = 'hausbau';
-const DB_VERSION = 10;
+const DB_VERSION = 11;
 
 // Wo Eintraege zu einem Elternobjekt gehoeren (Pins zu einem Geschoss), steht
 // dessen Kennung als Feld drin und bekommt einen Index.
@@ -35,6 +35,10 @@ const SPEICHER = {
   posten: { indizes: ['gewerk'] },
   // Angebote zu einer Position. Mehrere je Position, genau darum geht es.
   angebote: { indizes: ['postenId'] },
+  // Anbietervergleich beim schluesselfertigen Bauen: je Anbieter ein Satz,
+  // die bewerteten Positionen als Tabelle darin. Nicht ein Satz je Zelle --
+  // die Zellen gehoeren zum Anbieter und werden zusammen bearbeitet.
+  anbieter: { indizes: [] },
   belege: { indizes: ['datum'] },
   geschosse: { indizes: [] },
   // Raeume: das, worauf sich Maengel, Kosten und Fotos beziehen.
@@ -194,7 +198,7 @@ function db() {
       // Ab hier reicht Anlegen: anlegen() ueberspringt, was es schon gibt.
       // Die Wanderung auf Fassung 2 legt neue Speicher bereits mit an, ein
       // zweiter Aufruf schadet deshalb nicht.
-      if (ereignis.oldVersion < 10) {
+      if (ereignis.oldVersion < 11) {
         anlegen(d);
       }
     };

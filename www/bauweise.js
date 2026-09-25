@@ -143,7 +143,10 @@ export async function eigenleistungenSetzen(liste) {
  * Architektenhaus, nur im Bestand.
  */
 function verstecken(id, eigenleistungen) {
-  if (id !== SCHLUESSELFERTIG) return new Set();
+  // Der Anbietervergleich gilt dem Hausangebot als Ganzem. Bei Einzelvergabe
+  // und in der Sanierung gibt es kein solches Angebot; dort steht unter
+  // "Angebote" der Vergleich je Gewerk.
+  if (id !== SCHLUESSELFERTIG) return new Set(['anbieter']);
   const weg = ['ablauf'];
   if (!eigenleistungen.length) weg.push('angebote', 'kontakte/gewerke');
   return new Set(weg);

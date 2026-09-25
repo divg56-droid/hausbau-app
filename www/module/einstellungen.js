@@ -28,7 +28,7 @@ import { daten, einstellung } from '../daten.js';
 // bleibt beim Loeschen stehen. Sie steht deshalb in derselben Reihenfolge wie
 // SPEICHER in daten.js, damit ein neuer Speicher beim Vergleich auffaellt.
 const SPEICHER = [
-  'projekte', 'darlehen', 'leitfaden', 'posten', 'angebote', 'belege', 'geschosse',
+  'projekte', 'darlehen', 'leitfaden', 'posten', 'angebote', 'anbieter', 'belege', 'geschosse',
   'raeume', 'pins', 'maengel', 'aufgaben', 'todos', 'tagebuch', 'dokumente',
   'baudoku', 'kontakte',
 ];

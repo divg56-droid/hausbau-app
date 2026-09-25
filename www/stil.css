@@ -1387,3 +1387,32 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
 .umfang-drin { background: #2e7d4f; border-color: #2e7d4f; color: #fff; }
 .umfang-ohne { background: var(--band); color: var(--tinte); text-decoration: none; }
 .umfang-offen { border-style: dashed; }
+
+/* Anbietervergleich: eine Tabelle, die von links gelesen wird.
+ *
+ * Die erste Spalte traegt die Position und bleibt beim Rollen stehen --
+ * ohne sie weiss man nach der zweiten Spalte nicht mehr, worum es geht.
+ * Die Anbieterspalten bekommen eine feste Breite, sonst zieht eine lange
+ * Frage die Tabelle auseinander. */
+.vergleich { border-collapse: collapse; width: 100%; }
+.vergleich th, .vergleich td {
+  border-bottom: 1px solid var(--linie); padding: 8px 10px; vertical-align: top; text-align: left;
+}
+.vergleich thead th { font-size: 13px; color: var(--tinte-leise); }
+.vergleich-kopf {
+  position: sticky; left: 0; background: var(--karte); min-width: 190px; max-width: 260px;
+  font-weight: 400;
+}
+.vergleich td { min-width: 150px; }
+.vergleich td.zahl { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.vergleich .zeilen-unter { display: block; }
+.vergleich-summe td, .vergleich-summe th { font-weight: 700; border-top: 2px solid var(--akzent); }
+.vergleich-wahl { width: 100%; min-height: 44px; }
+.vergleich-wahl.art-drin { border-color: #2e7d4f; }
+.vergleich-wahl.art-betrag { border-color: var(--akzent); }
+.vergleich input { width: 100%; margin-top: 6px; }
+.anbieter-neu { margin-top: 12px; }
+.anbieter-neu input { flex: 1 1 160px; min-width: 0; }
+.knopf-leise { margin-top: 6px; color: var(--tinte-leise); }
+.schritte { margin: 0; padding-left: 20px; line-height: 1.5; }
+.schritte li { margin-bottom: 8px; }

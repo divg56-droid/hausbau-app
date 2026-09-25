@@ -1392,8 +1392,10 @@ console.log('Bauweise');
   // Wer selbst etwas uebernimmt, braucht Angebote und Gewerke wieder.
   pruef('Eigenleistungen holen Angebote und Gewerke zurueck',
     b.includes("if (!eigenleistungen.length) weg.push('angebote', 'kontakte/gewerke');"));
-  pruef('Sonst wird nichts versteckt',
-    b.includes("if (id !== SCHLUESSELFERTIG) return new Set();"));
+  // Umgekehrt: Der Anbietervergleich gilt dem Hausangebot als Ganzem und
+  // steht nur beim schluesselfertigen Bauen in der Leiste.
+  pruef('Sonst bleibt nur der Anbietervergleich versteckt',
+    b.includes("if (id !== SCHLUESSELFERTIG) return new Set(['anbieter']);"));
   // In der Sanierung fragen Foerderungen und Nachweise genau nach den
   // Kostengruppen.
   pruef('Die Sanierung behaelt ihre Kostengruppen',

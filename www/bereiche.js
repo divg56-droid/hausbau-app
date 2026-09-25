@@ -38,6 +38,8 @@ export const BEREICHE = [
     // den einzelnen Termin und der Plan, der beim Elektriker liegt.
     titel: 'Planen', zeichen: '\u{1F4D0}',
     punkte: [
+      { weg: 'anbieter', titel: 'Anbietervergleich',
+        text: 'Zwei bis vier Angebote nebeneinander: was drin ist, was fehlt, was es am Ende kostet.' },
       { weg: 'leitfaden', titel: 'Bauleitfaden',
         text: 'Was in welcher Reihenfolge zu tun ist, von der Finanzierung bis zur Abnahme.' },
       { weg: 'todos', titel: 'To-Dos',
