@@ -28,6 +28,12 @@ return [
     // niemand, und admin.php antwortet wie auf einen unbekannten Weg.
     'admins' => ['kontakt@bauzeuge.de'],
 
+    // Die Codes aus dem Buch "Klartext Hausbau", einer je Auflage. Wer einen
+    // davon im Konto eintraegt, bekommt drei Monate. Gross- und
+    // Kleinschreibung und Bindestriche sind egal. Der echte Code steht nur
+    // in geheim.php -- hier nicht, diese Datei liegt im Git.
+    'buchcodes' => [],
+
     // Schuetzt einrichten.php. Selbst ausdenken, lang und zufaellig.
     // Ohne diesen Wert laesst sich das Schema nicht anlegen.
     'einrichten_schluessel' => '',

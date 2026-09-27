@@ -22,7 +22,10 @@
     "beispiel": "node test/beispiel.mjs",
     "bildschirme": "node test/bildschirme.mjs",
     "verwaltung": "node test/verwaltung.mjs",
-    "anbieter": "node test/anbieter.mjs"
+    "anbieter": "node test/anbieter.mjs",
+    "laufzeit": "node test/laufzeit.mjs",
+    "buchcode": "node test/buchcode.mjs",
+    "anmeldetor": "node test/anmeldetor.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",

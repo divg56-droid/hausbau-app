@@ -126,7 +126,12 @@ export async function ruf(pfad, inhalt, optionen = {}) {
 
   if (!antwort.ok) {
     // Abgelaufene Anmeldung nicht als Fehler stehen lassen, sondern aufraeumen.
-    if (antwort.status === 401) vergessen();
+    //
+    // Nur wenn der Server sie ausdruecklich fuer hin erklaert. Ein 401 heisst
+    // auch "das Passwort stimmt nicht" oder "den Code kennen wir nicht" --
+    // wer hier jeden 401 als Abmeldung nimmt, wirft jemanden wegen eines
+    // Tippfehlers aus seinem Konto.
+    if (antwort.status === 401 && daten.abgemeldet) vergessen();
     throw new Error(daten.fehler || 'Der Server antwortete mit ' + antwort.status + '.');
   }
   return daten;
@@ -184,6 +189,15 @@ export async function codeEinloesen(adresse, code) {
 }
 
 export const wer = () => ruf('/konto.php', { tun: 'wer' });
+
+/**
+ * Loest den Code aus dem Buch ein: drei Monate statt der Probezeit.
+ *
+ * Geprueft wird ausschliesslich auf dem Server. Hier steht kein Code und
+ * keine Liste -- wer die Datei liest, findet nichts zu raten.
+ */
+export const buchcodeEinloesen = (code) =>
+  ruf('/konto.php', { tun: 'buchcode', code });
 
 export const passwortAendern = (alt, neu) =>
   ruf('/konto.php', { tun: 'passwort_aendern', alt, neu });

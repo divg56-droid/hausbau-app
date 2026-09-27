@@ -236,6 +236,18 @@ $gesamt = [
     'freigabe_aufrufe' => array_sum(array_column($liste, 'freigabe_aufrufe')),
 ];
 
+/* Wie viele Konten mit dem Code aus dem Buch freigeschaltet sind -- die
+ * Zahl, die sagt, ob das Buch Konten bringt. Abgelaufene zaehlen mit: Wer
+ * einmal eingeloest hat, kam ueber das Buch. */
+try {
+    $gesamt['buchcodes'] = (int)$db->query(
+        "SELECT COUNT(*) FROM nutzer WHERE buchcode IS NOT NULL AND buchcode <> ''"
+    )->fetchColumn();
+} catch (Throwable $ex) {
+    // Spalte noch nicht angelegt: dann wurde auch noch nichts eingeloest.
+    $gesamt['buchcodes'] = 0;
+}
+
 // Neue Konten im Fenster: die einzige Zahl, die sagt, ob es voran geht.
 $neu = $db->prepare('SELECT COUNT(*) FROM nutzer WHERE angelegt > DATE_SUB(NOW(), INTERVAL ? DAY)');
 $neu->execute([$tage]);

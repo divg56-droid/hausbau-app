@@ -306,5 +306,51 @@ else:
           danach.get('ort') == 'Kaiserslautern', danach.get('ort'))
 
 
+print('Laufzeit und Buchcode')
+
+# Die Laufzeit steht in "wer" und wird in Tagen mitgeliefert.
+_, w = ruf('/konto.php', {'tun': 'wer'}, marke=handy)
+pruef('Das Konto hat eine Laufzeit', bool(w.get('frei_bis')), w.get('frei_bis'))
+pruef('Die Tage kommen als Zahl', isinstance(w.get('tage_frei'), int), w.get('tage_frei'))
+vorher = w.get('tage_frei') or 0
+
+# Ein falscher Code wird abgelehnt -- und darf die Sitzung nicht beenden.
+code, a = ruf('/konto.php', {'tun': 'buchcode', 'code': 'XXXX-XXXX'}, marke=handy)
+pruef('Falscher Code wird abgelehnt', code == 401, code)
+pruef('Und gilt nicht als Abmeldung', not a.get('abgemeldet'), a)
+code, _ = ruf('/konto.php', {'tun': 'wer'}, marke=handy)
+pruef('Die Anmeldung gilt weiter', code == 200, code)
+
+code, _ = ruf('/konto.php', {'tun': 'buchcode', 'code': ''}, marke=handy)
+pruef('Leerer Code ist ein Eingabefehler', code == 400, code)
+
+# Der echte Code steht in geheim.php. Ist dort keiner gesetzt, laesst sich das
+# Einloesen nicht pruefen -- dann wird es uebersprungen statt gemeldet.
+import os
+import re
+echt = ''
+try:
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           'daten', 'geheim.php'), encoding='utf-8') as datei:
+        quelle = datei.read()
+    treffer = re.search(r"'buchcodes'\s*=>\s*\[\s*'([^']+)'", quelle)
+    echt = treffer.group(1) if treffer else ''
+except OSError:
+    pass
+
+if not echt:
+    print('  --   Kein Buchcode in geheim.php, Einloesen nicht geprueft')
+else:
+    # Klein geschrieben und ohne Bindestrich muss genauso gehen.
+    code, a = ruf('/konto.php', {'tun': 'buchcode',
+                                 'code': echt.lower().replace('-', ' ')}, marke=handy)
+    pruef('Der echte Code wird angenommen', code == 200 and a.get('eingeloest'), a)
+    _, w = ruf('/konto.php', {'tun': 'wer'}, marke=handy)
+    pruef('Die Laufzeit wurde laenger', (w.get('tage_frei') or 0) > vorher, w.get('tage_frei'))
+    pruef('Der Buchcode ist vermerkt', w.get('buchcode') is True, w.get('buchcode'))
+    code, _ = ruf('/konto.php', {'tun': 'buchcode', 'code': echt}, marke=handy)
+    pruef('Zweimal einloesen geht nicht', code == 409, code)
+
+
 print('\nFEHLGESCHLAGEN: ' + str(len(fehler)) if fehler else '\nAlle Pruefungen bestanden.')
 raise SystemExit(1 if fehler else 0)

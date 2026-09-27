@@ -116,6 +116,7 @@ function kennzahlen({ gesamt, tage }) {
     kennzahl('Fotos und PDF', zahl(gesamt.bilder), menge(gesamt.bilder_bytes) + ' abgelegt'),
     kennzahl('Bautagebücher', zahl(gesamt.freigaben),
       zahl(gesamt.freigabe_aufrufe) + ' Aufrufe insgesamt'),
+    kennzahl('Aus dem Buch', zahl(gesamt.buchcodes || 0), 'Code eingelöst'),
   ]);
 }
 

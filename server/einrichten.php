@@ -90,6 +90,8 @@ CREATE TABLE nutzer (
     epost VARCHAR(190) NOT NULL,
     passwort_hash VARCHAR(255) NOT NULL,
     angelegt DATETIME NOT NULL,
+    frei_bis DATETIME NULL,
+    buchcode VARCHAR(20) NULL,
     PRIMARY KEY (id),
     UNIQUE KEY epost (epost)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
@@ -265,6 +267,8 @@ foreach ($tabellen as $name => $sql) {
 $nachtrag = [
     ['freigaben', 'aufrufe', 'INT UNSIGNED NOT NULL DEFAULT 0'],
     ['freigaben', 'zuletzt', 'DATETIME NULL'],
+    ['nutzer', 'frei_bis', 'DATETIME NULL'],
+    ['nutzer', 'buchcode', 'VARCHAR(20) NULL'],
 ];
 /*
  * Spalten holen und in PHP vergleichen, nicht "SHOW COLUMNS ... LIKE ?".
@@ -306,6 +310,17 @@ foreach ($nachtrag as [$tabelle, $spalte, $art]) {
             'bis_dahin' => $meldungen,
         ], 500);
     }
+}
+
+/*
+ * Bestehende Konten bekommen ihre Probezeit ab jetzt, nicht ab Anmeldung:
+ * Wer die App in der Testphase benutzt hat, soll nicht mit einer bereits
+ * abgelaufenen Frist aufwachen. Laeuft bei jedem Einrichten mit und trifft
+ * danach nichts mehr -- neue Konten setzen die Spalte selbst.
+ */
+if (isset($vorhanden['nutzer'])) {
+    $offen = (int)db()->exec('UPDATE nutzer SET frei_bis = DATE_ADD(NOW(), INTERVAL 30 DAY) WHERE frei_bis IS NULL');
+    $meldungen[] = 'nutzer.frei_bis: ' . $offen . ' Konto(en) auf 30 Tage gesetzt';
 }
 
 // Ablage fuer die Bilddateien. Liegt unter daten/, das per .htaccess gesperrt

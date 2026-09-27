@@ -193,6 +193,35 @@ laeuft und ob `geheim.php` gesperrt ist.
 3. `https://www.bauzeuge.de/app/api/einrichten.php?schluessel=...` einmal aufrufen
 
 Der dritte Schritt legt die Tabellen an und laesst sich gefahrlos wiederholen.
+Er zieht auch neue Spalten nach -- nach jedem Hochladen, das am Schema etwas
+aendert, muss er noch einmal laufen.
+
+### Ohne Konto gibt es nur das Beispiel
+
+Seit dem 27.09.2026 ist die Anmeldung der Anfang und nicht die Kuer. Wer
+nicht angemeldet ist, sieht auf dem ersten Bildschirm zwei Wege: anmelden
+oder das Beispielprojekt ansehen. Ein eigenes Bauvorhaben anzulegen verlangt
+ein Konto -- geprueft an genau einer Stelle, `projektBlatt()` in
+`www/module/uebersicht.js`, weil dort die eigenen Daten entstehen.
+
+Der Grund ist nicht das Geld, sondern der Verlust: Daten, die nur auf einem
+Telefon liegen, sind beim naechsten Geraetewechsel weg, und ein Bau dauert
+laenger als ein Telefon haelt. Das Beispielprojekt bleibt frei, sonst haette
+die App niemandem etwas zu zeigen.
+
+`node test/anmeldetor.mjs` prueft beide Seiten davon.
+
+### Laufzeit und Buchcode
+
+Jedes Konto bekommt bei der Anmeldung 30 Tage (`PROBE_TAGE` in
+`server/konto.php`), der Code aus dem Buch macht drei Monate daraus
+(`BUCH_MONATE`). Die gueltigen Codes stehen in `geheim.php` unter
+`buchcodes`, einer je Auflage -- nie im Quelltext, nie auf der Website.
+
+Gezaehlt wird schon, **gesperrt noch nicht**: Solange es keine
+Bezahlmoeglichkeit gibt, waere eine Sperre eine Sackgasse. Wenn PayPal steht,
+gehoert die Pruefung von `frei_bis` nach `abgleich.php` und `bild.php` -- an
+genau diese zwei Stellen. Die App auf dem Geraet bleibt in jedem Fall frei.
 
 ### Wie der Abgleich funktioniert
 

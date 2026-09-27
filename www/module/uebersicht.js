@@ -16,7 +16,7 @@
 
 import {
   el, eur, feld, eingabe, knopf, karte, kopfzeile, hinweisKasten, datumLang,
-  heute, zahl, fuellen, kontaktName,
+  heute, zahl, fuellen, kontaktName, melde,
   anhaengen,
   geheZu,
 } from '../hilfen.js';
@@ -409,14 +409,53 @@ export async function zeige(rahmen) {
 /**
  * Der erste Bildschirm, wenn noch nichts da ist.
  *
- * Genau eine Handlung, gross und farbig, und darunter die eine Frage, die
- * alles Weitere praegt: wie gebaut wird. Wer hier laenger als drei Sekunden
- * ueberlegen muss, was er tun soll, kommt nicht wieder.
+ * Zwei Faelle, und der Unterschied ist das Konto.
  *
- * Die drei Kacheln sind keine zweite Handlung, sondern eine Abkuerzung: Sie
- * oeffnen dasselbe Blatt, nur mit ihrer Bauweise schon angehakt.
+ * Ohne Konto ist die einzige sinnvolle Handlung die Anmeldung. Ein eigenes
+ * Bauvorhaben ohne Konto anzulegen hiesse, es auf ein einziges Geraet zu
+ * legen -- und ein Bau dauert laenger als ein Telefon haelt. Zum Ansehen
+ * braucht es trotzdem nichts: Das Beispielprojekt steht daneben.
+ *
+ * Mit Konto ist es wie bisher: eine Handlung, gross und farbig, und darunter
+ * die Frage, wie gebaut wird. Die drei Kacheln sind keine zweite Handlung,
+ * sondern eine Abkuerzung -- sie oeffnen dasselbe Blatt, nur mit ihrer
+ * Bauweise schon angehakt.
  */
 function willkommen() {
+  return angemeldet() ? willkommenProjekt() : willkommenAnmelden();
+}
+
+/** Ohne Konto: anmelden oder das Beispiel ansehen. Sonst nichts. */
+function willkommenAnmelden() {
+  return karte([
+    el('p', { klasse: 'willkommen-marke', text: 'Willkommen bei BauZeuge' }),
+    el('h2', { klasse: 'willkommen-titel', text: 'Dein Bauvorhaben an einer Stelle' }),
+    el('p', {
+      klasse: 'willkommen-text',
+      text: 'Kosten, Termine, Mängel, Fotos und Dokumente an einem Ort – von der ersten ' +
+        'Schätzung bis zur Abnahme. Die ersten 30 Tage kosten nichts, und mehr als deine ' +
+        'E-Mail-Adresse brauchen wir dafür nicht.',
+    }),
+    knopf('Anmelden und loslegen', () => { geheZu('#/konto/neu'); }, 'knopf-haupt knopf-gross'),
+    // Erst sehen, dann entscheiden: Das Beispiel ist gefuellt und braucht
+    // keine Anmeldung. Wer nichts zu zeigen hat, darf nicht nach einer
+    // E-Mail-Adresse fragen.
+    knopf('Beispielprojekt ansehen', async () => {
+      const { beispielOeffnen } = await import('../beispiel.js');
+      await beispielOeffnen();
+    }, 'knopf knopf-gross'),
+    el('p', {
+      klasse: 'unterzeile leise',
+      text: 'Warum ein Konto: Dein Bau dauert länger, als ein Telefon hält. Mit Konto liegen ' +
+        'deine Daten gesichert auf einem Server in Deutschland, Telefon und Rechner zeigen ' +
+        'dasselbe, und ein Gerätewechsel ist ein Anmelden. Ein Passwort ist freiwillig – ' +
+        'es genügt ein Link per E-Mail.',
+    }),
+  ], 'willkommenskarte');
+}
+
+/** Mit Konto: das erste eigene Bauvorhaben anlegen. */
+function willkommenProjekt() {
   return karte([
     el('p', { klasse: 'willkommen-marke', text: 'Willkommen bei BauZeuge' }),
     el('h2', { klasse: 'willkommen-titel', text: 'Dein Bauvorhaben an einer Stelle' }),
@@ -441,9 +480,8 @@ function willkommen() {
     )),
     el('p', {
       klasse: 'unterzeile leise',
-      text: 'Deine Projektdaten bleiben lokal auf diesem Gerät – ohne Konto und ohne ' +
-        'Übertragung an uns. Ein Konto brauchst du erst, wenn App und Internetseite ' +
-        'dieselben Daten zeigen sollen.',
+      text: 'Deine Daten liegen auf diesem Gerät und verschlüsselt übertragen auf einem ' +
+        'Server in Deutschland. Keine Werbung, keine weitergegebenen Adressen.',
     }),
   ], 'willkommenskarte');
 }
@@ -457,6 +495,15 @@ function willkommen() {
  * das ohnehin schon. Aendern laesst es sich jederzeit in den Einstellungen.
  */
 function projektBlatt(vorwahl) {
+  /* Die eine Stelle, an der eigene Daten entstehen -- und deshalb die eine
+   * Stelle, an der das Konto verlangt wird. Nicht bei jedem Feld danach:
+   * Wer einmal angemeldet ist, soll nie wieder gefragt werden. */
+  if (!angemeldet()) {
+    melde('Für ein eigenes Bauvorhaben brauchst du ein Konto. Die ersten 30 Tage kosten nichts.');
+    geheZu('#/konto/neu');
+    return;
+  }
+
   const name = eingabe({ placeholder: 'z. B. Neubau Ahornweg 12' });
   let gewaehlt = BAUWEISEN.some((b) => b.id === vorwahl) ? vorwahl : SCHLUESSELFERTIG;
 

@@ -108,9 +108,17 @@ function antwort(array $inhalt, int $code = 200): never
     exit;
 }
 
-function fehler(int $code, string $text): never
+/**
+ * @param bool $abgemeldet Nur wahr, wenn die Sitzung selbst hin ist.
+ *
+ * Die Unterscheidung ist noetig, weil 401 zwei verschiedene Dinge heisst:
+ * "du bist nicht angemeldet" und "das Passwort stimmt nicht". Die App raeumt
+ * beim ersten die Anmeldung weg -- tut sie das auch beim zweiten, wirft ein
+ * Tippfehler im Passwortfeld den Nutzer aus dem Konto.
+ */
+function fehler(int $code, string $text, bool $abgemeldet = false): never
 {
-    antwort(['fehler' => $text], $code);
+    antwort($abgemeldet ? ['fehler' => $text, 'abgemeldet' => true] : ['fehler' => $text], $code);
 }
 
 /** Liest den Rumpf der Anfrage als JSON. */
@@ -147,7 +155,7 @@ function nutzer(): array
 
     $marke = marke();
     if ($marke === '') {
-        fehler(401, 'Nicht angemeldet.');
+        fehler(401, 'Nicht angemeldet.', true);
     }
 
     $s = db()->prepare(
@@ -159,7 +167,7 @@ function nutzer(): array
     $s->execute([hash('sha256', $marke), SITZUNG_TAGE]);
     $zeile = $s->fetch();
     if (!$zeile) {
-        fehler(401, 'Die Anmeldung ist abgelaufen.');
+        fehler(401, 'Die Anmeldung ist abgelaufen.', true);
     }
 
     // Nur einmal am Tag schreiben, sonst kostet jede Anfrage einen Schreibzugriff.
@@ -197,6 +205,32 @@ function istAdmin(string $epost): bool
     $liste = geheim()['admins'] ?? [];
     foreach ($liste as $eine) {
         if (hash_equals(strtolower(trim((string)$eine)), strtolower($epost))) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Bringt einen Buchcode auf die Vergleichsform: Grossbuchstaben, keine
+ * Bindestriche, keine Leerzeichen. Dasselbe macht www/laufzeit.js.
+ */
+function codeNormalisieren(string $text): string
+{
+    return (string)preg_replace('/[^A-Z0-9]/', '', strtoupper($text));
+}
+
+/**
+ * Ist das ein gueltiger Code aus dem Buch?
+ *
+ * Die Codes stehen in geheim.php, nicht hier: Sie sind je Auflage einer, im
+ * Buch abgedruckt, und ein Blick in dieses Verzeichnis soll sie nicht
+ * hergeben. hash_equals, damit die Laufzeit des Vergleichs nichts verraet.
+ */
+function buchcodeGueltig(string $code): bool
+{
+    foreach ((geheim()['buchcodes'] ?? []) as $einer) {
+        if (hash_equals(codeNormalisieren((string)$einer), $code)) {
             return true;
         }
     }

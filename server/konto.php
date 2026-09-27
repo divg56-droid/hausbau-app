@@ -14,12 +14,28 @@ require __DIR__ . '/_start.php';
  *   POST { tun: "wer" }
  *   POST { tun: "passwort_aendern", alt, neu }
  *   POST { tun: "konto_loeschen",   passwort }
+ *   POST { tun: "buchcode",         code }
  *
  * Antwort beim Anmelden und Registrieren enthaelt die Marke. Die App legt sie
  * ab und schickt sie danach im Kopf X-Hausbau-Marke mit.
  */
 
 const PASSWORT_MINDESTLAENGE = 10;
+
+/*
+ * Laufzeit des Kontos.
+ *
+ * Die App auf dem Geraet kennt keine Frist -- bezahlt wird nur der Abgleich
+ * mit dem Server. Jedes Konto bekommt bei der Anmeldung PROBE_TAGE, der Code
+ * aus dem Buch macht BUCH_MONATE daraus.
+ *
+ * Gezaehlt wird schon jetzt, gesperrt noch nicht: Solange es keine
+ * Bezahlmoeglichkeit gibt, waere eine Sperre eine Sackgasse. Wenn PayPal
+ * steht, gehoert die Pruefung in abgleich.php und bild.php -- an genau zwei
+ * Stellen, nicht verteilt.
+ */
+const PROBE_TAGE = 30;
+const BUCH_MONATE = 3;
 
 // Anmeldung ohne Passwort.
 //
@@ -73,8 +89,10 @@ function anmeldenPerPost(string $epost): void
     if (is_array($zeile)) {
         $id = (int)$zeile['id'];
     } else {
-        db()->prepare("INSERT INTO nutzer (epost, passwort_hash, angelegt) VALUES (?, '', NOW())")
-            ->execute([$epost]);
+        db()->prepare(
+            "INSERT INTO nutzer (epost, passwort_hash, angelegt, frei_bis)
+                  VALUES (?, '', NOW(), DATE_ADD(NOW(), INTERVAL ? DAY))"
+        )->execute([$epost, PROBE_TAGE]);
         $id = (int)db()->lastInsertId();
     }
 
@@ -115,8 +133,10 @@ switch ($tun) {
             fehler(409, 'Zu dieser Adresse gibt es schon ein Konto.');
         }
 
-        db()->prepare('INSERT INTO nutzer (epost, passwort_hash, angelegt) VALUES (?, ?, NOW())')
-            ->execute([$epost, password_hash($passwort, PASSWORD_DEFAULT)]);
+        db()->prepare(
+            'INSERT INTO nutzer (epost, passwort_hash, angelegt, frei_bis)
+                  VALUES (?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? DAY))'
+        )->execute([$epost, password_hash($passwort, PASSWORD_DEFAULT), PROBE_TAGE]);
 
         $id = (int)db()->lastInsertId();
         antwort(['marke' => sitzungAnlegen($id), 'epost' => $epost]);
@@ -300,8 +320,32 @@ switch ($tun) {
         $s = db()->prepare('SELECT COUNT(*) AS n, COALESCE(SUM(groesse), 0) AS b FROM bilder WHERE nutzer_id = ? AND geloescht = 0');
         $s->execute([$n['id']]);
         $bilder = $s->fetch();
+
+        /* Die verbleibenden Tage rechnet die Datenbank, nicht das Geraet.
+         * Aufgerundet: Wer heute noch dran ist, soll "1 Tag" lesen und
+         * nicht "0".
+         *
+         * Im try, weil zwischen einem Hochladen und dem Aufruf von
+         * einrichten.php die Spalten fehlen. Dann fehlt die Laufzeit --
+         * nicht die halbe Kontoseite. */
+        $lauf = [];
+        try {
+            $l = db()->prepare(
+                'SELECT frei_bis, buchcode,
+                        CEIL(TIMESTAMPDIFF(HOUR, NOW(), frei_bis) / 24) AS tage
+                   FROM nutzer WHERE id = ?'
+            );
+            $l->execute([$n['id']]);
+            $lauf = $l->fetch() ?: [];
+        } catch (Throwable $ex) {
+            // Spalten noch nicht angelegt.
+        }
+
         antwort([
             'epost' => $n['epost'],
+            'frei_bis' => $lauf['frei_bis'] ?? null,
+            'tage_frei' => isset($lauf['frei_bis']) ? max(0, (int)$lauf['tage']) : null,
+            'buchcode' => !empty($lauf['buchcode']),
             'saetze' => $saetze,
             'je_speicher' => $jeSpeicher,
             'bilder' => (int)$bilder['n'],
@@ -375,6 +419,55 @@ switch ($tun) {
         db()->prepare('DELETE FROM nutzer WHERE id = ?')->execute([$n['id']]);
 
         antwort(['geloescht' => true]);
+    }
+
+    case 'buchcode': {
+        $n = nutzer();
+        $code = codeNormalisieren((string)($eingang['code'] ?? ''));
+
+        if ($code === '') {
+            fehler(400, 'Bitte den Code aus dem Buch eintragen.');
+        }
+
+        /* Zwei Bremsen, weil eine zu wenig waere: Das Konto verhindert das
+         * Durchprobieren am eigenen Zugang, die Adresse verhindert, dass
+         * jemand sich dafuer laufend neue Konten anlegt. */
+        $bremsen = ['buch:' . $n['id'], 'buchip:' . ($_SERVER['REMOTE_ADDR'] ?? '?')];
+        foreach ($bremsen as $k) {
+            if (bremseGesperrt($k)) {
+                fehler(429, 'Zu viele Versuche. Bitte in einer Viertelstunde erneut probieren.');
+            }
+        }
+
+        $s = db()->prepare('SELECT buchcode FROM nutzer WHERE id = ?');
+        $s->execute([$n['id']]);
+        if ((string)($s->fetch()['buchcode'] ?? '') !== '') {
+            fehler(409, 'Für dieses Konto ist schon ein Buchcode eingelöst.');
+        }
+
+        if (!buchcodeGueltig($code)) {
+            foreach ($bremsen as $k) {
+                bremseZaehlen($k);
+            }
+            fehler(401, 'Diesen Code kennen wir nicht. Er steht hinten im Buch, Groß- und Kleinschreibung ist egal.');
+        }
+
+        /* GREATEST, damit ein Einloesen nie Zeit wegnimmt: Wer aus welchem
+         * Grund auch immer schon laenger freigeschaltet ist, behaelt das. */
+        db()->prepare(
+            'UPDATE nutzer
+                SET buchcode = ?,
+                    frei_bis = GREATEST(COALESCE(frei_bis, NOW()), DATE_ADD(NOW(), INTERVAL ? MONTH))
+              WHERE id = ?'
+        )->execute([$code, BUCH_MONATE, $n['id']]);
+
+        foreach ($bremsen as $k) {
+            bremseLoeschen($k);
+        }
+
+        $s = db()->prepare('SELECT frei_bis FROM nutzer WHERE id = ?');
+        $s->execute([$n['id']]);
+        antwort(['eingeloest' => true, 'frei_bis' => (string)$s->fetch()['frei_bis']]);
     }
 
     default:

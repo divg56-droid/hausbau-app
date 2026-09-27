@@ -15,8 +15,9 @@ import { daten } from '../daten.js';
 import {
   angemeldet, epost, anmelden, registrieren, abmelden, wer,
   passwortAendern, kontoLoeschen, standLesen,
-  anmeldelinkAnfordern, linkEinloesen, codeEinloesen,
+  anmeldelinkAnfordern, linkEinloesen, codeEinloesen, buchcodeEinloesen,
 } from '../konto.js';
+import { laufzeitText, codeNormalisieren } from '../laufzeit.js';
 import { abgleichen } from '../abgleich.js';
 import { blattOeffnen } from '../blatt.js';
 
@@ -28,7 +29,9 @@ export async function zeige(rahmen, unterweg) {
     await zeichneLink(rahmen, unterweg);
     return;
   }
-  await zeichne(rahmen);
+  // "#/konto/neu" kommt vom Willkommensbildschirm und vom Projektanlegen:
+  // Wer noch kein Konto hat, soll nicht erst "Noch kein Konto?" suchen.
+  await zeichne(rahmen, unterweg === 'neu' ? 'neu' : 'anmelden');
 }
 
 /** Der Bildschirm zwischen Klick und Konto: einloesen, dann weiter. */
@@ -204,6 +207,10 @@ async function zeichne(rahmen, art = 'anmelden') {
     }
   }, 'knopf-haupt');
 
+  // Steht gleich da, damit die Karte an ihrem Platz bleibt; der Satz kommt
+  // vom Server nach. Die Uhr dieses Geraets zaehlt keine Laufzeit.
+  const laufzeitAnzeige = el('p', { klasse: 'unterzeile', text: 'Laufzeit wird geladen …' });
+
   anhaengen(
     rahmen,
     karte([
@@ -216,6 +223,17 @@ async function zeichne(rahmen, art = 'anmelden') {
             'info'
           )
         : null,
+    ]),
+
+    karte([
+      el('h2', { text: 'Laufzeit' }),
+      laufzeitAnzeige,
+      el('p', {
+        klasse: 'unterzeile',
+        text: 'Läuft die Zeit ab, ruht das Konto. Gelöscht wird nichts: Projekt, Fotos und '
+          + 'Dokumente bleiben liegen, und deine Sicherung bekommst du weiterhin.',
+      }),
+      knopf('Code aus dem Buch eintragen', () => buchcodeBlatt(), 'knopf-leise'),
     ]),
 
     karte([
@@ -261,10 +279,10 @@ async function zeichne(rahmen, art = 'anmelden') {
     ])
   );
 
-  // Ohne await: Der Verweis zur Verwaltung ist ein Nachtrag fuer den
-  // Betreiber, und die Kontoseite soll nicht darauf warten. Schlaegt der
-  // Aufruf fehl -- kein Netz, kein Recht -- bleibt es einfach dabei.
-  verwaltungAnbieten(rahmen);
+  // Ohne await: Laufzeit und Verwaltungsverweis sind Nachtraege, und die
+  // Kontoseite soll nicht darauf warten. Schlaegt der Aufruf fehl -- kein
+  // Netz, kein Recht -- bleibt es einfach dabei.
+  vomServerNachtragen(rahmen, laufzeitAnzeige);
 
   function passwortBlatt() {
     const alt = el('input', { type: 'password', autocomplete: 'current-password' });
@@ -277,6 +295,31 @@ async function zeichne(rahmen, art = 'anmelden') {
       await passwortAendern(alt.value, neuesWort.value);
       melde('Passwort gesetzt. Andere Geräte sind abgemeldet.');
     });
+  }
+
+  function buchcodeBlatt() {
+    const code = eingabe({
+      value: '',
+      placeholder: 'XXXX-XXXX',
+      autocapitalize: 'characters',
+      autocomplete: 'off',
+      spellcheck: 'false',
+    });
+    blattOeffnen('Code aus dem Buch', [
+      el('p', {
+        klasse: 'unterzeile',
+        text: 'Der Code steht hinten in „Klartext Hausbau“. Er schaltet das Konto für drei '
+          + 'Monate frei. Groß- und Kleinschreibung und der Bindestrich sind egal.',
+      }),
+      feld('Code', code),
+    ], async () => {
+      if (codeNormalisieren(code.value).length < 6) {
+        throw new Error('Der Code ist kürzer als erwartet. Bitte noch einmal ansehen.');
+      }
+      await buchcodeEinloesen(code.value);
+      melde('Freigeschaltet. Das Konto läuft jetzt drei Monate.');
+      await zeichne(rahmen);
+    }, { sicherText: 'Einlösen' });
   }
 
   function loeschBlatt(nachher) {
@@ -300,18 +343,27 @@ async function zeichne(rahmen, art = 'anmelden') {
 }
 
 /**
- * Haengt den Verweis zur Verwaltung an, wenn dieses Konto sie sehen darf.
+ * Was nur der Server weiss: die Laufzeit und ob dieses Konto die Verwaltung
+ * sehen darf. Ein Aufruf fuer beides -- zwei waeren zwei Runden ueber die
+ * Leitung fuer dieselbe Antwort.
  *
- * Die Auskunft kommt vom Server; hier steht keine Liste von Adressen. Dass
- * der Verweis fehlt, ist nur eine Anzeige -- den Zugang entscheidet
- * admin.php, und zwar bei jedem Aufruf neu.
+ * Dass der Verwaltungsverweis fehlt, ist nur eine Anzeige; den Zugang
+ * entscheidet admin.php, und zwar bei jedem Aufruf neu.
  */
-async function verwaltungAnbieten(rahmen) {
+async function vomServerNachtragen(rahmen, laufzeitAnzeige) {
   let w;
   try {
     w = await wer();
-  } catch {
+  } catch (fehler) {
+    if (laufzeitAnzeige.isConnected) {
+      laufzeitAnzeige.textContent = 'Laufzeit unbekannt: ' + fehler.message;
+    }
     return;
+  }
+  if (laufzeitAnzeige.isConnected) {
+    laufzeitAnzeige.textContent = laufzeitText(
+      w, w.frei_bis ? datumLang(String(w.frei_bis).slice(0, 10)) : ''
+    );
   }
   if (!w.admin || !rahmen.isConnected) return;
   anhaengen(rahmen, karte([
@@ -363,6 +415,12 @@ function zeigeAnmeldung(rahmen, art, nachher) {
       else await anmelden(adresse.value.trim(), passwort.value);
       melde(neuesKonto ? 'Konto angelegt.' : 'Angemeldet.');
       await gleichAbgleichen();
+      if (neuesKonto) {
+        // Ein frisches Konto hat noch kein Bauvorhaben. Die Kontoseite mit
+        // lauter Nullen ist dann die falsche Antwort auf "und jetzt?".
+        geheZu('#/');
+        return;
+      }
       await nachher();
     } catch (fehler) {
       meldung.textContent = fehler.message;
@@ -388,25 +446,39 @@ function zeigeAnmeldung(rahmen, art, nachher) {
         el('p', {
           klasse: 'anmeldung-unter',
           text: neuesKonto
-            ? 'Ein Konto, damit dein Bauvorhaben in der App und auf BauZeuge.de dasselbe zeigt.'
+            ? 'Die ersten 30 Tage kosten nichts – alle Funktionen, kein Zahlungsmittel. '
+              + 'Danach entscheidest du, ob es weitergeht.'
             : 'Melde dich an und mach dort weiter, wo du aufgehört hast.',
         }),
         feld('E-Mail-Adresse', adresse),
-        feld('Passwort', el('span', { klasse: 'passwortfeld' }, [passwort, auge]),
-          neuesKonto ? 'Mindestens 10 Zeichen.' : null),
-        senden,
-        meldung,
+        // Beim neuen Konto zuerst der Weg ohne Passwort: Er braucht nur die
+        // Adresse, die eine Zeile darueber schon steht. Beim Anmelden
+        // umgekehrt -- wer ein Passwort hat, benutzt es.
+        neuesKonto ? null : feld('Passwort', el('span', { klasse: 'passwortfeld' }, [passwort, auge]), null),
+        neuesKonto ? null : senden,
+        neuesKonto ? null : meldung,
 
-        // Der zweite Weg. Er steht bewusst unter dem ersten und nicht
-        // daneben: Wer ein Passwort hat, benutzt es; wer keins mehr weiss,
-        // findet hier heraus, ohne "Passwort vergessen" zu suchen.
-        el('p', { klasse: 'anmeldung-oder' }, ['oder']),
-        knopf('Anmeldelink per E-Mail', () => linkAnfordern(), 'knopf-leise'),
+        // Das "oder" trennt zwei Wege. Beim neuen Konto steht hier noch
+        // keiner davor, dann trennt es nichts.
+        neuesKonto ? null : el('p', { klasse: 'anmeldung-oder' }, ['oder']),
+        knopf(neuesKonto ? 'Link zum Anmelden schicken' : 'Anmeldelink per E-Mail',
+          () => linkAnfordern(), neuesKonto ? 'knopf-haupt knopf-gross' : 'knopf-leise'),
         el('p', {
           klasse: 'unterzeile',
-          text: 'Ohne Passwort: Wir schicken dir einen Link und einen Code an die ' +
-            'Adresse oben. Beides gilt 15 Minuten.',
+          text: neuesKonto
+            ? 'Kein Passwort ausdenken: Wir schicken dir einen Link und einen Code an die '
+              + 'Adresse oben. Beides gilt 15 Minuten.'
+            : 'Ohne Passwort: Wir schicken dir einen Link und einen Code an die '
+              + 'Adresse oben. Beides gilt 15 Minuten.',
         }),
+
+        // Der Weg mit Passwort. Beim neuen Konto steht er hier unten, weil
+        // zehn ausgedachte Zeichen die Huerde sind, an der es haengen bleibt.
+        neuesKonto ? el('p', { klasse: 'anmeldung-oder' }, ['oder mit Passwort']) : null,
+        neuesKonto ? feld('Passwort', el('span', { klasse: 'passwortfeld' }, [passwort, auge]),
+          'Mindestens 10 Zeichen. Kannst du dir auch später geben.') : null,
+        neuesKonto ? senden : null,
+        neuesKonto ? meldung : null,
 
         el('p', { klasse: 'anmeldung-fuss' }, [
           neuesKonto ? 'Schon ein Konto? ' : 'Noch kein Konto? ',
