@@ -773,6 +773,19 @@ html[data-thema="dunkel"] {
 
 #rumpf { display: flex; align-items: flex-start; }
 
+/* Fusszeile: Kontakt und Rechtliches, wie auf der Website.
+   Leise gehalten -- sie ist eine Pflichtangabe und kein Angebot, und auf
+   einem Telefon darf sie den Daumen nicht vom Inhalt wegziehen. */
+#fusszeile {
+  border-top: 1px solid var(--linie); background: var(--karte);
+  padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+  font-size: 13.5px; color: var(--tinte-leise);
+}
+.fuss-marke { margin: 0 0 8px; }
+.fuss-wege { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.fuss-wege a { color: var(--tinte-leise); text-decoration: underline; min-height: 32px; display: inline-flex; align-items: center; }
+.fuss-wege a:hover { color: var(--akzent); }
+
 #seitenleiste {
   flex: none; width: 236px; align-self: stretch;
   position: sticky; top: var(--kopf-gesamt);

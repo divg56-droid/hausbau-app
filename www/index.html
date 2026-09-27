@@ -135,7 +135,7 @@
     </p>
     <p class="startfehler-grund" id="startfehler-grund"></p>
     <p>
-      <a href="mailto:info@atlanta-pfalz.de?subject=BauZeuge%20startet%20nicht">info@atlanta-pfalz.de</a>
+      <a href="mailto:info@bauzeuge.de?subject=BauZeuge%20startet%20nicht">info@bauzeuge.de</a>
       &nbsp;·&nbsp;
       <a href="https://www.bauzeuge.de/app/">www.bauzeuge.de/app/</a>
     </p>
@@ -162,12 +162,24 @@
   <main id="inhalt" aria-live="polite"></main>
 </div>
 
+<footer id="fusszeile">
+  <p class="fuss-marke">&copy; <span id="fuss-jahr">2026</span> BauZeuge.de &middot; Projekt &middot; Budget &middot; Baudoku</p>
+  <nav class="fuss-wege" aria-label="Rechtliches">
+    <a href="https://www.bauzeuge.de/kontakt/" target="_blank" rel="noopener">Kontakt</a>
+    <a href="https://www.bauzeuge.de/impressum/" target="_blank" rel="noopener">Impressum</a>
+    <a href="https://www.bauzeuge.de/datenschutz/" target="_blank" rel="noopener">Datenschutz</a>
+    <a href="https://www.bauzeuge.de/app-datenschutz/" target="_blank" rel="noopener">Datenschutz App</a>
+    <a href="https://www.bauzeuge.de/sitemap/" target="_blank" rel="noopener">Sitemap</a>
+  </nav>
+</footer>
+
 <script type="module">
   // Vor app.js: Das Design muss stehen, bevor der erste Bildschirm gezeichnet
   // wird, sonst blitzt beim Start kurz das helle auf.
   import { themaStarten, schalterAnbinden } from './thema.js';
   themaStarten();
   schalterAnbinden(document.getElementById('themaschalter'));
+  document.getElementById('fuss-jahr').textContent = String(new Date().getFullYear());
 </script>
 <script type="module" src="app.js"></script>
 
