@@ -154,6 +154,37 @@ CREATE TABLE orte (
 // Oeffentliche Freigabe des Bautagebuchs. Die Marke steht als SHA-256, wie
 // bei den Sitzungen: Wer die Datenbank liest, kann daraus keinen gueltigen
 // Verweis bauen.
+/* Seitenaufrufe der Website.
+ *
+ * Eine Zeile je Tag und Pfad, mehr nicht. Keine IP, kein Keks, keine
+ * Kennung: Es gibt hier niemanden wiederzuerkennen. Damit ist die Tabelle
+ * auch dann harmlos, wenn sie jemand in die Hand bekommt. */
+'seitenaufrufe' => "
+CREATE TABLE seitenaufrufe (
+    tag DATE NOT NULL,
+    pfad VARCHAR(190) NOT NULL,
+    aufrufe INT UNSIGNED NOT NULL DEFAULT 0,
+    PRIMARY KEY (tag, pfad),
+    KEY nach_tag (tag)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+
+/* Wer einen Rechner bis zum Ende ausgefuellt und seine Adresse
+ * dagelassen hat. Anders als die Seitenaufrufe sind das Personendaten --
+ * deshalb getrennt, mit Zweck und Herkunft in der Zeile. */
+'leads' => "
+CREATE TABLE leads (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    quelle VARCHAR(40) NOT NULL,
+    epost VARCHAR(190) NOT NULL,
+    plz VARCHAR(5) NULL,
+    bundesland VARCHAR(40) NULL,
+    angaben TEXT NULL,
+    zeit DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    KEY nach_zeit (zeit),
+    KEY nach_plz (plz)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+
 'freigaben' => "
 CREATE TABLE freigaben (
     marke CHAR(64) NOT NULL,

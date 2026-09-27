@@ -227,6 +227,13 @@ export const adminUeberblick = (tage = 30) =>
 /** Die volle Adresse eines einzelnen Kontos. Der Server protokolliert das. */
 export const adminAdresse = (id) => ruf('/admin.php', { tun: 'adresse', id });
 
+/**
+ * Die Auswertung der Website: Seitenaufrufe, Postleitzahl-Regionen und die
+ * Anfragen aus den Rechnern. Dieselbe Tuer wie die App-Verwaltung.
+ */
+export const adminWebsite = (tage = 30) =>
+  ruf('/admin.php', { tun: 'website', tage });
+
 // ------------------------------------------------------------------ Freigabe
 
 export const freigabeStand = () => ruf('/freigabe.php', { tun: 'stand' });

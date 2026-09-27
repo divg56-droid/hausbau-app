@@ -7,6 +7,7 @@ require __DIR__ . '/_start.php';
  *
  *   POST { tun: "ueberblick", tage?: 30 }
  *   POST { tun: "adresse", id: 7 }
+ *   POST { tun: "website", tage?: 30 }
  *
  * Wer hier hereindarf, steht als Liste von Adressen in geheim.php unter
  * "admins". Es gibt keine zweite Anmeldung und kein zweites Passwort: Der
@@ -38,11 +39,89 @@ $tun = (string)($eingang['tun'] ?? 'ueberblick');
 // hinaus wird die Abfrage teuer und die Anzeige unlesbar.
 $tage = max(1, min(365, (int)($eingang['tage'] ?? 30)));
 
-if ($tun !== 'ueberblick' && $tun !== 'adresse') {
+if (!in_array($tun, ['ueberblick', 'adresse', 'website'], true)) {
     fehler(400, 'Unbekannte Aktion.');
 }
 
 $db = db();
+
+/* ---------------------------------------------------- Auswertung der Website
+ *
+ * Drei Fragen, drei Abfragen: Welche Seite wird gelesen? Wer hat einen
+ * Rechner zu Ende ausgefuellt? Und aus welcher Gegend kommen die Leute?
+ *
+ * Die Gegend steht in den ersten zwei Ziffern der Postleitzahl. Das ist die
+ * Koernigkeit, die etwas sagt und niemanden verraet: "66" ist die halbe
+ * Westpfalz, eine volle Postleitzahl waere ein Dorf.
+ */
+
+if ($tun === 'website') {
+    $seiten = $db->prepare(
+        'SELECT pfad, SUM(aufrufe) AS aufrufe
+           FROM seitenaufrufe
+          WHERE tag > DATE_SUB(CURDATE(), INTERVAL ? DAY)
+          GROUP BY pfad
+          ORDER BY aufrufe DESC
+          LIMIT 100'
+    );
+    $seiten->execute([$tage]);
+
+    $verlauf = $db->prepare(
+        'SELECT tag, SUM(aufrufe) AS aufrufe
+           FROM seitenaufrufe
+          WHERE tag > DATE_SUB(CURDATE(), INTERVAL ? DAY)
+          GROUP BY tag ORDER BY tag'
+    );
+    $verlauf->execute([$tage]);
+
+    /* Die Postleitzahl-Regionen. Gezaehlt wird ueber alle Leads und nicht
+     * nur ueber das Fenster: Wo die Leute herkommen, aendert sich langsamer
+     * als der Verkehr, und bei kleinen Zahlen sagt ein Monat nichts. */
+    $regionen = $db->query(
+        "SELECT LEFT(plz, 2) AS region, COUNT(*) AS anzahl
+           FROM leads
+          WHERE plz IS NOT NULL AND plz <> ''
+          GROUP BY region ORDER BY anzahl DESC, region"
+    );
+
+    /* Die Adressen gehen hier verkuerzt heraus, wie in der Nutzerliste.
+     * Wer eine ganze braucht, hat sie ohnehin in der Mail, die der Rechner
+     * verschickt hat. */
+    $leads = $db->prepare(
+        'SELECT id, quelle, epost, plz, bundesland, angaben, zeit
+           FROM leads ORDER BY zeit DESC LIMIT ?'
+    );
+    $leads->bindValue(1, 200, PDO::PARAM_INT);
+    $leads->execute();
+    $liste = [];
+    foreach ($leads as $z) {
+        $liste[] = [
+            'id' => (int)$z['id'],
+            'quelle' => $z['quelle'],
+            'epost' => epostKurz((string)$z['epost']),
+            'plz' => $z['plz'],
+            'bundesland' => $z['bundesland'],
+            'angaben' => $z['angaben'] ? json_decode((string)$z['angaben'], true) : null,
+            'zeit' => substr((string)$z['zeit'], 0, 16),
+        ];
+    }
+
+    $gesamt = $db->prepare(
+        'SELECT COALESCE(SUM(aufrufe), 0) AS aufrufe, COUNT(DISTINCT pfad) AS seiten
+           FROM seitenaufrufe WHERE tag > DATE_SUB(CURDATE(), INTERVAL ? DAY)'
+    );
+    $gesamt->execute([$tage]);
+
+    antwort([
+        'tage' => $tage,
+        'gesamt' => $gesamt->fetch() ?: ['aufrufe' => 0, 'seiten' => 0],
+        'seiten' => $seiten->fetchAll(),
+        'verlauf' => $verlauf->fetchAll(),
+        'regionen' => $regionen->fetchAll(),
+        'leads' => $liste,
+        'leads_gesamt' => (int)$db->query('SELECT COUNT(*) FROM leads')->fetchColumn(),
+    ]);
+}
 
 /* ------------------------------------------------------- Eine volle Adresse */
 

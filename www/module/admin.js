@@ -11,7 +11,7 @@
 import {
   el, karte, kopfzeile, hinweisKasten, leerzustand, anhaengen, zahl, datumLang,
 } from '../hilfen.js';
-import { adminAdresse, adminUeberblick, angemeldet } from '../konto.js';
+import { adminAdresse, adminUeberblick, adminWebsite, angemeldet } from '../konto.js';
 
 const FENSTER = [
   { tage: 7, titel: '7 Tage' },
@@ -30,6 +30,8 @@ function menge(bytes) {
 }
 
 let gewaehlt = 30;
+// Welche der beiden Auswertungen offen ist: die App oder die Website.
+let bereich = 'app';
 
 export async function zeige(rahmen) {
   await zeichne(rahmen);
@@ -47,12 +49,16 @@ async function zeichne(rahmen) {
     return;
   }
 
+  anhaengen(rahmen, bereichswahl(rahmen));
+
   const laden = el('p', { klasse: 'unterzeile', text: 'Zahlen werden geholt …' });
   anhaengen(rahmen, laden);
 
   let daten;
   try {
-    daten = await adminUeberblick(gewaehlt);
+    daten = bereich === 'website'
+      ? await adminWebsite(gewaehlt)
+      : await adminUeberblick(gewaehlt);
   } catch (fehler) {
     laden.remove();
     anhaengen(rahmen, leerzustand(
@@ -68,6 +74,25 @@ async function zeichne(rahmen) {
   }
   laden.remove();
 
+  if (bereich === 'website') {
+    anhaengen(
+      rahmen,
+      zeitraum(rahmen),
+      webKennzahlen(daten),
+      daten.verlauf.length ? webVerlauf(daten) : null,
+      webSeiten(daten),
+      webRegionen(daten),
+      webLeads(daten),
+      hinweisKasten(
+        'Gezählt wird eine Zeile je Tag und Seite, ohne IP-Adresse, ohne Keks und ohne '
+          + 'Kennung — es gibt hier niemanden wiederzuerkennen. Die Postleitzahl-Region '
+          + 'sind die ersten zwei Ziffern; eine ganze Postleitzahl wäre ein Dorf.',
+        'info'
+      )
+    );
+    return;
+  }
+
   anhaengen(
     rahmen,
     zeitraum(rahmen),
@@ -81,6 +106,178 @@ async function zeichne(rahmen) {
       'info'
     )
   );
+}
+
+/** App oder Website. Dieselbe Pille wie der Zeitraum darunter. */
+function bereichswahl(rahmen) {
+  return el('div', { klasse: 'thema-schalter mit-text' }, [
+    ['app', 'App'],
+    ['website', 'Website'],
+  ].map(([id, titel]) =>
+    el('button', {
+      type: 'button',
+      klasse: 'thema-taste' + (bereich === id ? ' aktiv' : ''),
+      text: titel,
+      onclick: () => {
+        bereich = id;
+        zeichne(rahmen);
+      },
+    })
+  ));
+}
+
+// ------------------------------------------------------------------ Website
+
+function webKennzahlen({ gesamt, tage, leads_gesamt: leads, regionen }) {
+  return el('div', { klasse: 'kennzahlen' }, [
+    kennzahl('Seitenaufrufe', zahl(gesamt.aufrufe), 'in ' + tage + ' Tagen'),
+    kennzahl('Seiten gelesen', zahl(gesamt.seiten), 'verschiedene Adressen'),
+    kennzahl('Anfragen aus Rechnern', zahl(leads || 0), 'mit E-Mail-Adresse'),
+    kennzahl('Gegenden', zahl(regionen.length), 'Postleitzahl-Regionen'),
+  ]);
+}
+
+/** Aufrufe je Tag, als Balken -- wie der Verlauf der App daneben. */
+function webVerlauf({ verlauf: tage, tage: fenster }) {
+  const hoechst = Math.max(1, ...tage.map((t) => Number(t.aufrufe)));
+  const breit = fenster > 90 ? 3 : fenster > 30 ? 6 : 14;
+
+  return karte([
+    el('h2', { text: 'Aufrufe je Tag' }),
+    el('div', { klasse: 'tabelle-rolle' }, [
+      el('div', {
+        klasse: 'balkenblock',
+        stil: { minWidth: tage.length * (breit + 2) + 'px' },
+      }, tage.map((t) =>
+        el('div', {
+          klasse: 'saeule',
+          title: datumLang(t.tag) + ': ' + zahl(t.aufrufe) + ' Aufrufe',
+        }, [
+          el('div', {
+            klasse: 'anteil-zins',
+            stil: { height: Math.round((Number(t.aufrufe) / hoechst) * 100) + '%', minHeight: '2px' },
+          }),
+        ])
+      )),
+    ]),
+    el('p', {
+      klasse: 'unterzeile',
+      text: datumLang(tage[0].tag) + ' bis ' + datumLang(tage[tage.length - 1].tag)
+        + ' · Höchstwert ' + zahl(hoechst) + ' Aufrufe an einem Tag',
+    }),
+  ]);
+}
+
+/**
+ * Welche Seite wie oft.
+ *
+ * Mit Balken unter dem Pfad statt nur der Zahl: Die Rangfolge sieht man so
+ * ohne zu rechnen, und genau darum geht es bei dieser Tabelle.
+ */
+function webSeiten({ seiten }) {
+  if (!seiten.length) {
+    return karte([
+      el('h2', { text: 'Seiten' }),
+      el('p', { klasse: 'unterzeile', text: 'Noch keine Aufrufe gezählt.' }),
+    ]);
+  }
+  const hoechst = Math.max(1, ...seiten.map((z) => Number(z.aufrufe)));
+  return karte([
+    el('h2', { text: 'Meistgelesene Seiten' }),
+    el('div', { klasse: 'tabellenrahmen' }, [
+      el('table', {}, [
+        el('thead', {}, [el('tr', {}, [
+          el('th', { text: 'Seite' }),
+          el('th', { text: 'Aufrufe' }),
+        ])]),
+        el('tbody', {}, seiten.map((z) =>
+          el('tr', {}, [
+            el('td', { stil: { textAlign: 'left', whiteSpace: 'normal' } }, [
+              el('a', {
+                href: 'https://www.bauzeuge.de' + z.pfad,
+                target: '_blank', rel: 'noopener', text: z.pfad,
+              }),
+              el('div', { klasse: 'fortschrittsbalken' }, [
+                el('div', { stil: { width: Math.round((Number(z.aufrufe) / hoechst) * 100) + '%' } }),
+              ]),
+            ]),
+            el('td', { text: zahl(z.aufrufe) }),
+          ])
+        )),
+      ]),
+    ]),
+  ]);
+}
+
+/** Die ersten zwei Ziffern der Postleitzahl, absteigend. */
+function webRegionen({ regionen }) {
+  if (!regionen.length) {
+    return karte([
+      el('h2', { text: 'Gegenden' }),
+      el('p', { klasse: 'unterzeile', text: 'Noch keine Postleitzahl eingegeben.' }),
+    ]);
+  }
+  const hoechst = Math.max(1, ...regionen.map((r) => Number(r.anzahl)));
+  return karte([
+    el('h2', { text: 'Woher die Anfragen kommen' }),
+    el('div', { klasse: 'kennzahlen' }, regionen.map((r) =>
+      el('div', { klasse: 'kennzahl' }, [
+        el('span', { klasse: 'wert', text: r.region }),
+        el('span', {
+          klasse: 'name',
+          text: zahl(r.anzahl) + (Number(r.anzahl) === 1 ? ' Anfrage' : ' Anfragen'),
+        }),
+        el('div', { klasse: 'fortschrittsbalken' }, [
+          el('div', { stil: { width: Math.round((Number(r.anzahl) / hoechst) * 100) + '%' } }),
+        ]),
+      ])
+    )),
+  ]);
+}
+
+/** Wer einen Rechner zu Ende ausgefuellt hat. */
+function webLeads({ leads }) {
+  if (!leads.length) {
+    return karte([
+      el('h2', { text: 'Anfragen aus den Rechnern' }),
+      el('p', { klasse: 'unterzeile', text: 'Noch keine Anfrage eingegangen.' }),
+    ]);
+  }
+  return karte([
+    el('h2', { text: 'Anfragen aus den Rechnern' }),
+    el('div', { klasse: 'tabellenrahmen' }, [
+      el('table', {}, [
+        el('thead', {}, [el('tr', {}, [
+          el('th', { text: 'Wann' }),
+          el('th', { text: 'Adresse' }),
+          el('th', { text: 'PLZ' }),
+          el('th', { text: 'Angaben' }),
+        ])]),
+        el('tbody', {}, leads.map((l) =>
+          el('tr', {}, [
+            el('td', { text: datumLang(String(l.zeit).slice(0, 10)) }),
+            el('td', { stil: { textAlign: 'left' } }, [
+              el('span', { klasse: 'zeilen-titel', text: l.epost }),
+              el('span', { klasse: 'zeilen-unter', text: l.quelle }),
+            ]),
+            el('td', { text: (l.plz || '—') + (l.bundesland ? ' · ' + l.bundesland : '') }),
+            el('td', { text: angabenText(l.angaben) }),
+          ])
+        )),
+      ]),
+    ]),
+  ]);
+}
+
+/** Die Zahlen eines Leads in einer Zeile, ohne JSON-Klammern. */
+function angabenText(a) {
+  if (!a) return '—';
+  const teile = [];
+  if (a.flaeche) teile.push(a.flaeche + ' m²');
+  if (a.standard) teile.push(a.standard);
+  if (a.keller) teile.push('Keller');
+  if (a.gesamt) teile.push(zahl(a.gesamt) + ' €');
+  return teile.join(' · ') || '—';
 }
 
 function zeitraum(rahmen) {

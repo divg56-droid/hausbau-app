@@ -25,7 +25,8 @@
     "anbieter": "node test/anbieter.mjs",
     "laufzeit": "node test/laufzeit.mjs",
     "buchcode": "node test/buchcode.mjs",
-    "anmeldetor": "node test/anmeldetor.mjs"
+    "anmeldetor": "node test/anmeldetor.mjs",
+    "verwaltung-web": "node test/verwaltungWeb.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
