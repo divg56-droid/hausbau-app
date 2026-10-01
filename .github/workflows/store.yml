@@ -183,10 +183,19 @@ jobs:
 
       - name: Nachsehen, was entstanden ist
         run: |
-          aab=$(find android -name '*.aab' | head -1)
-          [ -n "$aab" ] || { echo "FEHLER: kein AAB gebaut." >&2; exit 1; }
+          # Nur aus outputs/, nicht irgendwo unter android/.
+          #
+          # Gradle legt zwei AABs an: packageReleaseBundle schreibt eine
+          # unsignierte Zwischenfassung unter build/intermediates/,
+          # signReleaseBundle die fertige unter build/outputs/. Ein "find
+          # android -name '*.aab' | head -1" nimmt, was die Verzeichnis-
+          # reihenfolge zuerst liefert -- am 01.10.2026 war das die
+          # unsignierte, und Play nimmt die nicht an.
+          aab=$(find android/app/build/outputs/bundle -name '*.aab' | head -1)
+          [ -n "$aab" ] || { echo "FEHLER: kein AAB in outputs/ gebaut." >&2; exit 1; }
+          echo "AAB: $aab"
           cp "$aab" "bauzeuge-${{ steps.fassung.outputs.name }}.aab"
-          for apk in $(find android -path '*release*' -name '*.apk'); do
+          for apk in $(find android/app/build/outputs/apk -path '*release*' -name '*.apk'); do
             cp "$apk" "bauzeuge-${{ steps.fassung.outputs.name }}.apk"
           done
 
@@ -226,6 +235,11 @@ jobs:
           if unzip -l "$datei" | grep -qE 'META-INF/.*\.(RSA|DSA|EC)$'; then
             unzip -l "$datei" | grep -E 'META-INF/.*\.(RSA|SF)$'
             echo "Signiert."
+          elif [ "${{ steps.schluessel.outputs.da }}" = "ja" ]; then
+            # Ein Schluessel lag bereit und das Paket ist trotzdem nackt --
+            # dann stimmt etwas nicht, und eine Warnung uebersieht man.
+            echo "FEHLER: Schluessel war da, das Paket ist trotzdem unsigniert." >&2
+            exit 1
           else
             echo "::warning::Unsigniert - so nimmt Play das Paket nicht an."
           fi
