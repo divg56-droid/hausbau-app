@@ -1,0 +1,111 @@
+# Deploy: laedt App und Schnittstellen per FTPS zu All-Inkl hoch.
+#
+# Laeuft bei jedem Push auf master und von Hand (Actions -> Deploy -> Run
+# workflow). Dasselbe Ziel wie deploy.py, nur ohne den Rechner im Keller:
+#
+#     www/     ->  www.bauzeuge.de/app/
+#     server/  ->  www.bauzeuge.de/app/api/
+#
+# Benoetigte Secrets (Settings -> Secrets and variables -> Actions):
+#   FTP_HOST  wXXXXXXX.kasserver.com
+#   FTP_USER  fXXXXXXX
+#   FTP_PASS  das FTP-Passwort
+#   FTP_DIR   nur noetig, wenn der FTP-Zugang NICHT auf das Domain-
+#             verzeichnis beschraenkt ist -- dann mit Slash am Ende,
+#             z. B. www/bauzeuge.de/
+# Es sind dieselben Werte wie im Repo der Website; es ist derselbe Server.
+#
+# Geladen wird mit curl und nicht mit einer fertigen FTP-Action: All-Inkl
+# (ProFTPD) kappt der Action die FTPS-Datenverbindung. Derselbe Grund steht
+# im Deploy der Website und im Kopf von deploy.py.
+#
+# Hochgeladen wird, geloescht nie. Was auf dem Server liegt und hier nicht
+# vorkommt, bleibt stehen -- das ist Bedingung, nicht Bequemlichkeit: Unter
+# api/daten/bilder/ liegen die Fotos der Nutzer.
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Dieselbe Pruefung wie vor dem Store-Bau. Ein Deploy, der die
+      # Rechenkerne nicht gefragt hat, ist ein Deploy auf Verdacht.
+      - name: Rechenkerne prüfen
+        run: node test.mjs
+
+      - name: Zugangsdaten prüfen
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
+        run: |
+          fehlt=""
+          [ -n "$FTP_HOST" ] || fehlt="$fehlt FTP_HOST"
+          [ -n "$FTP_USER" ] || fehlt="$fehlt FTP_USER"
+          [ -n "$FTP_PASS" ] || fehlt="$fehlt FTP_PASS"
+          if [ -n "$fehlt" ]; then
+            echo "FEHLER: Diese Secrets fehlen:$fehlt" >&2
+            echo "Settings -> Secrets and variables -> Actions anlegen." >&2
+            exit 1
+          fi
+          echo "Zugangsdaten liegen bereit."
+
+      - name: FTPS-Upload
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
+          FTP_DIR: ${{ secrets.FTP_DIR }}
+        run: |
+          set -o pipefail
+
+          # Was niemals hochgeht -- dieselbe Liste wie in deploy.py.
+          #
+          # geheim.php traegt die Zugangsdaten der Datenbank und steht nur auf
+          # dem Server. daten/bilder/ gehoert dem Server allein. geheim.
+          # beispiel.php und test_api.py sind Werkzeug, kein Betrieb.
+          nicht() {
+            case "$1" in
+              server/daten/geheim.php)      return 0 ;;
+              server/daten/bilder/*)        return 0 ;;
+              */geheim.beispiel.php)        return 0 ;;
+              */test_api.py)                return 0 ;;
+            esac
+            return 1
+          }
+
+          hoch() {  # $1 = lokaler Ordner, $2 = Ziel unterhalb von /app/
+            local wurzel="$1" praefix="$2" zahl=0
+            while IFS= read -r datei; do
+              local rel="${datei#./}"
+              nicht "$wurzel/$rel" && { echo "  aus  $wurzel/$rel"; continue; }
+              curl --silent --show-error --ssl-reqd --ftp-create-dirs \
+                --retry 2 --retry-delay 3 --fail \
+                -T "$wurzel/$rel" \
+                "ftp://${FTP_HOST}${FTP_DIR}/app/${praefix}${rel}" \
+                --user "${FTP_USER}:${FTP_PASS}" \
+                || { echo "FEHLER beim Hochladen von $wurzel/$rel" >&2; return 1; }
+              zahl=$((zahl + 1))
+              echo "  up   ${praefix}${rel}"
+            done < <(cd "$wurzel" && find . -type f | sort)
+            echo "$wurzel: $zahl Dateien."
+          }
+
+          hoch www ""
+          hoch server "api/"
+          echo "Deploy fertig."
