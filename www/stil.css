@@ -487,10 +487,17 @@ h3.unterabschnitt { font-size: 15px; margin: 16px 0 4px; }
 }
 .leistungsblock .filterleiste { margin: 12px 0 0; }
 .filterleiste input, .filterleiste select { flex: 1 1 160px; }
-/* Zins und Tilgung im Kreditvergleich: schmales Feld mit Aufschrift davor. */
-.satzfeld { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+/* Zins und Tilgung im Kreditvergleich: schmales Feld mit Aufschrift davor.
+
+   Es darf schrumpfen. Mit "flex: 0 0 auto" und einem Eingabefeld von festen
+   74 Pixeln standen die beiden Felder auf einem 320 Punkte breiten Telefon
+   fuenf Punkte ueber dem Rand -- die Zeile bricht zwar um, aber ein Feld,
+   das nicht schmaler werden darf, bricht nicht in sich zusammen. "min-width:
+   0" muss dazu: Ein Flex-Kind ist sonst mindestens so breit wie sein Inhalt
+   und schrumpft trotz Schrumpffaktor nicht. */
+.satzfeld { display: flex; align-items: center; gap: 6px; flex: 1 1 130px; min-width: 0; }
 .satzfeld span { font-size: 12px; color: var(--tinte-leise); white-space: nowrap; }
-.satzfeld input { width: 74px; text-align: right; }
+.satzfeld input { flex: 1 1 auto; width: auto; min-width: 0; max-width: 94px; text-align: right; }
 .filterleiste button { flex: 0 0 auto; width: auto; margin: 0; }
 
 /* ------------------------------------------------------------------- Meldungen */
