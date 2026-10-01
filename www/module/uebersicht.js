@@ -132,55 +132,6 @@ export async function zeige(rahmen) {
       : null
   );
 
-  // ------------------------------------------------------------- Kennzahlen
-  // Eine Null ist keine Zahl, sondern eine Luecke. Wo nichts steht, steht
-  // deshalb der Weg dorthin und nicht "0 €".
-  anhaengen(
-    rahmen,
-    el('div', { klasse: 'kennzahlen' }, [
-      stand.gesamt > 0
-        ? kennzahl('Budget', eur.format(stand.gesamt))
-        : kennzahlLeer('Budget', 'Noch nicht festgelegt', 'Budget anlegen', '#/finanzierung'),
-      posten.length
-        ? kennzahl('Geplante Kosten', eur.format(geplant))
-        : kennzahlLeer('Geplante Kosten', 'Noch keine Position',
-            'Kosten erfassen', '#/baukasse/kosten'),
-      posten.length
-        ? kennzahl('Auftragssumme', eur.format(auftrag))
-        : kennzahlLeer('Auftragssumme', 'Noch nichts beauftragt',
-            'Angebote vergleichen', '#/angebote'),
-      posten.length
-        ? kennzahl('Mehrkosten', (mehr > 0 ? '+' : '') + eur.format(mehr),
-            mehr > 0 ? 'mehr' : mehr < 0 ? 'weniger' : null)
-        : kennzahlLeer('Mehrkosten', 'Nichts zu vergleichen',
-            'Baukosten schätzen', '#/baukosten'),
-    ])
-  );
-
-  if (stand.gesamt > 0) {
-    const anteil = Math.min(100, (auftrag / stand.gesamt) * 100);
-    anhaengen(
-      rahmen,
-      karte([
-        el('h2', { text: 'Restbudget' }),
-        el('div', { klasse: 'fortschrittsbalken' }, [
-          el('div', {
-            stil: { width: anteil + '%', background: rest < 0 ? 'var(--warn)' : 'var(--akzent)' },
-          }),
-        ]),
-        el('div', { klasse: 'wertzeile stark' }, [
-          el('span', { text: rest < 0 ? 'Über dem Budget' : 'Noch frei' }),
-          el('strong', { klasse: rest < 0 ? 'mehr' : null, text: eur.format(Math.abs(rest)) }),
-        ]),
-        el('p', {
-          klasse: 'unterzeile',
-          text: `Davon bereits bezahlt ${eur.format(gezahlt)}.`,
-        }),
-        knopf('Zur Budgetplanung', () => { geheZu('#/baukasse'); }, 'knopf-leise'),
-      ])
-    );
-  }
-
   // -------------------------------------------------- Die naechsten Schritte
   const todoZahlen = todoStand(todos, heute());
   const offeneTodos = todosSortieren(todos.filter((t) => !t.erledigt));
@@ -204,17 +155,111 @@ export async function zeige(rahmen) {
     leitfaden, offeneTodos, offeneMaengel, naechsterSchritt, stand, posten, fotos, frist,
     belag, bauLaeuft,
   });
-  if (schritte.length) {
+
+  // ------------------------------------------------------------ Als Naechstes
+  //
+  // Wer die App aufmacht, fragt nicht "wie viel habe ich ausgegeben", sondern
+  // "was muss ich jetzt tun". Deshalb steht der erste Schritt oben und als
+  // Karte mit Knopf, nicht als vierte Zeile einer Liste weiter unten. Die
+  // uebrigen Schritte bleiben in ihrer Liste; dieser eine wird dort
+  // uebersprungen, damit nichts doppelt steht.
+  schritte.length
+    ? anhaengen(
+        rahmen,
+        karte([
+          el('p', { klasse: 'alsnaechstes-marke', text: 'Als Nächstes' }),
+          el('h2', { klasse: 'alsnaechstes-titel', text: schritte[0].titel }),
+          el('p', { klasse: 'unterzeile', text: schritte[0].warum }),
+          knopf(schritte[0].wo ? 'Zu ' + schritte[0].wo : 'Ansehen',
+            () => { geheZu(schritte[0].ziel); }, 'knopf-haupt'),
+        ], 'alsnaechstes')
+      )
+    : null;
+
+  // ------------------------------------------------------------------- Geld
+  //
+  // Vier Kacheln nebeneinander waren vier gleich laute Zahlen, und eine
+  // davon rot: "Mehrkosten +8.940 EUR". Die Zahl stimmt und aendert sich
+  // selten -- sie jeden Tag in Alarmfarbe zu zeigen, macht sie nicht
+  // richtiger, nur lauter. Jetzt stehen oben die zwei Zahlen, nach denen
+  // wirklich jemand sucht, darunter der Balken, und die Abweichung als
+  // ruhige Zeile mit Prozentangabe daneben.
+  //
+  // Eine Null ist keine Zahl, sondern eine Luecke: Solange kein Budget und
+  // keine Position da ist, bleiben die Kacheln mit dem Weg hinein stehen.
+  if (stand.gesamt > 0 || posten.length) {
+    const bezahltAnteil = stand.gesamt > 0
+      ? Math.min(100, (gezahlt / stand.gesamt) * 100)
+      : 0;
+    const abweichung = geplant > 0 ? (mehr / geplant) * 100 : 0;
+
     anhaengen(
       rahmen,
       karte([
-        el('h2', { text: 'Deine nächsten Schritte' }),
+        el('div', { klasse: 'geldzahlen' }, [
+          el('div', {}, [
+            el('span', { klasse: 'geldname', text: rest < 0 ? 'Über dem Budget' : 'Noch frei' }),
+            el('strong', { klasse: 'geldwert', text: eur.format(Math.abs(rest)) }),
+          ]),
+          el('div', { klasse: 'rechts' }, [
+            el('span', { klasse: 'geldname', text: 'Bezahlt' }),
+            el('strong', { klasse: 'geldwert', text: eur.format(gezahlt) }),
+          ]),
+        ]),
+        el('div', { klasse: 'fortschrittsbalken schmal' }, [
+          el('div', {
+            stil: { width: bezahltAnteil + '%', background: rest < 0 ? 'var(--warn)' : 'var(--akzent)' },
+          }),
+        ]),
+        el('p', {
+          klasse: 'unterzeile',
+          text: [
+            stand.gesamt > 0 ? eur.format(stand.gesamt) + ' Budget' : null,
+            posten.length ? eur.format(auftrag) + ' beauftragt' : null,
+            posten.length && mehr !== 0
+              ? eur.format(Math.abs(mehr)) + (mehr > 0 ? ' über' : ' unter') + ' Plan, das sind ' +
+                Math.abs(abweichung).toFixed(1).replace('.', ',') + ' %'
+              : null,
+          ].filter(Boolean).join(' · '),
+        }),
+        knopf('Zur Budgetplanung', () => { geheZu('#/baukasse'); }, 'knopf-leise'),
+      ])
+    );
+
+    // Zwei Kacheln statt vier: beides Zahlen, hinter denen Arbeit steckt.
+    anhaengen(
+      rahmen,
+      el('div', { klasse: 'kennzahlen' }, [
+        kennzahl('Mängel offen', zahl(offeneMaengel.length)),
+        kennzahl('Bauleitfaden',
+          Math.round((leitfaden.erledigt / leitfaden.gesamt) * 100) + ' %'),
+      ])
+    );
+  } else {
+    anhaengen(
+      rahmen,
+      el('div', { klasse: 'kennzahlen' }, [
+        kennzahlLeer('Budget', 'Noch nicht festgelegt', 'Budget anlegen', '#/finanzierung'),
+        kennzahlLeer('Geplante Kosten', 'Noch keine Position',
+          'Kosten erfassen', '#/baukasse/kosten'),
+      ])
+    );
+  }
+
+  // Der erste Schritt steht schon oben in seiner eigenen Karte; hier faengt
+  // die Liste deshalb beim zweiten an. Bleibt nichts uebrig, entfaellt sie.
+  const weitereSchritte = schritte.slice(1);
+  if (weitereSchritte.length) {
+    anhaengen(
+      rahmen,
+      karte([
+        el('h2', { text: 'Danach' }),
         el('p', {
           klasse: 'unterzeile',
           text: 'Aus Bauablauf, To-Dos, Mängeln und Bauleitfaden, nach Dringlichkeit ' +
             'und passend zum Stand deines Baus sortiert.',
         }),
-        ...schritte.map((s) =>
+        ...weitereSchritte.map((s) =>
           el('button', { klasse: 'listenzeile', onclick: () => { geheZu(s.ziel); } }, [
             el('span', { klasse: 'zeilen-text' }, [
               el('span', { klasse: 'zeilen-titel', text: s.titel }),

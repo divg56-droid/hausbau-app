@@ -977,6 +977,23 @@ h2.abschnitt + .unterzeile { margin-top: -4px; margin-bottom: 10px; }
   .zustandstaste { transition: none; }
 }
 
+/* Die Karte, die oben steht: ein Schritt, nicht zehn.
+   Die Marke darueber ist klein und in der Akzentfarbe -- sie sagt, wozu
+   die Karte da ist, ohne der Ueberschrift die Groesse wegzunehmen. */
+.karte.alsnaechstes { border-color: var(--akzent); }
+.alsnaechstes-marke {
+  margin: 0; font-size: 11.5px; font-weight: 700; letter-spacing: .4px;
+  text-transform: uppercase; color: var(--akzent);
+}
+.alsnaechstes-titel { margin: 6px 0 0; font-size: 19px; line-height: 1.25; }
+
+/* Zwei Zahlen nebeneinander statt vier Kacheln untereinander. */
+.geldzahlen { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.geldzahlen .rechts { text-align: right; }
+.geldname { display: block; font-size: 13px; color: var(--tinte-leise); }
+.geldwert { display: block; font-size: 26px; font-weight: 700; line-height: 1.15; letter-spacing: -.4px; }
+.fortschrittsbalken.schmal { height: 6px; border-radius: 3px; margin: 14px 0 8px; }
+
 .kennzahlen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
 .kennzahl { background: var(--karte); border: 1px solid var(--linie); border-radius: 12px; padding: 12px 14px; }
 .kennzahl .wert { font-size: 21px; font-weight: 700; display: block; line-height: 1.2; }

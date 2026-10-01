@@ -35,14 +35,23 @@ try {
     angebote.slice(0, 400));
 
   // Uebersicht: die naechsten Schritte passen zur Bauphase.
+  //
+  // Der erste Schritt steht seit dem 01.10.2026 in einer eigenen Karte ganz
+  // oben ("Als Naechstes"), die uebrigen darunter unter "Danach". Geprueft
+  // wird deshalb beides: was oben steht, und was in der Liste folgt.
   await s.hin('', 2200);
+  const obenauf = await s.werten(
+    `(document.querySelector('.alsnaechstes-titel') || {}).textContent || ''`);
   const schritte = await s.werten(`(() => {
-    const karte = [...document.querySelectorAll('.karte')].find((k) => k.innerText.includes('Deine nächsten Schritte'));
+    const karte = [...document.querySelectorAll('.karte')].find((k) => k.innerText.includes('Danach'));
     return karte ? [...karte.querySelectorAll('.zeilen-titel')].map((e) => e.textContent) : [];
   })()`);
-  pruef('Oben steht die Fotoaufgabe vor dem Innenputz', /Fotografieren, bevor/.test(schritte[0] || ''), JSON.stringify(schritte));
+  pruef('Oben steht die Fotoaufgabe vor dem Innenputz', /Fotografieren, bevor/.test(obenauf), obenauf);
+  pruef('Die Karte oben hat einen Knopf',
+    await s.werten(`!!document.querySelector('.karte.alsnaechstes .knopf-haupt')`));
   pruef('Keine Haushaltsrechnung mitten im Bau', !schritte.some((t) => /Haushaltsrechnung/.test(t)), JSON.stringify(schritte));
-  pruef('Es sind höchstens drei', schritte.length > 0 && schritte.length <= 3, String(schritte.length));
+  pruef('Darunter stehen hoechstens zwei', schritte.length <= 2, String(schritte.length));
+  pruef('Der erste Schritt steht nicht doppelt', !schritte.some((t) => t === obenauf), JSON.stringify(schritte));
 
   // Bauablauf: stimmiger Stand und die Fotoaufgabe.
   await s.hin('ablauf', 1800);
