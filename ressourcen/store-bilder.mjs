@@ -28,7 +28,7 @@ const BASIS = process.argv[2] || 'http://localhost:4301';
  * Eintrags: zuerst, was in zwei Sekunden ueberzeugt (Zahlen), danach, was
  * die Arbeit zeigt. */
 const BILDER = [
-  ['', '1-uebersicht', 'Alles auf einen Blick', 'Budget, Kosten und Mehrkosten deines Baus'],
+  ['', '1-uebersicht', 'Alles auf einen Blick', 'Was als Nächstes dran ist, und wie das Geld steht'],
   ['baukasse', '2-budget', 'Budgetplanung', 'Was geplant, beauftragt und bezahlt ist'],
   ['angebote', '3-angebote', 'Angebote vergleichen', 'Position für Position, nicht nur die Endsumme'],
   ['maengel', '4-maengel', 'Mängelliste', 'Mangel, Foto, Frist – bis er behoben ist'],
