@@ -189,8 +189,17 @@ foreach ($ortsatz as $z) {
     if (!isset($nutzer[$id])) {
         continue;
     }
+    /*
+     * Der Abgleich legt den ganzen Satz ab, nicht nur seinen Wert: Eine
+     * Einstellung steht als { name, wert, geaendert } in der Spalte, und der
+     * Ortsname darin unter "wert". Gelesen wurde bis zum 01.10.2026
+     * $satz['ort'] -- den gibt es dort nicht, die Spalte blieb immer leer.
+     * Der alte Weg bleibt als zweite Moeglichkeit stehen, falls doch einmal
+     * ein blanker Wert ankommt.
+     */
     $satz = json_decode((string)$z['inhalt'], true);
-    $ort = is_array($satz) ? trim((string)($satz['ort'] ?? '')) : '';
+    $wert = is_array($satz['wert'] ?? null) ? $satz['wert'] : (is_array($satz) ? $satz : []);
+    $ort = trim((string)($wert['ort'] ?? ''));
     if ($ort !== '') {
         // Spaeter geaendert gewinnt, deshalb ohne Pruefung ueberschreiben:
         // die Abfrage liefert aufsteigend.
