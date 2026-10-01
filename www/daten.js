@@ -414,6 +414,31 @@ export async function projektWechseln(id) {
 const gehoertHierher = (speicher, satz, projekt) =>
   OHNE_PROJEKT.has(speicher) || (satz.projektId || ERSTES_PROJEKT) === projekt;
 
+/* Wer wissen will, wann geschrieben wurde.
+ *
+ * Der Abgleich haengt sich hier ein, damit eine Aenderung von selbst
+ * hochgeht. Ueber einen Horcher und nicht ueber einen Import: daten.js
+ * kennt den Abgleich nicht, der Abgleich kennt daten.js -- andersherum
+ * waere es ein Ring.
+ *
+ * Nicht gemeldet wird, was mit zeitBehalten geschrieben wird. Das ist der
+ * Abgleich selbst, der gerade Fremdes einarbeitet; ihn davon aufzuwecken
+ * waere eine Schleife.
+ */
+const schreibHorcher = new Set();
+
+export function beimSchreiben(fn) {
+  schreibHorcher.add(fn);
+  return () => schreibHorcher.delete(fn);
+}
+
+function geschrieben(speicher) {
+  for (const fn of schreibHorcher) {
+    try { fn(speicher); } catch (fehler) { console.warn('Schreibhorcher:', fehler); }
+  }
+}
+
+
 export const daten = {
   alle: async (speicher) => {
     const [liste, projekt] = await Promise.all([
@@ -448,6 +473,7 @@ export const daten = {
     if (speicher === 'einstellungen') {
       satz.geaendert = optionen.zeitBehalten && satz.geaendert ? satz.geaendert : jetzt();
       await lauf(speicher, 'readwrite', (s) => s.put(satz));
+      if (!optionen.zeitBehalten) geschrieben(speicher);
       return satz.name;
     }
     if (!satz.id) satz.id = neueKennung();
@@ -460,6 +486,7 @@ export const daten = {
     }
     satz.geaendert = optionen.zeitBehalten && satz.geaendert ? satz.geaendert : jetzt();
     await lauf(speicher, 'readwrite', (s) => s.put(satz));
+    if (!optionen.zeitBehalten) geschrieben(speicher);
     return satz.id;
   },
 
@@ -470,11 +497,14 @@ export const daten = {
    */
   loeschen: async (speicher, id) => {
     if (speicher === 'einstellungen') {
-      return lauf(speicher, 'readwrite', (s) => s.delete(id));
+      const weg = await lauf(speicher, 'readwrite', (s) => s.delete(id));
+      geschrieben(speicher);
+      return weg;
     }
     await lauf(speicher, 'readwrite', (s) =>
       s.put({ id, geloescht: true, geaendert: jetzt() })
     );
+    geschrieben(speicher);
   },
 
   /** Einen Satz endgueltig entfernen, ohne Grabstein. Nur fuer Saetze, die

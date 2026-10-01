@@ -364,5 +364,10 @@ zeichne();
 // merkt der Nutzer nichts: Das Geraet ist die Arbeitskopie, der Abgleich holt
 // es beim naechsten Mal nach.
 import('./abgleich.js')
-  .then((m) => m.stillAbgleichen())
+  .then(async (m) => {
+    await m.stillAbgleichen();
+    // Danach von selbst: beim Zurueckkommen und mit Verzug nach dem
+    // Schreiben. Was das genau heisst, steht in abgleich.js.
+    await m.abgleichUeberwachen();
+  })
   .catch((fehler) => console.warn('Abgleich beim Start nicht möglich:', fehler));

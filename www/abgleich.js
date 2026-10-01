@@ -217,9 +217,68 @@ export async function abgleichen(melden = () => {}) {
 export async function stillAbgleichen() {
   if (!angemeldet()) return null;
   try {
-    return await abgleichen();
+    const stand = await abgleichen();
+    letzterLauf = Date.now();
+    return stand;
   } catch (fehler) {
     console.warn('Abgleich im Hintergrund nicht möglich:', fehler.message);
     return null;
   }
+}
+
+/* ------------------------------------------------------- Von selbst abgleichen
+ *
+ * Der Abgleich war bis zum 01.10.2026 ein Knopf, den man druecken musste,
+ * und einmal beim Start. Wer ihn vergass, hatte seine Baustelle nur auf
+ * einem Geraet -- und bei der Statistik fehlte der Ort.
+ *
+ * Zwei Anlaesse, mehr nicht:
+ *
+ *   - Zurueck in der App (visibilitychange). Das ist der Alltag: Die App
+ *     liegt im Hintergrund, man holt sie wieder vor. Nur wenn der letzte
+ *     Lauf eine Weile her ist, sonst gleicht jedes Umschalten ab.
+ *   - Nach dem Schreiben, mit Verzug. Wer zehn Posten eintippt, soll einen
+ *     Abgleich ausloesen und nicht zehn; jede weitere Aenderung stellt die
+ *     Uhr zurueck.
+ *
+ * Kein fester Takt: Auf der Baustelle ist das Netz schlecht und der Akku
+ * knapp, und ein Abgleich alle fuenf Minuten kostet beides, ohne dass sich
+ * etwas geaendert haette.
+ */
+
+// Wie lange nach der letzten Aenderung gewartet wird.
+const VERZUG = 30000;
+// Wie lange der letzte Lauf her sein muss, damit das Zurueckkommen zaehlt.
+const RUHE = 5 * 60 * 1000;
+// Laeuft gerade einer, wird so lange gewartet und dann noch einmal gesehen.
+const SPAETER = 10000;
+
+let letzterLauf = 0;
+let uhr = null;
+
+function anstossen() {
+  if (!angemeldet()) return;
+  clearTimeout(uhr);
+  uhr = setTimeout(async () => {
+    uhr = null;
+    // Ein laufender Abgleich wuerde werfen ("laeuft schon"). Seine eigenen
+    // Schreibvorgaenge melden sich nicht, aber ein Knopfdruck kann sich mit
+    // dem Verzug kreuzen -- dann einfach noch einmal anklopfen.
+    if (laeuft) { anstossen(); return; }
+    await stillAbgleichen();
+  }, laeuft ? SPAETER : VERZUG);
+}
+
+/**
+ * Haengt den Abgleich an das Geschehen. Einmal beim Start aufrufen.
+ */
+export async function abgleichUeberwachen() {
+  const { beimSchreiben } = await import('./daten.js');
+  beimSchreiben(anstossen);
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (Date.now() - letzterLauf < RUHE) return;
+    stillAbgleichen();
+  });
 }
