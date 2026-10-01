@@ -26,12 +26,15 @@ const ORTE = [
 
 export async function browserStarten({ basis }) {
   const { existsSync } = await import('node:fs');
-  const pfad = ORTE.find((o) => existsSync(o));
+  const pfad = process.env.CHROME ?? ORTE.find((o) => existsSync(o));
   if (!pfad) throw new Error('Kein Chrome gefunden. Gesucht in:\n  ' + ORTE.join('\n  '));
 
   const profil = mkdtempSync(join(tmpdir(), 'bauzeuge-'));
   const chrome = spawn(pfad, [
     '--headless=new', '--disable-gpu', '--no-first-run', '--hide-scrollbars',
+    /* In einem Container laeuft Node als root, und dann startet Chrome ohne
+       diese Flagge gar nicht. Auf dem Arbeitsrechner bleibt sie weg. */
+    ...(process.env.CHROME_OHNE_SANDBOX ? ['--no-sandbox'] : []),
     '--remote-debugging-port=0', `--user-data-dir=${profil}`, 'about:blank',
   ], { stdio: ['ignore', 'ignore', 'pipe'] });
 
