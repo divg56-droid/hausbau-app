@@ -65,6 +65,21 @@ try {
   const stand = await seite.werten(FUELLEN);
   console.log(`Beispielprojekt: ${stand.posten} Posten, Budget ${stand.budget} EUR`);
 
+  /* Zwei Hinweise auf der Uebersicht gehoeren nicht ins erste Store-Bild.
+   *
+   * "BauZeuge auf den Startbildschirm" ist eine Aufforderung, die App als
+   * Web-App zu installieren -- wer das Bild im Play Store sieht, hat sie
+   * gerade installiert. Und der Sicherungshinweis erscheint nur, solange
+   * keine Sicherung existiert; im Bild sieht er aus wie eine Warnung ueber
+   * die App. Beides sind Zustaende, keine Funktionen, also wird der Zustand
+   * vorher gesetzt statt das Bild hinterher beschnitten. */
+  await seite.werten(`(async () => {
+    localStorage.setItem('bauzeuge.installhinweis', 'installiert|' + Date.now());
+    const d = await import('./daten.js');
+    await d.einstellung('letzte_sicherung', new Date().toISOString().slice(0, 10));
+    return true;
+  })()`);
+
   for (const format of FORMATE) {
     const ordner = join(HIER, 'play', format.ordner);
     mkdirSync(ordner, { recursive: true });
