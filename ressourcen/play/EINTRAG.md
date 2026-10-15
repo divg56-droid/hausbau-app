@@ -65,8 +65,8 @@ offline — auf der Baustelle gibt es oft kein Netz, und das soll nichts machen.
 Ein Konto ist freiwillig und nur dafür da, dieselben Daten am Telefon und am
 Rechner zu haben. Dann liegen sie auf einem Server in Deutschland.
 
-Keine Werbung. Keine Analysedienste. Keine Werbe-ID. Die App fordert eine
-einzige Berechtigung an: Zugang zum Internet.
+Keine Analysedienste. Die App fordert eine einzige Berechtigung an: Zugang
+zum Internet.
 
 AUSGEBEN UND TEILEN
 

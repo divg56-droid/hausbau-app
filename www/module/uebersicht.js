@@ -526,7 +526,7 @@ function willkommenProjekt() {
     el('p', {
       klasse: 'unterzeile leise',
       text: 'Deine Daten liegen auf diesem Gerät und verschlüsselt übertragen auf einem ' +
-        'Server in Deutschland. Keine Werbung, keine weitergegebenen Adressen.',
+        'Server in Deutschland. Keine weitergegebenen Adressen.',
     }),
   ], 'willkommenskarte');
 }
