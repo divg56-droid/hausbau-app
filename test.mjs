@@ -1954,14 +1954,32 @@ console.log('Verwaltung');
     admin.includes("fehler(404, 'Nicht vorhanden.')"));
 
   /*
-   * Die wichtigste Pruefung dieser Gruppe: Es darf keine vollstaendige
-   * Adresse herausgehen. Nicht "wird im Browser gekuerzt angezeigt" --
-   * gekuerzt wird auf dem Server, sonst steht die volle Adresse trotzdem in
-   * jeder Antwort, in jedem Zwischenspeicher und in jedem Protokoll.
+   * Die wichtigste Pruefung dieser Gruppe, seit dem 19.10.2026 in zwei
+   * Haelften -- weil es zwei Arten von Adresse gibt und nur eine davon
+   * geschuetzt gehoert.
+   *
+   * Konten: verkuerzt. Wer die App benutzt, hat seine Adresse hinterlegt,
+   * damit die App laeuft, nicht damit jemand sie liest. Gekuerzt wird auf
+   * dem Server und nicht im Browser -- sonst steht die volle Adresse
+   * trotzdem in jeder Antwort, in jedem Zwischenspeicher, in jedem
+   * Protokoll.
+   *
+   * Anfragen aus den Rechnern: vollstaendig. Wer dort seine Adresse
+   * eintraegt, schreibt dem Betreiber; die Anfrage ist an ihn gerichtet.
+   *
+   * Geprueft wird abschnittsweise, nicht ueber die ganze Datei: Eine
+   * Pruefung, die nur "irgendwo steht epostKurz" sagt, waere blind dafuer,
+   * an welcher Stelle die volle Adresse herausgeht.
    */
-  pruef('Adressen gehen nur verkuerzt heraus',
-    admin.includes("'epost' => epostKurz(") &&
-    !/'epost'\s*=>\s*\(?string\)?\$z\['epost'\]/.test(admin));
+  const websiteTeil = admin.slice(admin.indexOf("if ($tun === 'website')"),
+                                  admin.indexOf("if ($tun === 'adresse')"));
+  const kontenTeil = admin.slice(admin.indexOf("if ($tun === 'adresse')"));
+  const vollesFeld = /'epost'\s*=>\s*\(string\)\$z\['epost'\]/;
+
+  pruef('Konto-Adressen gehen nur verkuerzt heraus',
+    kontenTeil.includes("'epost' => epostKurz(") && !vollesFeld.test(kontenTeil));
+  pruef('Die Anfragen aus den Rechnern gehen vollstaendig heraus',
+    vollesFeld.test(websiteTeil) && !websiteTeil.includes('epostKurz('));
 
   // Die Kuerzung selbst, nachgerechnet statt nachgelesen. Dieselben Regeln
   // wie epostKurz() in _start.php.
