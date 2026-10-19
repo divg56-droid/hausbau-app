@@ -14,9 +14,11 @@ require __DIR__ . '/_start.php';
  * Betreiber meldet sich wie jeder andere an, und diese Datei prueft nur
  * zusaetzlich, ob seine Adresse auf der Liste steht.
  *
- * Die Liste geht ausschliesslich verkuerzt heraus ("an…as@example.de").
+ * Die Kontenliste geht ausschliesslich verkuerzt heraus ("an…as@example.de").
  * Zum Wiedererkennen reicht die Kurzform, und es gibt keinen Grund, den
- * ganzen Bestand bei jedem Aufruf durch einen Browser zu schicken.
+ * ganzen Bestand bei jedem Aufruf durch einen Browser zu schicken. Die
+ * Anfragen aus den Rechnern ("website") sind davon ausgenommen und stehen
+ * voll da -- die Begruendung steht an der Stelle selbst.
  *
  * Wer eine volle Adresse braucht, holt sie einzeln ("adresse") -- eine
  * Anfrage, eine Kennung, eine Adresse. Jede davon steht danach in
@@ -84,9 +86,18 @@ if ($tun === 'website') {
           GROUP BY region ORDER BY anzahl DESC, region"
     );
 
-    /* Die Adressen gehen hier verkuerzt heraus, wie in der Nutzerliste.
-     * Wer eine ganze braucht, hat sie ohnehin in der Mail, die der Rechner
-     * verschickt hat. */
+    /* Diese Adressen gehen vollstaendig heraus -- anders als die der
+     * Konten weiter unten.
+     *
+     * Der Unterschied ist nicht Nachlaessigkeit, sondern die Sache selbst.
+     * Ein Konto hat seine Adresse hinterlegt, um die App zu benutzen; dass
+     * der Betreiber sie lesen kann, ist Nebenfolge und bleibt deshalb die
+     * Ausnahme, einzeln abrufbar und protokolliert. Wer dagegen einen
+     * Rechner ausfuellt und seine Adresse eintraegt, schreibt genau diesem
+     * Betreiber -- die Anfrage ist an ihn gerichtet, und sie steht ohnehin
+     * schon in der Mail, die der Rechner ihm geschickt hat. Sie in der
+     * Liste zu verstuemmeln, haette niemanden geschuetzt und nur das
+     * Beantworten erschwert. Nutzervorgabe 19.10.2026. */
     $leads = $db->prepare(
         'SELECT id, quelle, epost, plz, bundesland, angaben, zeit
            FROM leads ORDER BY zeit DESC LIMIT ?'
@@ -98,7 +109,7 @@ if ($tun === 'website') {
         $liste[] = [
             'id' => (int)$z['id'],
             'quelle' => $z['quelle'],
-            'epost' => epostKurz((string)$z['epost']),
+            'epost' => (string)$z['epost'],
             'plz' => $z['plz'],
             'bundesland' => $z['bundesland'],
             'angaben' => $z['angaben'] ? json_decode((string)$z['angaben'], true) : null,

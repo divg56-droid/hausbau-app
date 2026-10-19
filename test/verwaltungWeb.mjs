@@ -44,7 +44,7 @@ try {
             { region: '67', anzahl: 1 },
           ],
           leads: [
-            { id: 1, quelle: 'baukosten', epost: 'an…lz@beispiel.de', plz: '66989',
+            { id: 1, quelle: 'baukosten', epost: 'andreas.volz@beispiel.de', plz: '66989',
               bundesland: 'rheinland-pfalz', zeit: '2026-09-26 10:00',
               angaben: { flaeche: 140, standard: 'gehoben', keller: true, gesamt: 480000 } },
           ],
@@ -87,7 +87,11 @@ try {
     /\b66\b/.test(text) && !/66989\s*Anfragen/.test(text), text.slice(0, 600));
   pruef('Die stärkste Gegend steht vorn', text.indexOf('66') < text.indexOf('55'));
   pruef('Die Anfrage aus dem Rechner steht da', text.includes('baukosten'));
-  pruef('Adressen bleiben verkürzt', text.includes('an…lz@beispiel.de') && !text.includes('andreas'));
+  // Zwei Regeln, nicht eine: Wer einen Rechner ausgefuellt hat, schreibt dem
+  // Betreiber und steht mit voller Adresse da. Ein Konto hat seine Adresse nur
+  // hinterlegt, um die App zu benutzen, und bleibt verkuerzt.
+  pruef('Die Adresse aus dem Rechner steht vollständig da',
+    text.includes('andreas.volz@beispiel.de'), text.slice(0, 800));
   pruef('Die Angaben stehen lesbar da', /140 m²/.test(text), text.slice(0, 800));
 
   // Und wieder zurueck: Die App-Ansicht darf davon nichts abbekommen.
@@ -95,6 +99,9 @@ try {
   await w(900);
   const zurueck = await s.werten(`document.getElementById('inhalt').innerText`);
   pruef('Zurück zur App geht auch', zurueck.includes('Konten') && !zurueck.includes('Meistgelesene'));
+  pruef('Die Adresse eines Kontos bleibt verkürzt',
+    zurueck.includes('an…lz@beispiel.de') && !zurueck.includes('andreas.volz@beispiel.de'),
+    zurueck.slice(0, 400));
 
   const klagen = s.klagenHolen().filter((k) => !/abgleich\.php|ERR_FAILED/.test(k.text || ''));
   pruef('Keine Konsolenfehler', klagen.length === 0, JSON.stringify(klagen).slice(0, 300));
