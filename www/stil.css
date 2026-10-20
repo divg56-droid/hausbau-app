@@ -79,7 +79,11 @@ html, body {
   height: var(--kopf-gesamt);
 }
 
-h1 { font-size: 24px; line-height: 1.2; margin: 0 0 4px; font-weight: 700; }
+/* Laufweite haengt an der Groesse: Je groesser die Schrift, desto weiter
+   stehen die Buchstaben von selbst, und desto enger muessen sie gesetzt
+   werden. Bei h2 (18px) und h3 (15px) waere das falsch -- kleine Schrift
+   braucht eher mehr Luft, nicht weniger. Darum steht es nur an h1. */
+h1 { font-size: 24px; line-height: 1.2; margin: 0 0 4px; font-weight: 700; letter-spacing: -.01em; }
 h2 { font-size: 18px; margin: 0 0 10px; font-weight: 700; }
 h3 { font-size: 15px; margin: 0 0 6px; font-weight: 600; }
 p { margin: 0 0 12px; }
@@ -206,6 +210,21 @@ input[type="checkbox"] { width: 22px; height: 22px; min-height: 0; accent-color:
 .knopf-leise { background: none; border-color: transparent; color: var(--akzent-dunkel); font-weight: 600; }
 .knopf-warn { color: var(--warn); border-color: var(--linie); }
 .knopf:active, .knopf-warn:active { background: var(--band); }
+
+/* Nachgeben beim Druecken, nicht erst beim Loslassen. Zwei Zeiten mit
+   Absicht: 90 ms hinein, 180 ms zurueck. Die Antwort auf den Finger muss
+   sofort da sein; das Zurueckfedern ist keine Antwort mehr und darf
+   Zeit lassen. Dieselben Werte wie auf bauzeuge.de. */
+@media (prefers-reduced-motion: no-preference) {
+  .knopf, .knopf-haupt, .knopf-leise, .knopf-warn, .kachel, .zustandstaste {
+    transition: background-color 150ms ease, transform 180ms cubic-bezier(.23, 1, .32, 1);
+  }
+  .knopf:active, .knopf-haupt:active, .knopf-leise:active, .knopf-warn:active,
+  .kachel:active, .zustandstaste:active {
+    transform: scale(.97);
+    transition: transform 90ms ease-out;
+  }
+}
 
 /* Einzeln untereinander stehende Knoepfe brauchen Luft; in einer Reihe
    uebernimmt das gap den Abstand, dort stoert der Rand. */
@@ -512,16 +531,41 @@ h3.unterabschnitt { font-size: 15px; margin: 16px 0 4px; }
 
 /* --------------------------------------------------------------------- Dialog */
 
+/* Der Schleier folgt dem Blatt: --blatt-anteil ist 1, wenn das Blatt ganz
+   offen ist, und 0, wenn es unten angekommen ist. Gesetzt wird er Bild fuer
+   Bild von blattziehen.js. So sieht man schon waehrend des Ziehens, dass
+   man gerade schliesst, statt es erst am Ende zu erfahren. */
 .ueberlagerung {
-  position: fixed; inset: 0; z-index: 50; background: var(--schleier);
+  position: fixed; inset: 0; z-index: 50;
+  background: var(--schleier);
+  opacity: var(--blatt-anteil, 1);
   display: flex; align-items: flex-end; justify-content: center;
 }
 .blatt {
   background: var(--papier); width: 100%; max-width: 720px;
   max-height: 92vh; overflow-y: auto;
   border-radius: 16px 16px 0 0;
-  padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+  padding: 8px 16px calc(20px + env(safe-area-inset-bottom));
+  will-change: transform;
 }
+
+/* Der Griff. Er sagt, dass sich das Blatt ziehen laesst, und er ist die
+   Flaeche, an der gezogen wird -- am Rumpf ginge es nicht, der scrollt.
+   touch-action: none, weil der Browser die senkrechte Geste sonst als
+   Scrollen fuer sich behaelt und pointermove nicht mehr kommt.
+   Die Flaeche ist hoeher als der sichtbare Strich: 44 px sind das Mass,
+   unter dem ein Ziel mit dem Daumen schwer zu treffen ist. */
+.blatt-griff {
+  display: block; width: 100%; height: 28px; margin: 0 0 4px;
+  touch-action: none; cursor: grab; position: relative;
+}
+.blatt-griff:active { cursor: grabbing; }
+.blatt-griff::before {
+  content: ''; position: absolute; left: 50%; top: 10px;
+  width: 40px; height: 4px; margin-left: -20px;
+  border-radius: 2px; background: var(--linie);
+}
+.blatt h2 { margin-top: 0; }
 .blatt h2 { margin-bottom: 14px; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -694,7 +738,7 @@ html[data-thema="dunkel"] {
    nicht daneben. */
 .anmeldung { display: flex; justify-content: center; }
 .anmeldekarte { width: 100%; max-width: 430px; padding: 26px 24px 22px; }
-.anmeldung-titel { margin: 0 0 6px; font-size: 30px; line-height: 1.15; }
+.anmeldung-titel { margin: 0 0 6px; font-size: 30px; line-height: 1.12; letter-spacing: -.018em; }
 .anmeldung-unter {
   margin: 0 0 20px; font-size: 15px; line-height: 1.5; color: var(--tinte-leise);
 }
@@ -885,7 +929,7 @@ body.leiste-offen #kopf .menue-knopf span:nth-child(3) { transform: translateY(-
   margin-bottom: 8px;
 }
 .kachelname { font-weight: 700; font-size: 15px; flex: 1; min-width: 0; }
-.kachelwert { display: block; font-size: 24px; font-weight: 700; line-height: 1.15; }
+.kachelwert { display: block; font-size: 24px; font-weight: 700; line-height: 1.15; letter-spacing: -.01em; }
 .kachelfuss {
   display: block; margin-top: 8px; font-size: 12.5px; color: var(--tinte-leise);
 }

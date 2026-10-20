@@ -2,6 +2,7 @@
 // anlegt oder bearbeitet, benutzt dieses eine.
 
 import { el, knopf } from './hilfen.js';
+import { ziehbarMachen } from './blattziehen.js';
 
 /* Die offenen Blaetter, das oberste zuletzt.
  *
@@ -83,7 +84,16 @@ export function blattOeffnen(titel, felder, beimSichern, optionen = {}) {
      zugeschnappt ist -- zuletzt bei "Rechnung erfassen". */
   let eigenerEintrag = false;
 
+  /* Steht hier oben aus demselben Grund wie eigenerEintrag: schliessen()
+     liest es, und schliessen() wird weiter unten in offene gelegt, bevor
+     diese Zeile liefe. Mit const waere das die zeitliche Totzone. */
+  let bewegung = null;
+
   const blatt = el('div', { klasse: 'blatt' }, [
+    /* Der Griff ist nicht nur Zierde: Er sagt, dass sich das Blatt ziehen
+       laesst, und er ist die Flaeche, an der gezogen wird. Am Rumpf zu
+       ziehen ginge nicht -- der scrollt. */
+    el('div', { klasse: 'blatt-griff', attribute: { 'aria-hidden': 'true' } }),
     el('h2', { text: titel }),
     ...felder,
     el('div', { klasse: 'knopf-reihe', stil: { marginTop: '6px' } }, [
@@ -111,7 +121,11 @@ export function blattOeffnen(titel, felder, beimSichern, optionen = {}) {
    *   noch einmal abgeraeumt werden. */
   function schliessen(vonZurueck = false) {
     document.removeEventListener('keydown', beiTaste);
-    ueberlagerung.remove();
+    /* Hinaus auf demselben Weg, auf dem es hereinkam: nach unten. Ein Blatt,
+       das von unten faehrt und zur Seite verschwindet, wirkt wie zwei
+       verschiedene Dinge. Das Element geht erst weg, wenn es unten ist --
+       bewegung.hinaus() raeumt es selbst ab. */
+    if (bewegung) bewegung.hinaus(); else ueberlagerung.remove();
     const stelle = offene.indexOf(schliessen);
     if (stelle !== -1) offene.splice(stelle, 1);
 
@@ -148,6 +162,11 @@ export function blattOeffnen(titel, felder, beimSichern, optionen = {}) {
   document.addEventListener('keydown', beiTaste);
   document.body.append(ueberlagerung);
   offene.push(schliessen);
+
+  /* Hereinfahren und das Ziehen. Beides steckt in blattziehen.js, damit
+     diese Datei weiter davon handelt, was ein Blatt ist, und nicht davon,
+     wie es sich bewegt. Gibt zurueck, wie das Blatt wieder hinausfaehrt. */
+  bewegung = ziehbarMachen(ueberlagerung, blatt, () => schliessen());
 
   try {
     history.pushState({ bauzeugeBlatt: true }, '');

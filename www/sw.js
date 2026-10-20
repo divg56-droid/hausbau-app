@@ -42,6 +42,8 @@ const SCHALE = [
   './bauweise.js',
   './bereiche.js',
   './blatt.js',
+  './blattziehen.js',
+  './feder.js',
   './csv.js',
   './xlsx.js',
   './anbietervergleich-daten.js',
