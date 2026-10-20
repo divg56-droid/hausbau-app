@@ -167,6 +167,25 @@ seitenleiste.addEventListener('click', (e) => {
   if (e.target.closest('.leiste-punkt')) leisteSchalten(false);
 });
 
+/* Die Kante unter dem Kopf erscheint erst, wenn Inhalt darunter liegt.
+   passive: true, weil hier nichts abgefangen wird -- ohne das Versprechen
+   wartet der Browser bei jedem Rollen darauf, ob wir es vielleicht doch
+   tun, und das Rollen ruckelt. */
+let gescrollt = null;
+addEventListener('scroll', () => {
+  const jetzt = window.scrollY > 4;
+  if (jetzt === gescrollt) return;   // nur bei Wechsel ins Dokument fassen
+  gescrollt = jetzt;
+  document.body.classList.toggle('gescrollt', jetzt);
+}, { passive: true });
+
+/* Wegwischen. Nur zumachen, nicht aufmachen -- ein Wisch von der linken
+   Kante gehoert dem Geraet (Zurueck), und zwei Empfaenger fuer dieselbe
+   Geste streiten sich. */
+import('./leisteziehen.js').then(({ leisteZiehbar }) =>
+  leisteZiehbar(seitenleiste, leistenSchatten, () => leisteSchalten(false))
+);
+
 leisteBauen();
 
 /* Die Zurücktaste von Android.
