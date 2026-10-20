@@ -27,6 +27,15 @@ require __DIR__ . '/_start.php';
  * die Adresse nicht heraus.
  */
 
+/* Ab wie vielen Aufrufen eine Seite in "Meistgelesene Seiten" auftaucht.
+ *
+ * Nutzervorgabe 20.10.2026. Vorher stand jede Seite in der Liste, auch die
+ * mit einem einzigen Aufruf -- und das waren die meisten. Eine Tabelle, in
+ * der neunzig Zeilen "1" sagen, verdeckt die fuenf, die etwas aussagen.
+ * Ein einzelner Aufruf ist ohnehin kein Lesesignal, sondern genauso gut ein
+ * Bot oder ein Verirrter. */
+const SEITEN_AB = 20;
+
 $n = nutzer();
 if (!istAdmin($n['epost'])) {
     // Dieselbe Antwort wie fuer einen unbekannten Weg. Wer nicht auf der
@@ -63,10 +72,11 @@ if ($tun === 'website') {
            FROM seitenaufrufe
           WHERE tag > DATE_SUB(CURDATE(), INTERVAL ? DAY)
           GROUP BY pfad
+         HAVING SUM(aufrufe) >= ?
           ORDER BY aufrufe DESC
           LIMIT 100'
     );
-    $seiten->execute([$tage]);
+    $seiten->execute([$tage, SEITEN_AB]);
 
     $verlauf = $db->prepare(
         'SELECT tag, SUM(aufrufe) AS aufrufe
@@ -127,6 +137,8 @@ if ($tun === 'website') {
         'tage' => $tage,
         'gesamt' => $gesamt->fetch() ?: ['aufrufe' => 0, 'seiten' => 0],
         'seiten' => $seiten->fetchAll(),
+        // Damit die Anzeige sagen kann, warum eine Seite fehlt.
+        'seiten_ab' => SEITEN_AB,
         'verlauf' => $verlauf->fetchAll(),
         'regionen' => $regionen->fetchAll(),
         'leads' => $liste,

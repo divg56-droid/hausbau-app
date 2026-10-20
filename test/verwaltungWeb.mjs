@@ -29,6 +29,7 @@ try {
         return Response.json({
           tage: 30,
           gesamt: { aufrufe: 1234, seiten: 42 },
+          seiten_ab: 20,
           seiten: [
             { pfad: '/kfw/', aufrufe: 800 },
             { pfad: '/preise/', aufrufe: 300 },
@@ -83,6 +84,11 @@ try {
   pruef('Die Website wird getrennt abgefragt', gefragt.includes('website'), JSON.stringify(gefragt));
   pruef('Die Seitenaufrufe stehen da', /1\.234|1234/.test(text), text.slice(0, 200));
   pruef('Die meistgelesene Seite steht oben', text.indexOf('/kfw/') < text.indexOf('/preise/'));
+  // Die Schwelle kommt vom Server und wird angeschrieben: Sonst sieht der
+  // Betreiber eine kurze Liste und weiss nicht, ob gefiltert wurde oder ob
+  // es wirklich nicht mehr Seiten gibt.
+  pruef('Die Schwelle steht an der Tabelle',
+    text.includes('Ab 20 Aufrufen'), text.slice(0, 600));
   pruef('Die Postleitzahl-Region steht als zwei Ziffern da',
     /\b66\b/.test(text) && !/66989\s*Anfragen/.test(text), text.slice(0, 600));
   pruef('Die stärkste Gegend steht vorn', text.indexOf('66') < text.indexOf('55'));

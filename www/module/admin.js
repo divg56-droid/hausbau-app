@@ -174,16 +174,27 @@ function webVerlauf({ verlauf: tage, tage: fenster }) {
  * Mit Balken unter dem Pfad statt nur der Zahl: Die Rangfolge sieht man so
  * ohne zu rechnen, und genau darum geht es bei dieser Tabelle.
  */
-function webSeiten({ seiten }) {
+function webSeiten({ seiten, seiten_ab: ab }) {
+  // Die Schwelle kommt vom Server mit. Sie hier zu wiederholen hiesse, zwei
+  // Zahlen zu pflegen, die immer gleich sein muessen.
+  const schwelle = Number(ab) || 0;
   if (!seiten.length) {
     return karte([
       el('h2', { text: 'Seiten' }),
-      el('p', { klasse: 'unterzeile', text: 'Noch keine Aufrufe gezählt.' }),
+      el('p', {
+        klasse: 'unterzeile',
+        text: schwelle > 1
+          ? `Keine Seite kam in diesem Zeitraum auf ${schwelle} Aufrufe.`
+          : 'Noch keine Aufrufe gezählt.',
+      }),
     ]);
   }
   const hoechst = Math.max(1, ...seiten.map((z) => Number(z.aufrufe)));
   return karte([
     el('h2', { text: 'Meistgelesene Seiten' }),
+    ...(schwelle > 1
+      ? [el('p', { klasse: 'unterzeile', text: `Ab ${schwelle} Aufrufen im Zeitraum.` })]
+      : []),
     el('div', { klasse: 'tabellenrahmen' }, [
       el('table', {}, [
         el('thead', {}, [el('tr', {}, [
