@@ -75,6 +75,12 @@ jobs:
         run: |
           sed -i 's/compileSdkVersion = [0-9]*/compileSdkVersion = 36/'   android/variables.gradle
           sed -i 's/targetSdkVersion = [0-9]*/targetSdkVersion = 36/'     android/variables.gradle
+          # minSdk 24 statt der 23 von Capacitor: Der automatische Schutz von
+          # Google Play setzt mindestens 24 voraus, und ohne ihn weist die
+          # Console das Paket beim Hochladen ab. 24 ist Android 7.0 von 2016 --
+          # darunter liegt kaum noch ein Geraet, und eine Baustellen-App wird
+          # nicht auf einem zehn Jahre alten Telefon gefuehrt.
+          sed -i 's/minSdkVersion = [0-9]*/minSdkVersion = 24/'           android/variables.gradle
           # AGP 8.7 kennt SDK 36 noch nicht namentlich und warnt deswegen bei
           # jedem Bau. Die Warnung ist richtig und hier trotzdem ohne Folge.
           echo 'android.suppressUnsupportedCompileSdk=36' >> android/gradle.properties
