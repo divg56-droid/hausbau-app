@@ -38,11 +38,23 @@ const seite = await browserStarten({ basis: BASIS });
 try {
   // Dieselbe Groesse wie die Play-Bilder: 360 x 640 bei dreifacher Dichte.
   await seite.groesse(360, 640, 3);
+  /* THEMA=dunkel nimmt die dunkle Fassung auf. Gesetzt wird derselbe
+     Schluessel, den der Schalter in der App benutzt -- so ist das Bild
+     wirklich das, was ein Nutzer mit dieser Wahl sieht, und keine
+     nachtraeglich eingefaerbte Aufnahme. */
+  const thema = process.env.THEMA === 'dunkel' ? 'dunkel' : null;
+
   await seite.vorschalten(`
     window.addEventListener('beforeinstallprompt', (e) => e.stopImmediatePropagation(), true);
+    ${thema ? `try { localStorage.setItem('hausbau.thema', '${thema}'); } catch {}` : ''}
     document.addEventListener('DOMContentLoaded', () => {
       const stil = document.createElement('style');
-      stil.textContent = '.beispielband, .install-karte, .kopfaktionen { display: none !important; }';
+      /* .thema-schalter stand hier bis zum 22.10.2026 nicht drin, und
+         .kopfaktionen ist etwas anderes -- eine Layoutklasse, nicht der
+         Schalter. Deshalb war der Hell-Dunkel-Schalter auf allen bisherigen
+         Bildern der Startseite zu sehen. Er gehoert zur Bedienung, nicht zum
+         Inhalt, und lenkt in einem Werbebild nur ab. */
+      stil.textContent = '.beispielband, .install-karte, .kopfaktionen, .thema-schalter { display: none !important; }';
       document.head.append(stil);
     });
   `);
