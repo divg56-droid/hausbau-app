@@ -71,8 +71,28 @@ await fall('iphoneChrome', async (s) => {
 });
 
 await fall('android', async (s) => {
+  const play = `(() => { const a = document.querySelector('.install-karte a[href*="play.google.com"]'); return a ? a.textContent : null; })()`;
   const ohne = await s.werten(karte);
-  pruef('Android ohne Angebot: Weg über das Menü', ohne.da && /drei Punkten/.test(ohne.text));
+  pruef('Android: Verweis auf Google Play', ohne.da && (await s.werten(play)) === 'Bei Google Play laden');
+  pruef('Android: keine Anleitung über das Menü', ohne.da && !/drei Punkten/.test(ohne.text));
+  pruef('Android ohne Projekt: warnt vor getrennten Daten', ohne.da && /vor dem ersten Projekt/.test(ohne.text));
+
+  // Bietet Chrome die Installation an, bleibt es trotzdem bei Google Play.
+  await s.werten(`(() => {
+    const e = new Event('beforeinstallprompt', { cancelable: true });
+    e.nachgestellt = true;
+    e.prompt = () => { window.__gefragt = true; };
+    e.userChoice = Promise.resolve({ outcome: 'accepted' });
+    window.dispatchEvent(e);
+  })()`);
+  await s.hin('ablauf', 600);
+  await s.hin('', 1400);
+  const mit = await s.werten(karte);
+  pruef('Android mit Angebot von Chrome: trotzdem Google Play', mit.da && !/Jetzt installieren/.test(mit.text) && (await s.werten(play)) !== null);
+});
+
+await fall('rechner', async (s) => {
+  pruef('Rechner ohne Angebot: kein Hinweis', (await s.werten(karte)).da === false);
 
   await s.werten(`(() => {
     const e = new Event('beforeinstallprompt', { cancelable: true });
@@ -84,7 +104,7 @@ await fall('android', async (s) => {
   await s.hin('ablauf', 600);
   await s.hin('', 1400);
   const mit = await s.werten(karte);
-  pruef('Android mit Angebot: ein Knopf statt Anleitung', mit.da && /Jetzt installieren/.test(mit.text) && !/drei Punkten/.test(mit.text));
+  pruef('Rechner mit Angebot: ein Knopf', mit.da && /Jetzt installieren/.test(mit.text));
 
   await s.werten(`[...document.querySelectorAll('.install-karte button')].find((b) => b.textContent === 'Jetzt installieren').click()`);
   await new Promise((g) => setTimeout(g, 800));
@@ -93,10 +113,5 @@ await fall('android', async (s) => {
   pruef('Nach dem Installieren ist die Karte weg', !danach.karte);
   pruef('Installation ist vermerkt', String(danach.gemerkt).startsWith('installiert'), String(danach.gemerkt));
 });
-
-await fall('rechner', async (s) => {
-  pruef('Rechner ohne Angebot: kein Hinweis', (await s.werten(karte)).da === false);
-});
-
 console.log(fehler ? `\n${fehler} Fehler.` : '\nDer Installationshinweis passt zum Gerät.');
 process.exitCode = fehler ? 1 : 0;

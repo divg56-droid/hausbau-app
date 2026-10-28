@@ -1,18 +1,6 @@
 // Einstellungen, Sicherung und Loeschung.
 
-/* Die Adresse im Play Store.
- *
- * Sie steht fest, sobald die App veroeffentlicht ist -- sie leitet sich aus
- * dem Paketnamen ab. Bis dahin null, und dann zeigt die Seite den Verweis
- * gar nicht: Eine Store-Seite, die es noch nicht gibt, endet bei Google in
- * einer Fehlermeldung, und das ist schlechter als kein Verweis.
- *
- * Zum Freischalten die naechste Zeile tauschen. Dieselbe Adresse steht in
- * hausbauatlas/src/pages/index.astro -- beide gehoeren beim Livegang
- * umgelegt.
- */
-const PLAY_STORE = null;
-// const PLAY_STORE = 'https://play.google.com/store/apps/details?id=de.bauzeuge.app';
+/* Die Adresse im Play Store steht in installieren.js. */
 
 import {
   el, feld, eingabe, knopf, karte, kopfzeile, wertzeile, hinweisKasten, melde, heute, datumLang,
@@ -21,6 +9,7 @@ import {
   geheZu,
 } from '../hilfen.js';
 import { daten, einstellung } from '../daten.js';
+import { PLAY_STORE } from '../installieren.js';
 
 // Alle Speicher ausser den Einstellungen selbst; Bilder werden gesondert
 // behandelt, weil sie als Blob nicht in JSON passen.

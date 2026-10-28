@@ -1,15 +1,19 @@
 // Die App auf den Startbildschirm holen.
 //
-// Solange die App nicht im Play Store steht, ist der Startbildschirm der Weg
-// zum Kunden: ein Symbol neben den anderen Apps, Vollbild, ohne Adresszeile.
-// Die Technik dafuer ist da (Manifest, Arbeiter, Symbole). Was fehlte, war
-// jemand, der es dem Nutzer sagt.
+// Ein Symbol neben den anderen Apps, Vollbild, ohne Adresszeile. Die Technik
+// dafuer ist da (Manifest, Arbeiter, Symbole). Was fehlte, war jemand, der
+// es dem Nutzer sagt.
 //
-// Drei Lagen, drei Antworten:
+// Vier Lagen, vier Antworten:
 //
-//   Chrome und Edge (Android, Rechner)  Der Browser bietet die Installation
-//       selbst an, aber nur einmal und unauffaellig. Wir fangen das Angebot
-//       ab und legen es auf einen Knopf.
+//   Android  Google Play, sonst nichts (seit 28.10.2026). Vorher stand hier
+//       die Installation ueber Chrome, aus der Zeit vor dem Store-Eintrag.
+//       Zwei Wege zur selben App verwirren nur, und die Web-App haette
+//       wieder eigene Daten neben denen aus dem Store. Dieselbe Linie
+//       fuehrt www.bauzeuge.de/app-installieren/.
+//   Chrome und Edge am Rechner  Der Browser bietet die Installation selbst
+//       an, aber nur einmal und unauffaellig. Wir fangen das Angebot ab und
+//       legen es auf einen Knopf.
 //   iPhone und iPad  Es gibt kein Angebot, nur den Weg ueber Teilen. Und es
 //       gibt eine Falle: Die installierte App hat eigene Daten, getrennt von
 //       Safari. Wer erst ein Projekt anlegt und dann installiert, findet es
@@ -21,6 +25,10 @@
 // einmal beim Start, und wer dann noch nicht zuhoert, verpasst es.
 
 import { el } from './hilfen.js';
+
+/** Der Eintrag bei Google Play. Dieselbe Adresse steht in
+ *  hausbauatlas/src/data/app.ts und in public/laden.php. */
+export const PLAY_STORE = 'https://play.google.com/store/apps/details?id=de.bauzeuge.app';
 
 let angebot = null;
 
@@ -64,12 +72,14 @@ export function installLage(umgebung = globalThis) {
   const eigenstaendig = (w.matchMedia && w.matchMedia('(display-mode: standalone)').matches) ||
     nav.standalone === true;
   if (eigenstaendig) return 'installiert';
-  if (angebot) return 'angebot';
+  // Android vor dem Angebot: Auch wenn Chrome die Installation anbietet,
+  // fuehrt der Weg zu Google Play.
+  if (/Android/.test(ua)) return 'android';
 
   // iPadOS meldet sich als Mac. Ein Mac mit Touchscreen ist ein iPad.
   const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && (nav.maxTouchPoints || 0) > 1);
   if (ios) return /CriOS|FxiOS|EdgiOS|OPiOS/.test(ua) ? 'ios-anderer' : 'ios';
-  if (/Android/.test(ua)) return 'android';
+  if (angebot) return 'angebot';
   return 'rechner';
 }
 
@@ -151,16 +161,29 @@ export function installKarte({ vorDemStart = false, nachher } = {}) {
     return karte;
   }
 
-  // Android ohne Angebot: anderer Browser, oder Chrome hat es noch nicht
-  // geschickt. Der Weg ueber das Menue geht fast ueberall.
+  // Android: Google Play.
   karte.append(...[
-    ...kopf,
-    el('ol', { klasse: 'install-schritte' }, [
-      schritt(1, 'Tippe oben rechts auf das Menü mit den drei Punkten.'),
-      schritt(2, 'Wähle „App installieren“ oder „Zum Startbildschirm hinzufügen“.'),
-      schritt(3, 'Bestätige und öffne BauZeuge ab jetzt über das neue Symbol.'),
-    ]),
-    vorDemStart ? null : el('div', { klasse: 'knopf-reihe' }, [spaeter]),
-  ].filter(Boolean));
+    el('p', { klasse: 'willkommen-marke', text: 'Als App installieren' }),
+    el('h2', { text: 'BauZeuge bei Google Play' }),
+    el('p', {
+      klasse: 'unterzeile',
+      text: 'Ein Symbol neben deinen anderen Apps, Vollbild und auch ohne Empfang auf der Baustelle.',
+    }),
+    el('div', { klasse: 'knopf-reihe' }, [
+      el('a', {
+        klasse: 'knopf knopf-haupt', href: PLAY_STORE, target: '_blank', rel: 'noopener',
+        text: 'Bei Google Play laden',
+      }),
+      vorDemStart ? null : spaeter,
+    ].filter(Boolean)),
+    el('p', {
+      klasse: 'unterzeile leise',
+      text: vorDemStart
+        ? 'Am besten jetzt, vor dem ersten Projekt: Die App aus Google Play hat eigene Daten, ' +
+          'getrennt von diesem Browser.'
+        : 'Die App hat eigene Daten, getrennt von diesem Browser. Mit Konto meldest du dich dort ' +
+          'an und hast alles. Ohne Konto: Einstellungen, Sicherung erstellen, und in der App einlesen.',
+    }),
+  ]);
   return karte;
 }
