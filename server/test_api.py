@@ -237,7 +237,7 @@ pruef('Die Seite verbietet die Aufnahme in Suchmaschinen', 'noindex' in text)
 code, bild = ruf('/oeffentlich.php?k=' + marke_oeff + '&bild=' + KENNUNG, methode='GET')
 pruef('Bild des Eintrags wird ausgeliefert', code == 200 and bild == JPEG, code)
 
-FREMD = 'dddddddd-4444-4444-8444-444444444444'
+FREMD = 'eeeeeeee-5555-4555-8555-555555555555'
 ruf('/bild.php?id=' + FREMD, roh=JPEG, art='image/jpeg', marke=handy)
 code, _ = ruf('/oeffentlich.php?k=' + marke_oeff + '&bild=' + FREMD, methode='GET')
 pruef('Bild ohne Tagebuchbezug wird nicht ausgeliefert', code == 404, code)

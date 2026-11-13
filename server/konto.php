@@ -82,21 +82,43 @@ function linktabelle(): void
  */
 function anmeldenPerPost(string $epost): void
 {
-    $s = db()->prepare('SELECT id FROM nutzer WHERE epost = ?');
+    $mitBestaetigt = spalteDa('nutzer', 'bestaetigt');
+
+    $s = db()->prepare('SELECT * FROM nutzer WHERE epost = ?');
     $s->execute([$epost]);
     $zeile = $s->fetch();
 
     if (is_array($zeile)) {
         $id = (int)$zeile['id'];
+
+        /*
+         * Erster Beweis des Postfachs fuer ein Konto, das mit Passwort
+         * angelegt wurde. Registrieren verlangt keine Bestaetigung -- also
+         * kann jeder ein Konto auf eine fremde Adresse anlegen und warten,
+         * bis deren Inhaber sich per Link anmeldet und seine Baustelle
+         * eintraegt. Das Passwort des Fremden galt bis zum 13.11.2026 weiter.
+         * Jetzt faellt es weg, samt allen Sitzungen, die damit entstanden
+         * sind. Wer das Konto wirklich selbst angelegt hat, verliert nur ein
+         * Passwort, das er gleich neu setzen kann: Er ist ja gerade drin.
+         */
+        if ($mitBestaetigt && (int)$zeile['bestaetigt'] === 0) {
+            if ((string)$zeile['passwort_hash'] !== '') {
+                db()->prepare("UPDATE nutzer SET passwort_hash = '' WHERE id = ?")->execute([$id]);
+                db()->prepare('DELETE FROM sitzungen WHERE nutzer_id = ?')->execute([$id]);
+            }
+            db()->prepare('UPDATE nutzer SET bestaetigt = 1 WHERE id = ?')->execute([$id]);
+        }
     } else {
-        db()->prepare(
-            "INSERT INTO nutzer (epost, passwort_hash, angelegt, frei_bis)
-                  VALUES (?, '', NOW(), DATE_ADD(NOW(), INTERVAL ? DAY))"
+        db()->prepare($mitBestaetigt
+            ? "INSERT INTO nutzer (epost, passwort_hash, angelegt, frei_bis, bestaetigt)
+                    VALUES (?, '', NOW(), DATE_ADD(NOW(), INTERVAL ? DAY), 1)"
+            : "INSERT INTO nutzer (epost, passwort_hash, angelegt, frei_bis)
+                    VALUES (?, '', NOW(), DATE_ADD(NOW(), INTERVAL ? DAY))"
         )->execute([$epost, PROBE_TAGE]);
         $id = (int)db()->lastInsertId();
     }
 
-    antwort(['marke' => sitzungAnlegen($id), 'epost' => $epost]);
+    antwort(['marke' => sitzungAnlegen($id, true), 'epost' => $epost]);
 }
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
@@ -346,6 +368,9 @@ switch ($tun) {
             'frei_bis' => $lauf['frei_bis'] ?? null,
             'tage_frei' => isset($lauf['frei_bis']) ? max(0, (int)$lauf['tage']) : null,
             'buchcode' => !empty($lauf['buchcode']),
+            // Fuer das Passwortblatt: Muss das bisherige Passwort genannt
+            // werden? Nicht, wenn die Sitzung aus dem Postfach stammt.
+            'per_post' => sitzungPerPost(),
             'saetze' => $saetze,
             'je_speicher' => $jeSpeicher,
             'bilder' => (int)$bilder['n'],
@@ -372,7 +397,12 @@ switch ($tun) {
         // Wer sich per Anmeldelink angemeldet hat, hat kein Passwort. Er
         // bekommt hier sein erstes, ohne ein altes nennen zu koennen -- die
         // Sitzung stammt ohnehin aus seinem Postfach.
-        if ($hash !== '' && !password_verify($alt, $hash)) {
+        //
+        // Dasselbe gilt fuer den, der sein Passwort vergessen hat: Stammt
+        // diese Sitzung aus Link oder Code, ist das Postfach bewiesen, und
+        // das alte Passwort wird nicht verlangt. Bis zum 13.11.2026 war das
+        // eine Sackgasse -- angemeldet, aber ohne Weg zu einem neuen Passwort.
+        if ($hash !== '' && !sitzungPerPost() && !password_verify($alt, $hash)) {
             fehler(401, 'Das bisherige Passwort stimmt nicht.');
         }
 

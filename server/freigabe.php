@@ -76,16 +76,34 @@ if ($tun === 'anlegen') {
 
     $marke = bin2hex(random_bytes(24));
 
+    /*
+     * Die Freigabe gilt fuer das Projekt, aus dem sie angelegt wird. Bis zum
+     * 13.11.2026 zeigte die oeffentliche Seite die Tagebuecher aller Projekte
+     * eines Kontos unter der Ueberschrift des einen. Eine aeltere App schickt
+     * kein Projekt mit; dann bleibt es wie bisher.
+     */
+    $projekt = (string)($eingang['projektId'] ?? '');
+    if (!preg_match('/^[A-Za-z0-9-]{1,36}$/', $projekt) || !spalteDa('freigaben', 'projekt_id')) {
+        $projekt = '';
+    }
+
     $db = db();
     $db->beginTransaction();
     try {
         // Erst die alte weg, dann die neue. So bleibt es bei genau einer.
         $db->prepare('DELETE FROM freigaben WHERE nutzer_id = ? AND art = ?')
            ->execute([$n['id'], ART]);
-        $db->prepare(
-            'INSERT INTO freigaben (marke, nutzer_id, art, titel, angelegt)
-                  VALUES (?, ?, ?, ?, NOW())'
-        )->execute([hash('sha256', $marke), $n['id'], ART, $titel]);
+        if ($projekt !== '') {
+            $db->prepare(
+                'INSERT INTO freigaben (marke, nutzer_id, art, titel, angelegt, projekt_id)
+                      VALUES (?, ?, ?, ?, NOW(), ?)'
+            )->execute([hash('sha256', $marke), $n['id'], ART, $titel, $projekt]);
+        } else {
+            $db->prepare(
+                'INSERT INTO freigaben (marke, nutzer_id, art, titel, angelegt)
+                      VALUES (?, ?, ?, ?, NOW())'
+            )->execute([hash('sha256', $marke), $n['id'], ART, $titel]);
+        }
         $db->commit();
     } catch (Throwable $ex) {
         $db->rollBack();

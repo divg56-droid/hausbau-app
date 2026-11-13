@@ -64,12 +64,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         fehler(500, 'Die Datei ließ sich nicht ablegen.');
     }
 
-    db()->prepare(
-        'INSERT INTO bilder (nutzer_id, kennung, typ, groesse, geaendert, geloescht)
-              VALUES (:nutzer, :kennung, :typ, :groesse, :geaendert, 0)
-         ON DUPLICATE KEY UPDATE
-              typ = VALUES(typ), groesse = VALUES(groesse), geloescht = 0'
-    )->execute([
+    /*
+     * Mit der Spalte "eingang" bekommt die Zeile hier einen neuen Stempel:
+     * Erst jetzt liegt die Datei wirklich da, und die anderen Geraete muessen
+     * davon erfahren. Bis zum 13.11.2026 blieb ein Geraet, das die Angaben
+     * vor der Datei abgeglichen hatte, fuer immer bei "Groesse 0" stehen und
+     * holte das Foto nie.
+     */
+    $mitEingang = spalteDa('bilder', 'eingang');
+    $werte = [
         'nutzer' => $n['id'],
         'kennung' => $kennung,
         'typ' => $art,
@@ -79,7 +82,20 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         // gehoert dem Abgleich, nicht dem Hochladen. Sonst saehe die
         // Serverfassung staendig neuer aus als die des Geraets.
         'geaendert' => jetztIso(),
-    ]);
+    ];
+    if ($mitEingang) {
+        $werte['eingang'] = naechsterEingang($n['id']);
+    }
+    db()->prepare($mitEingang
+        ? 'INSERT INTO bilder (nutzer_id, kennung, typ, groesse, geaendert, geloescht, eingang)
+                VALUES (:nutzer, :kennung, :typ, :groesse, :geaendert, 0, :eingang)
+           ON DUPLICATE KEY UPDATE
+                typ = VALUES(typ), groesse = VALUES(groesse), geloescht = 0, eingang = VALUES(eingang)'
+        : 'INSERT INTO bilder (nutzer_id, kennung, typ, groesse, geaendert, geloescht)
+                VALUES (:nutzer, :kennung, :typ, :groesse, :geaendert, 0)
+           ON DUPLICATE KEY UPDATE
+                typ = VALUES(typ), groesse = VALUES(groesse), geloescht = 0'
+    )->execute($werte);
 
     antwort(['abgelegt' => true, 'groesse' => strlen($roh), 'typ' => $art]);
 }

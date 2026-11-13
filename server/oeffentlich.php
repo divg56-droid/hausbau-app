@@ -34,8 +34,10 @@ if (!preg_match('/^[0-9a-f]{32,64}$/', $marke)) {
     absage('Dieser Verweis stimmt nicht.');
 }
 
+// "*" und nicht die Spaltenliste: projekt_id kommt erst mit einrichten.php
+// dazu, und bis dahin soll die Seite trotzdem laufen.
 $s = db()->prepare(
-    'SELECT f.nutzer_id, f.titel
+    'SELECT f.*
        FROM freigaben f
       WHERE f.marke = ? AND f.art = ?'
 );
@@ -47,6 +49,8 @@ if (!$freigabe) {
 }
 
 $nutzerId = (int)$freigabe['nutzer_id'];
+// Leer bei Freigaben von vor dem 13.11.2026: Die zeigen weiter alles.
+$projektId = (string)($freigabe['projekt_id'] ?? '');
 
 // Aufruf mitzaehlen. Erst hier, nach der Pruefung der Marke: Ein falscher
 // Verweis soll nichts hochzaehlen.
@@ -71,8 +75,13 @@ if (!isset($_GET['bild'])) {
 
 // ------------------------------------------------------------------- Eintraege
 
-/** Liest die lebenden Tagebucheintraege des Nutzers, aeltester zuerst. */
-function eintraegeLesen(int $nutzerId): array
+/**
+ * Liest die lebenden Tagebucheintraege des Nutzers, aeltester zuerst.
+ *
+ * Mit $projektId nur die dieses Projekts. Ein Eintrag ohne projektId gehoert
+ * zum ersten Projekt, wie in daten.js (ERSTES_PROJEKT).
+ */
+function eintraegeLesen(int $nutzerId, string $projektId = ''): array
 {
     $s = db()->prepare(
         'SELECT inhalt FROM saetze
@@ -83,15 +92,19 @@ function eintraegeLesen(int $nutzerId): array
     $liste = [];
     foreach ($s->fetchAll() as $zeile) {
         $satz = json_decode((string)$zeile['inhalt'], true);
-        if (is_array($satz) && !empty($satz['datum'])) {
-            $liste[] = $satz;
+        if (!is_array($satz) || empty($satz['datum'])) {
+            continue;
         }
+        if ($projektId !== '' && (string)($satz['projektId'] ?? 'projekt-1') !== $projektId) {
+            continue;
+        }
+        $liste[] = $satz;
     }
     usort($liste, static fn ($a, $b) => strcmp((string)$a['datum'], (string)$b['datum']));
     return $liste;
 }
 
-$eintraege = eintraegeLesen($nutzerId);
+$eintraege = eintraegeLesen($nutzerId, $projektId);
 
 // ---------------------------------------------------------------------- Bilder
 
@@ -179,7 +192,7 @@ function stil(): string
     // Eingebettet statt als Datei: Die Seite soll ohne einen zweiten
     // Abruf vollstaendig sein, auch bei schlechtem Empfang.
     return '<style>
-:root{--papier:#f7f5f1;--karte:#fff;--tinte:#23272b;--leise:#5f6772;--linie:#ddd8cf;--akzent:#e8a020}
+:root{--papier:#f5f7f6;--karte:#fff;--tinte:#1f2a30;--leise:#54626a;--linie:#d3dcd9;--akzent:#0e6e72}
 *{box-sizing:border-box}
 body{margin:0;background:var(--papier);color:var(--tinte);
  font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
@@ -246,7 +259,8 @@ foreach ($sichtbar as $e) {
     if (!empty($e['wetter']) && isset(WETTER[$e['wetter']])) {
         $wetter[] = WETTER[$e['wetter']];
     }
-    if (!empty($e['temperatur'])) {
+    // Nicht !empty(): 0 Grad ist eine Temperatur und im Winter die wichtigste.
+    if (isset($e['temperatur']) && is_numeric($e['temperatur'])) {
         $wetter[] = (string)$e['temperatur'] . ' °C';
     }
     if ($wetter) {

@@ -14,7 +14,7 @@ import {
   anhaengen,
   geheZu,
 } from '../hilfen.js';
-import { daten, einstellung, bildUrl, bildLoeschen } from '../daten.js';
+import { daten, einstellung, bildUrl, bildLoeschen, projektAktiv } from '../daten.js';
 import { blattOeffnen } from '../blatt.js';
 import { fotofeld } from '../fotos.js';
 import { Blatt, pdfTeilen, bildLaden } from '../pdf.js';
@@ -321,7 +321,9 @@ function freigabekarte() {
 
   async function freischalten(titel) {
     try {
-      const antwort = await konto.freigabeAnlegen(titel);
+      // Mit dem Projekt: Die oeffentliche Seite zeigt nur dieses Tagebuch,
+      // nicht die aller Bauvorhaben im Konto.
+      const antwort = await konto.freigabeAnlegen(titel, await projektAktiv());
       melde('Öffentlich geschaltet.');
       zeigen(true, antwort.verweis, { aufrufe: 0, zuletzt: null });
       // Ohne Abgleich stünde die Seite leer da: Sie liest vom Server.

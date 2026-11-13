@@ -92,6 +92,7 @@ CREATE TABLE nutzer (
     angelegt DATETIME NOT NULL,
     frei_bis DATETIME NULL,
     buchcode VARCHAR(20) NULL,
+    bestaetigt TINYINT(1) NOT NULL DEFAULT 0,
     PRIMARY KEY (id),
     UNIQUE KEY epost (epost)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
@@ -104,6 +105,7 @@ CREATE TABLE sitzungen (
     nutzer_id INT UNSIGNED NOT NULL,
     angelegt DATETIME NOT NULL,
     gesehen DATETIME NOT NULL,
+    per_post TINYINT(1) NOT NULL DEFAULT 0,
     PRIMARY KEY (marke),
     KEY nutzer (nutzer_id),
     CONSTRAINT sitzung_nutzer FOREIGN KEY (nutzer_id) REFERENCES nutzer (id) ON DELETE CASCADE
@@ -117,8 +119,10 @@ CREATE TABLE saetze (
     geaendert CHAR(24) NOT NULL,
     geloescht TINYINT(1) NOT NULL DEFAULT 0,
     inhalt LONGTEXT NULL,
+    eingang CHAR(24) NOT NULL DEFAULT '',
     PRIMARY KEY (nutzer_id, speicher, kennung),
     KEY seit (nutzer_id, geaendert),
+    KEY ankunft (nutzer_id, eingang),
     CONSTRAINT satz_nutzer FOREIGN KEY (nutzer_id) REFERENCES nutzer (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
 
@@ -133,8 +137,10 @@ CREATE TABLE bilder (
     groesse INT UNSIGNED NOT NULL DEFAULT 0,
     geaendert CHAR(24) NOT NULL,
     geloescht TINYINT(1) NOT NULL DEFAULT 0,
+    eingang CHAR(24) NOT NULL DEFAULT '',
     PRIMARY KEY (nutzer_id, kennung),
     KEY seit (nutzer_id, geaendert),
+    KEY ankunft (nutzer_id, eingang),
     CONSTRAINT bild_nutzer FOREIGN KEY (nutzer_id) REFERENCES nutzer (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
 
@@ -194,6 +200,7 @@ CREATE TABLE freigaben (
     angelegt DATETIME NOT NULL,
     aufrufe INT UNSIGNED NOT NULL DEFAULT 0,
     zuletzt DATETIME NULL,
+    projekt_id CHAR(36) NULL,
     PRIMARY KEY (marke),
     UNIQUE KEY je_nutzer (nutzer_id, art),
     CONSTRAINT freigabe_nutzer FOREIGN KEY (nutzer_id) REFERENCES nutzer (id) ON DELETE CASCADE
@@ -300,7 +307,20 @@ $nachtrag = [
     ['freigaben', 'zuletzt', 'DATETIME NULL'],
     ['nutzer', 'frei_bis', 'DATETIME NULL'],
     ['nutzer', 'buchcode', 'VARCHAR(20) NULL'],
+    // 13.11.2026: Reihenfolge der Ankunft fuer den Abgleich, siehe
+    // naechsterEingang() in _start.php.
+    ['saetze', 'eingang', "CHAR(24) NOT NULL DEFAULT ''"],
+    ['bilder', 'eingang', "CHAR(24) NOT NULL DEFAULT ''"],
+    // Hat der Inhaber sein Postfach schon einmal bewiesen? Und stammt diese
+    // Sitzung aus einem Anmeldelink? Beides fuer "Passwort vergessen".
+    ['nutzer', 'bestaetigt', 'TINYINT(1) NOT NULL DEFAULT 0'],
+    ['sitzungen', 'per_post', 'TINYINT(1) NOT NULL DEFAULT 0'],
+    // Die Freigabe des Bautagebuchs gilt fuer ein Projekt, nicht fuer alle.
+    ['freigaben', 'projekt_id', 'CHAR(36) NULL'],
 ];
+// Wurde nutzer.bestaetigt in diesem Lauf erst angelegt? Dann gelten die
+// vorhandenen Konten als bestaetigt (siehe unten).
+$bestaetigtNeu = false;
 /*
  * Spalten holen und in PHP vergleichen, nicht "SHOW COLUMNS ... LIKE ?".
  *
@@ -334,6 +354,9 @@ foreach ($nachtrag as [$tabelle, $spalte, $art]) {
     try {
         db()->exec('ALTER TABLE `' . $tabelle . '` ADD `' . $spalte . '` ' . $art);
         $meldungen[] = "$tabelle.$spalte: ergaenzt";
+        if ($tabelle === 'nutzer' && $spalte === 'bestaetigt') {
+            $bestaetigtNeu = true;
+        }
     } catch (Throwable $ex) {
         antwort([
             'fehler' => 'Spalte ' . $tabelle . '.' . $spalte . ' liess sich nicht ergaenzen.',
@@ -341,6 +364,46 @@ foreach ($nachtrag as [$tabelle, $spalte, $art]) {
             'bis_dahin' => $meldungen,
         ], 500);
     }
+}
+
+/*
+ * Eingangsstempel nachtragen und den Index dazu anlegen.
+ *
+ * Der alte Bestand bekommt als Eingang seinen Aenderungszeitpunkt: Danach
+ * haben die Geraete bisher gefragt, ihre gemerkte Marke passt also weiter.
+ * Laeuft bei jedem Einrichten mit und trifft danach nichts mehr.
+ */
+foreach (['saetze', 'bilder'] as $tabelle) {
+    if (!isset($vorhanden[$tabelle])) {
+        continue;
+    }
+    try {
+        $offen = (int)db()->exec("UPDATE `$tabelle` SET eingang = geaendert WHERE eingang = ''");
+        $meldungen[] = "$tabelle.eingang: $offen Zeile(n) nachgetragen";
+
+        $indizes = db()->query("SHOW INDEX FROM `$tabelle`")->fetchAll(PDO::FETCH_ASSOC);
+        if (!in_array('ankunft', array_column($indizes, 'Key_name'), true)) {
+            db()->exec("ALTER TABLE `$tabelle` ADD KEY ankunft (nutzer_id, eingang)");
+            $meldungen[] = "$tabelle.ankunft: Index angelegt";
+        }
+    } catch (Throwable $ex) {
+        antwort([
+            'fehler' => 'Der Eingangsstempel in ' . $tabelle . ' liess sich nicht nachtragen.',
+            'meldung' => $ex->getMessage(),
+            'bis_dahin' => $meldungen,
+        ], 500);
+    }
+}
+
+/*
+ * Konten, die es vor dieser Spalte gab, gelten als bestaetigt. Sonst verloere
+ * jeder, der sich bisher mit Passwort angemeldet hat, es beim ersten
+ * Anmeldelink. Nur in dem Lauf, der die Spalte anlegt -- spaeter wuerde es
+ * neue, unbestaetigte Konten mitnehmen.
+ */
+if ($bestaetigtNeu) {
+    $offen = (int)db()->exec('UPDATE nutzer SET bestaetigt = 1');
+    $meldungen[] = 'nutzer.bestaetigt: ' . $offen . ' vorhandene(s) Konto(en) uebernommen';
 }
 
 /*

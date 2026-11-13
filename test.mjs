@@ -1963,7 +1963,10 @@ console.log('Anmeldung per Link')
   // Wer per Link kommt, hat kein Passwort. Er muss trotzdem eins setzen
   // und sein Konto loeschen koennen.
   pruef('Ohne Passwort laesst sich eins festlegen',
-    php.includes("if ($hash !== '' && !password_verify($alt, $hash))"));
+    php.includes("if ($hash !== '' && !sitzungPerPost() && !password_verify($alt, $hash))"));
+  // Passwort vergessen: Eine Sitzung aus dem Postfach braucht das alte nicht.
+  pruef('Anmeldung per Post wird an der Sitzung vermerkt',
+    php.includes('sitzungAnlegen($id, true)'));
   pruef('Und das Konto trotzdem loeschen', php.includes("if ($hash === '') {"));
 
   pruef('Die App fordert an und loest ein',

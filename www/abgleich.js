@@ -81,6 +81,17 @@ async function einarbeiten(hinein) {
 
       // Gleichstand heisst: schon bekannt. Nur echtes Neuersein zaehlt.
       if (eigenAlle && String(eigenAlle.geaendert || '') >= String(fremd.geaendert || '')) {
+        // Eine Ausnahme, und nur bei Bildern: Die Datei kommt nach den
+        // Angaben auf dem Server an. Der meldet die Zeile dann noch einmal,
+        // mit Groesse, aber unveraendertem Zeitpunkt. Ohne diese Uebernahme
+        // bliebe das Foto hier fuer immer "noch nicht oben" und wuerde nie
+        // geholt.
+        if (speicher === 'bilder' && fremd.groesse > 0 && !fremd.geloescht &&
+            !eigenAlle.geloescht && !eigenAlle.blob && !eigenAlle.groesse) {
+          await daten.sichern('bilder',
+            { ...eigenAlle, groesse: fremd.groesse, typ: fremd.typ || eigenAlle.typ },
+            { zeitBehalten: true });
+        }
         continue;
       }
 

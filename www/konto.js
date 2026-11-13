@@ -238,8 +238,8 @@ export const adminWebsite = (tage = 30) =>
 
 export const freigabeStand = () => ruf('/freigabe.php', { tun: 'stand' });
 
-export async function freigabeAnlegen(titel) {
-  const antwort = await ruf('/freigabe.php', { tun: 'anlegen', titel });
+export async function freigabeAnlegen(titel, projektId) {
+  const antwort = await ruf('/freigabe.php', { tun: 'anlegen', titel, projektId });
   freigabeSetzen(antwort.verweis);
   return antwort;
 }

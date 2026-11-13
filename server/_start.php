@@ -181,14 +181,38 @@ function nutzer(): array
     return $gefunden;
 }
 
-/** Legt eine Sitzung an und gibt die Marke im Klartext zurueck. */
-function sitzungAnlegen(int $nutzerId): string
+/**
+ * Legt eine Sitzung an und gibt die Marke im Klartext zurueck.
+ *
+ * $perPost: Die Anmeldung kam ueber Link oder Code aus dem Postfach. Eine
+ * solche Sitzung darf ein neues Passwort setzen, ohne das alte zu kennen --
+ * das ist "Passwort vergessen".
+ */
+function sitzungAnlegen(int $nutzerId, bool $perPost = false): string
 {
     $marke = bin2hex(random_bytes(32));
-    db()->prepare(
-        'INSERT INTO sitzungen (marke, nutzer_id, angelegt, gesehen) VALUES (?, ?, NOW(), NOW())'
-    )->execute([hash('sha256', $marke), $nutzerId]);
+    if (spalteDa('sitzungen', 'per_post')) {
+        db()->prepare(
+            'INSERT INTO sitzungen (marke, nutzer_id, angelegt, gesehen, per_post) VALUES (?, ?, NOW(), NOW(), ?)'
+        )->execute([hash('sha256', $marke), $nutzerId, $perPost ? 1 : 0]);
+    } else {
+        db()->prepare(
+            'INSERT INTO sitzungen (marke, nutzer_id, angelegt, gesehen) VALUES (?, ?, NOW(), NOW())'
+        )->execute([hash('sha256', $marke), $nutzerId]);
+    }
     return $marke;
+}
+
+/** Stammt die laufende Sitzung aus einem Anmeldelink oder -code? */
+function sitzungPerPost(): bool
+{
+    if (!spalteDa('sitzungen', 'per_post')) {
+        return false;
+    }
+    $s = db()->prepare('SELECT per_post FROM sitzungen WHERE marke = ?');
+    $s->execute([hash('sha256', marke())]);
+    $zeile = $s->fetch();
+    return is_array($zeile) && (int)$zeile['per_post'] === 1;
 }
 
 // ------------------------------------------------------------------ Verwaltung
@@ -302,6 +326,70 @@ function zugriffZaehlen(int $bytesRaus): void
 }
 
 // ------------------------------------------------------------------ Kleinkram
+
+/**
+ * Gibt es diese Spalte schon?
+ *
+ * Zwischen einem Hochladen und dem Aufruf von einrichten.php fehlen neue
+ * Spalten. Wer sie braucht, fragt hier und nimmt sonst den alten Weg --
+ * eine Abfrage auf eine unbekannte Spalte waere eine 500 fuer jeden Nutzer.
+ * Die Namen kommen aus dem Quelltext, nie von aussen.
+ */
+function spalteDa(string $tabelle, string $spalte): bool
+{
+    static $bekannt = [];
+    $k = $tabelle . '.' . $spalte;
+    if (!isset($bekannt[$k])) {
+        try {
+            $spalten = db()->query('SHOW COLUMNS FROM `' . $tabelle . '`')->fetchAll(PDO::FETCH_COLUMN);
+            $bekannt[$k] = in_array($spalte, $spalten, true);
+        } catch (Throwable $ex) {
+            $bekannt[$k] = false;
+        }
+    }
+    return $bekannt[$k];
+}
+
+/** Zaehlt Millisekunden auf einen Zeitpunkt der Form von jetztIso(). */
+function isoPlusMs(string $iso, int $ms): string
+{
+    $d = DateTimeImmutable::createFromFormat('Y-m-d\TH:i:s.v\Z', $iso, new DateTimeZone('UTC'));
+    if ($d === false) {
+        return jetztIso();
+    }
+    $gesamt = (int)$d->format('U') * 1000 + (int)$d->format('v') + $ms;
+    return gmdate('Y-m-d\TH:i:s', intdiv($gesamt, 1000)) . sprintf('.%03dZ', $gesamt % 1000);
+}
+
+/**
+ * Der naechste freie Eingangsstempel eines Nutzers.
+ *
+ * "eingang" ist die Reihenfolge, in der Saetze beim Server ankommen. Danach
+ * fragt ein Geraet, was es noch nicht hat -- nicht nach "geaendert", das die
+ * Uhr des schreibenden Geraets stellt. Bis zum 13.11.2026 war beides dasselbe,
+ * und ein Mangel, der am Montag ohne Netz erfasst und am Dienstag
+ * hochgeladen wurde, kam auf einem Rechner nie an, der am Montagabend schon
+ * abgeglichen hatte: Sein Stand lag bereits dahinter.
+ *
+ * Immer groesser als alles Vorhandene, auch wenn eine Geraeteuhr vorging und
+ * der alte Bestand deshalb Stempel aus der Zukunft traegt.
+ */
+function naechsterEingang(int $nutzerId): string
+{
+    $s = db()->prepare(
+        'SELECT GREATEST(
+                COALESCE((SELECT MAX(eingang) FROM saetze WHERE nutzer_id = ?), \'\'),
+                COALESCE((SELECT MAX(eingang) FROM bilder WHERE nutzer_id = ?), \'\')
+            ) AS hoechster'
+    );
+    $s->execute([$nutzerId, $nutzerId]);
+    $hoechster = (string)($s->fetch()['hoechster'] ?? '');
+    $jetzt = jetztIso();
+    if ($hoechster === '' || $hoechster < $jetzt) {
+        return $jetzt;
+    }
+    return isoPlusMs($hoechster, 1);
+}
 
 /** Zeitpunkt in derselben Form, die die App erzeugt: ISO-8601 in UTC. */
 function jetztIso(): string

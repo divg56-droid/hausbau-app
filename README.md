@@ -1,10 +1,11 @@
 # BauZeuge
 
 Android-App für Bauherren: Rechner, Kostenaufstellung und die Werkzeuge, die
-man auf der Baustelle braucht. Ohne Konto bleiben alle Daten auf dem Gerät;
-mit Konto gleicht die App sie mit www.BauZeuge.de ab.
+man auf der Baustelle braucht. Ohne Konto zeigt sie das Beispielprojekt; das
+eigene Bauvorhaben gehört zu einem Konto und wird mit www.BauZeuge.de
+abgeglichen (seit dem 27.09.2026, siehe „Ohne Konto gibt es nur das Beispiel“).
 
-Testversion, unsigniert. Nicht im Play Store.
+Bei Google Play als `de.bauzeuge.app`; die Fassung steht in `version.json`.
 
 Die Marke wird **BauZeuge** geschrieben, mit grossem Z. Das grosse Z trennt die
 beiden Woerter, ohne dass ein Bindestrich noetig waere. Technische Bezeichner
@@ -18,7 +19,8 @@ wacht darueber.
 
 Die Palette kommt vollstaendig von der Website und steht in `www/stil.css`.
 `test.mjs` prueft jeden Wert gegen `src/layouts/Base.astro` im Schwesterprojekt.
-Gruen, Bernstein und Grau der Zustaende sind bewusst keine Markenfarben: Mit
+Gruen, Lila und Grau der Zustaende sind bewusst keine Markenfarben (Bernstein
+ist seit dem 10.09.2026 durch Lila ersetzt, Gold kommt nirgends mehr vor): Mit
 dem Petrol als "laeuft" waere der Balkenplan neben dem Gruen von "fertig"
 nicht mehr lesbar.
 
@@ -140,7 +142,7 @@ Reines HTML, CSS und JavaScript ohne Bundler. Capacitor verpackt den Ordner
       fotos.js        Fotoaufnahme über ein Dateifeld
       pdf.js          PDF-Schreiber und Weitergabe ans Telefon
       stil.css        alles Sichtbare
-      module/*.js     die zehn Bereiche, je eine Datei
+      module/*.js     die Bereiche, je eine Datei
     ressourcen/       App-Symbol und Startbild samt Erzeuger
     test.mjs          prüft die Rechenkerne
 
@@ -242,7 +244,19 @@ Plaetzchen: Die App laeuft unter der Herkunft `https://localhost` und spricht
 mit www.BauZeuge.de; ein Plaetzchen waere dort fremd. In der Datenbank steht
 die Marke nur als Pruefsumme.
 
-    python server/test_api.py    20 Pruefungen gegen einen laufenden Server
+    python server/test_api.py        Konto, Abgleich, Bildablage, Freigabe
+    python server/test_abgleich.py   was der Abgleich bis 13.11.2026 ausliess
+
+Beide brauchen einen Testserver mit eigener, leerer Datenbank -- nie den
+Ordner server/ selbst starten, dort liegt die echte geheim.php.
+
+Wonach ein Geraet fragt: nach der Reihenfolge, in der Saetze beim Server
+angekommen sind (Spalte `eingang`), nicht nach `geaendert`. Den zweiten Wert
+stellt die Uhr des schreibenden Geraets; ein Mangel, der ohne Netz erfasst
+und erst am naechsten Tag hochgeladen wurde, lag damit hinter dem Stand eines
+Geraets, das inzwischen abgeglichen hatte, und kam dort nie an. Welcher Satz
+gewinnt, entscheidet weiter `geaendert`. Die Spalte legt `einrichten.php` an;
+bis dahin laeuft der Abgleich auf dem alten Weg.
 
 ## Entwickeln
 
@@ -284,8 +298,8 @@ einzigen Transaktion: Bricht etwas ab, bleiben die alten Daten stehen.
 
 ## Datenschutz
 
-**Ohne Konto sendet die App nichts.** Alles liegt in der IndexedDB des
-Geräts, es gibt keine Anmeldung und keinen Aufruf nach außen.
+**Ohne Konto sendet die App nichts.** Dann gibt es nur das Beispielprojekt,
+und das liegt in der IndexedDB des Geräts.
 
 **Mit Konto** gehen die Daten zum Abgleich an www.BauZeuge.de: Sätze über
 `abgleich.php`, Fotos über `bild.php`, beides nur für das eigene Konto.
@@ -427,5 +441,4 @@ weist die App vor dem Erstellen hin.
 
 ## Was noch fehlt
 
-- Signatur für den Play Store; das Debug-Paket ist nur zum Ausprobieren
 - Maßstab im Anschlussplan, um Abstände in Zentimetern abzulesen
