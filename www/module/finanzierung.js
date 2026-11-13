@@ -15,7 +15,8 @@ import { blattOeffnen } from '../blatt.js';
 
 // Marktnahe Startwerte je Zinsbindung, wie auf BauZeuge.de. Beim
 // monatlichen Zins-Update dort mitziehen.
-export const ZINS_JE_BINDUNG = { 5: 3.7, 10: 3.8, 15: 4.1, 20: 4.3 };
+// Stand 11.2026, wie zinsBasis in rechner.astro der Website.
+export const ZINS_JE_BINDUNG = { 5: 4.2, 10: 4.2, 15: 4.4, 20: 4.5 };
 
 /*
  * Foerderprogramme fuer private Bauherren.
@@ -73,9 +74,13 @@ export function annuitaet({ betrag, zinsProzent, tilgungProzent, bindungJahre })
   const n = bindungJahre * 12;
   const q = Math.pow(1 + r, n);
   const restNachBindung = Math.max(0, betrag * q - (rate * (q - 1)) / r);
-  const gezahlt = rate * n;
-  const getilgt = betrag - restNachBindung;
   const laufzeitMonate = Math.log(rate / (rate - betrag * r)) / Math.log(1 + r);
+  // Ist das Darlehen vor dem Ende der Bindung getilgt, wird danach nichts
+  // mehr gezahlt. Ohne diese Grenze zaehlten die Raten bis zum Ende der
+  // Bindung weiter, und ein Angebot mit hoher Tilgung sah teurer aus, als
+  // es ist (300.000 zu 3,8/5 auf 20 Jahre: 228.000 statt rund 93.000 Zins).
+  const gezahlt = laufzeitMonate < n ? rate * laufzeitMonate : rate * n;
+  const getilgt = betrag - restNachBindung;
   return {
     rate,
     restNachBindung,
@@ -120,7 +125,7 @@ function darlehensfelder(vorlage) {
     if (gewaehlt && !name.value.trim()) name.value = programmName(gewaehlt);
   });
   const betrag = zahlfeld({ value: vorlage.betrag ? String(vorlage.betrag) : '' });
-  const zins = zahlfeld({ value: String(vorlage.zinsProzent ?? 3.8) });
+  const zins = zahlfeld({ value: String(vorlage.zinsProzent ?? ZINS_JE_BINDUNG[10]) });
   const tilgung = zahlfeld({ value: String(vorlage.tilgungProzent ?? 2.0) });
   const bindung = auswahl(
     [[5, '5 Jahre'], [10, '10 Jahre'], [15, '15 Jahre'], [20, '20 Jahre']],
@@ -133,7 +138,7 @@ function darlehensfelder(vorlage) {
   zins.addEventListener('input', () => { selbstGesetzt = true; });
   bindung.addEventListener('change', () => {
     if (selbstGesetzt) return;
-    zins.value = String(ZINS_JE_BINDUNG[+bindung.value] ?? 3.8);
+    zins.value = String(ZINS_JE_BINDUNG[+bindung.value] ?? ZINS_JE_BINDUNG[10]).replace('.', ',');
   });
 
   return {
@@ -420,7 +425,7 @@ async function zeichne(rahmen) {
 function vorschlagsblock(vorbelegteKosten, nachher) {
   const kostenFeld = zahlfeld({ value: String(vorbelegteKosten || 500000) });
   const ekFeld = zahlfeld({ value: '100000' });
-  const zinsFeld = zahlfeld({ value: '3.8' });
+  const zinsFeld = zahlfeld({ value: String(ZINS_JE_BINDUNG[10]) });
   const tilgungFeld = zahlfeld({ value: '2.0' });
   const bindungFeld = auswahl([[5, '5 Jahre'], [10, '10 Jahre'], [15, '15 Jahre'], [20, '20 Jahre']], 10);
   const ausgabe = el('div');
@@ -428,7 +433,7 @@ function vorschlagsblock(vorbelegteKosten, nachher) {
   let zinsSelbst = false;
   zinsFeld.addEventListener('input', () => { zinsSelbst = true; });
   bindungFeld.addEventListener('change', () => {
-    if (!zinsSelbst) zinsFeld.value = String(ZINS_JE_BINDUNG[+bindungFeld.value] ?? 3.8);
+    if (!zinsSelbst) zinsFeld.value = String(ZINS_JE_BINDUNG[+bindungFeld.value] ?? ZINS_JE_BINDUNG[10]).replace('.', ',');
   });
 
   function rechne() {

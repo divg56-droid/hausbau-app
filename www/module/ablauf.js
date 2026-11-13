@@ -7,7 +7,7 @@
 
 import {
   el, feld, eingabe, zahlfeld, auswahl, knopf, karte, kopfzeile, hinweisKasten,
-  leerzustand, zuZahl, melde, datumLang, heute, kontaktName, kontaktLang,
+  leerzustand, zuZahl, melde, datumLang, heute, inTagen, kontaktName, kontaktLang,
   anhaengen,
   zustandswahl,
 } from '../hilfen.js';
@@ -78,9 +78,29 @@ export function terminePlanen(aufgaben) {
   const nachId = new Map(aufgaben.map((a) => [a.id, a]));
   const gerechnet = new Map();
 
+  // Wer ueber seine Vorgaenger wieder bei einem schon besuchten Schritt
+  // landet, haengt in einem Ring oder an einem. Fuer ihn laesst sich kein
+  // Termin rechnen. Das Kennzeichen muss am Ergebnis stehen, sonst sieht die
+  // Oberflaeche es nie: Bis zum 10.11.2026 stand es nur an einem
+  // Zwischenwert, und die Warnung erschien nicht.
+  function imRing(aufgabe) {
+    const gesehen = new Set();
+    let a = aufgabe;
+    while (a && a.vorgaengerId && nachId.has(a.vorgaengerId)) {
+      if (gesehen.has(a.id)) return true;
+      gesehen.add(a.id);
+      a = nachId.get(a.vorgaengerId);
+    }
+    return false;
+  }
+
   function rechne(aufgabe, tiefe = 0) {
     if (gerechnet.has(aufgabe.id)) return gerechnet.get(aufgabe.id);
-    if (tiefe > aufgaben.length) return { start: null, ende: null, ring: true };
+    if (imRing(aufgabe) || tiefe > aufgaben.length) {
+      const leer = { start: null, ende: null, dauer: Math.max(1, aufgabe.dauer || 1), ring: true };
+      gerechnet.set(aufgabe.id, leer);
+      return leer;
+    }
 
     let start = aufgabe.start || null;
 
@@ -404,7 +424,7 @@ function hinweiseZeigen(rahmen, aufgaben, neu, trocknung) {
     const ort = (await einstellung('baustelle')) || {};
     if (!ort.lat || !ort.lon) return;
     const von = heute();
-    const bis = new Date(Date.now() + 9 * TAG).toISOString().slice(0, 10);
+    const bis = inTagen(9);
     const betroffen = aufgaben.filter((a) => a.status !== 'fertig' && a.start && a.start <= bis && (a.ende || a.start) >= von);
     if (!betroffen.length) return;
     try {

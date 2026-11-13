@@ -10,7 +10,15 @@ export const eurGenau = new Intl.NumberFormat('de-DE', {
 export const zahl = (n, stellen = 0) =>
   new Intl.NumberFormat('de-DE', { minimumFractionDigits: stellen, maximumFractionDigits: stellen }).format(n);
 
-export const heute = () => new Date().toISOString().slice(0, 10);
+// Das Datum am Ort, nicht in UTC: toISOString() gaebe zwischen Mitternacht
+// und ein (im Sommer zwei) Uhr noch den Vortag zurueck.
+export const inTagen = (tage) => {
+  const d = new Date();
+  d.setDate(d.getDate() + tage);
+  const zwei = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${zwei(d.getMonth() + 1)}-${zwei(d.getDate())}`;
+};
+export const heute = () => inTagen(0);
 
 export function datumLang(iso) {
   if (!iso) return '';
@@ -101,7 +109,15 @@ export function eingabe(eigenschaften = {}) {
 export function zahlfeld(eigenschaften = {}) {
   // inputmode statt type=number: type=number blendet auf Android die
   // Komma-Taste aus und laesst sich nicht formatieren.
-  return el('input', { type: 'text', inputmode: 'decimal', ...eigenschaften });
+  //
+  // Der Startwert kommt aus dem Programm, also als "3.125" und nicht als
+  // "3,125". zuZahl() liest einen Punkt vor genau drei Ziffern als
+  // Tausenderpunkt -- deshalb steht hier von Anfang an das Komma im Feld.
+  const e = { ...eigenschaften };
+  if (typeof e.value === 'number' || /^-?\d+\.\d+$/.test(String(e.value ?? ''))) {
+    e.value = String(e.value).replace('.', ',');
+  }
+  return el('input', { type: 'text', inputmode: 'decimal', ...e });
 }
 
 export function auswahl(optionen, gewaehlt, eigenschaften = {}) {
@@ -179,10 +195,20 @@ export function zuZahl(wert) {
   const roh = String(wert ?? '').trim();
   if (!roh) return 0;
   const bereinigt = roh.replace(/[^\d,.-]/g, '');
-  // Kommt ein Komma vor, ist es das Dezimaltrennzeichen und Punkte sind Tausender.
-  const zahl = bereinigt.includes(',')
-    ? bereinigt.replace(/\./g, '').replace(',', '.')
-    : bereinigt;
+  let zahl;
+  if (bereinigt.includes(',') && bereinigt.lastIndexOf('.') > bereinigt.lastIndexOf(',')) {
+    // Englische Schreibweise "1,234.56": Kommas sind Tausender.
+    zahl = bereinigt.replace(/,/g, '');
+  } else if (bereinigt.includes(',')) {
+    // Kommt ein Komma vor, ist es das Dezimaltrennzeichen und Punkte sind Tausender.
+    zahl = bereinigt.replace(/\./g, '').replace(',', '.');
+  } else if (/^-?[1-9]\d{0,2}(\.\d{3})+$/.test(bereinigt)) {
+    // "400.000" und "1.250.000" sind Betraege mit Tausenderpunkt, nicht 400
+    // und 1,25. Bis zum 10.11.2026 rechnete die App hier mit 400 Euro.
+    zahl = bereinigt.replace(/\./g, '');
+  } else {
+    zahl = bereinigt;
+  }
   const n = parseFloat(zahl);
   return Number.isFinite(n) ? n : 0;
 }

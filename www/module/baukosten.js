@@ -12,14 +12,15 @@ import {
 } from '../hilfen.js';
 import { einstellung } from '../daten.js';
 
-// Baukosten je m2 (schluesselfertig, Stand 08.2026) und Grunderwerbsteuer.
+// Baukosten je m2 (schluesselfertig, Stand 10.2026) und Grunderwerbsteuer.
+// Bremen 5,5 % seit 01.07.2025, wie in bundeslaender.ts der Website.
 // Quelle: BauZeuge.de/hausbau/kosten-pro-qm/ und /hausbau/grunderwerbsteuer/.
 export const LAENDER = [
   { slug: 'baden-wuerttemberg', name: 'Baden-Württemberg', min: 2900, max: 3600, grest: 5.0 },
   { slug: 'bayern', name: 'Bayern', min: 2900, max: 3700, grest: 3.5 },
   { slug: 'berlin', name: 'Berlin', min: 3100, max: 3700, grest: 6.0 },
   { slug: 'brandenburg', name: 'Brandenburg', min: 2400, max: 3000, grest: 6.5 },
-  { slug: 'bremen', name: 'Bremen', min: 2500, max: 3100, grest: 5.0 },
+  { slug: 'bremen', name: 'Bremen', min: 2500, max: 3100, grest: 5.5 },
   { slug: 'hamburg', name: 'Hamburg', min: 3100, max: 3900, grest: 5.5 },
   { slug: 'hessen', name: 'Hessen', min: 2800, max: 3400, grest: 6.0 },
   { slug: 'mecklenburg-vorpommern', name: 'Mecklenburg-Vorpommern', min: 2400, max: 3000, grest: 6.0 },
@@ -157,7 +158,7 @@ export async function zeige(rahmen) {
         klasse: 'unterzeile',
         text:
           'Die m²-Spannen je Bundesland stammen aus der Baukosten-Übersicht von BauZeuge.de ' +
-          '(schlüsselfertig, Stand 08.2026). Der Standard wählt das untere, mittlere oder obere Ende ' +
+          '(schlüsselfertig, Stand 10.2026). Der Standard wählt das untere, mittlere oder obere Ende ' +
           'der Spanne. Unter 100 m² greift eine Untergrenze, ab 145 m² sinkt der Satz. ' +
           'Die ermittelten Werte sind eine auf realen Marktdaten beruhende Prognose, kein Angebot.',
       }),

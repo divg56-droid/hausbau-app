@@ -53,8 +53,14 @@ export function postenRechnen(posten, belege) {
   const tatsaechlich = posten.tatsaechlich || 0;
   // Solange keine echte Summe feststeht, ist die Abweichung null und nicht
   // etwa der volle Planwert im Minus.
-  const differenz = tatsaechlich > 0 ? tatsaechlich - geplant : 0;
-  const massgeblich = tatsaechlich > 0 ? tatsaechlich : geplant;
+  //
+  // Ist mehr bezahlt als geplant oder beauftragt, gilt das Bezahlte: Das
+  // Geld ist geflossen, ob eine Summe dazu eingetragen wurde oder nicht.
+  // Bis zum 10.11.2026 verschwand eine solche Ueberzahlung aus Restbudget
+  // und Mehrkosten.
+  const fest = tatsaechlich > 0 ? tatsaechlich : geplant;
+  const massgeblich = Math.max(fest, gezahlt);
+  const differenz = tatsaechlich > 0 || gezahlt > geplant + 0.005 ? massgeblich - geplant : 0;
 
   const gesetzt = POSTEN_STATUS[posten.status] || POSTEN_STATUS.geplant;
   let status = posten.status || 'geplant';
@@ -72,6 +78,19 @@ export function postenRechnen(posten, belege) {
     offen: Math.max(0, massgeblich - gezahlt),
     status, statusName: name, marke,
   };
+}
+
+/**
+ * Summe der Rechnungen, die an keiner vorhandenen Position haengen.
+ *
+ * Sie sind trotzdem bezahlt und gehen vom Budget ab. Bis zum 10.11.2026
+ * zaehlten sie nur unter "bereits bezahlt", nicht gegen das Restbudget.
+ */
+export function belegeOhnePosten(posten, belege) {
+  const ids = new Set(posten.map((p) => p.id));
+  return belege
+    .filter((b) => !b.postenId || !ids.has(b.postenId))
+    .reduce((s, b) => s + (b.betrag || 0), 0);
 }
 
 /** Zahl mit Vorzeichen und Farbe: ueber dem Plan rot, darunter gruen. */
@@ -105,9 +124,16 @@ async function zeichne(rahmen, ansicht) {
   const neu = () => zeichne(rahmen, ansicht);
   const gerechnet = posten.map((p) => ({ ...p, ...postenRechnen(p, belege) }));
 
+  const ohnePosten = belegeOhnePosten(posten, belege);
+  const auftrag = gerechnet.reduce((s, p) => s + p.massgeblich, 0);
+
   const summe = {
     geplant: gerechnet.reduce((s, p) => s + p.geplant, 0),
-    tatsaechlich: gerechnet.reduce((s, p) => s + p.massgeblich, 0),
+    tatsaechlich: auftrag,
+    ohnePosten,
+    // Was vom Budget abgeht: die Positionen und dazu, was ohne Position
+    // bezahlt wurde.
+    gebunden: auftrag + ohnePosten,
     gezahlt: belege.reduce((s, b) => s + (b.betrag || 0), 0),
     differenz: gerechnet.reduce((s, p) => s + p.differenz, 0),
   };
@@ -177,7 +203,9 @@ const monatLang = (monat) =>
 
 function zeigeBudgetplanung(rahmen, stand, summe, belege, hausdaten, neu) {
   const budget = stand.gesamt;
-  const rest = budget - summe.tatsaechlich;
+  const rest = budget - summe.gebunden;
+  // Ohne Budget gibt es nichts zu ueberschreiten: keine Warnung, kein Rest.
+  const ueber = budget > 0 && rest < 0;
   const flaeche = Number(hausdaten.flaeche) || 0;
 
   anhaengen(rahmen, kopfzeile('Budgetplanung', 'Woher das Geld kommt und wie weit es reicht.'));
@@ -261,21 +289,24 @@ function zeigeBudgetplanung(rahmen, stand, summe, belege, hausdaten, neu) {
   );
 
   // ---------------------------------------------------------- Was noch bleibt
-  const anteil = budget > 0 ? Math.min(100, (summe.tatsaechlich / budget) * 100) : 0;
+  const anteil = budget > 0 ? Math.min(100, (summe.gebunden / budget) * 100) : 0;
   anhaengen(
     rahmen,
     karte([
       el('div', { klasse: 'fortschrittsbalken' }, [
         el('div', {
-          stil: { width: anteil + '%', background: rest < 0 ? 'var(--warn)' : 'var(--akzent)' },
+          stil: { width: anteil + '%', background: ueber ? 'var(--warn)' : 'var(--akzent)' },
         }),
       ]),
       el('div', { klasse: 'wertzeile stark' }, [
-        el('span', { text: rest < 0 ? 'Über dem Budget' : 'Restbudget' }),
-        el('strong', { klasse: rest < 0 ? 'mehr' : null, text: eur.format(Math.abs(rest)) }),
+        el('span', { text: ueber ? 'Über dem Budget' : 'Restbudget' }),
+        el('strong', { klasse: ueber ? 'mehr' : null, text: budget > 0 ? eur.format(Math.abs(rest)) : '–' }),
       ]),
       wertzeile('Davon bereits bezahlt', eur.format(summe.gezahlt)),
-      rest < 0
+      summe.ohnePosten > 0
+        ? wertzeile('Rechnungen ohne Position', eur.format(summe.ohnePosten))
+        : null,
+      ueber
         ? hinweisKasten(
             `Das Budget ist um ${eur.format(-rest)} überschritten. Je früher das auffällt, ` +
               'desto eher lässt sich noch gegensteuern.',
@@ -401,7 +432,8 @@ async function budgetPdf(stand, summe, belege, verlauf, hausdaten) {
   blatt.wertzeile('Geplante Kosten', eur.format(summe.geplant));
   blatt.wertzeile('Auftragssumme', eur.format(summe.tatsaechlich));
   blatt.wertzeile('Bereits bezahlt', eur.format(summe.gezahlt));
-  blatt.wertzeile('Noch frei', eur.format(stand.gesamt - summe.tatsaechlich), true);
+  if (summe.ohnePosten > 0) blatt.wertzeile('Rechnungen ohne Position', eur.format(summe.ohnePosten));
+  blatt.wertzeile('Noch frei', eur.format(stand.gesamt - summe.gebunden), true);
   if (flaeche > 0) {
     blatt.absatz(`Bei ${zahl(flaeche)} m² Wohnfläche sind das ` +
       `${eur.format(stand.gesamt / flaeche)} Budget je Quadratmeter.`);
@@ -452,7 +484,8 @@ async function budgetTabelle(stand, summe, belege, verlauf) {
       ['Rahmen', 'Geplante Kosten', '', summe.geplant, '', ''],
       ['Rahmen', 'Auftragssumme', '', summe.tatsaechlich, '', ''],
       ['Rahmen', 'Bereits bezahlt', '', summe.gezahlt, '', ''],
-      ['Rahmen', 'Noch frei', '', stand.gesamt - summe.tatsaechlich, '', ''],
+      ...(summe.ohnePosten > 0 ? [['Rahmen', 'Rechnungen ohne Position', '', summe.ohnePosten, '', '']] : []),
+      ['Rahmen', 'Noch frei', '', stand.gesamt - summe.gebunden, '', ''],
     ];
     for (const m of geldmittelstand(stand, belege)) {
       zeilen.push(['Geldmittel', m.name, m.art, m.betrag, m.verbraucht, m.offen]);

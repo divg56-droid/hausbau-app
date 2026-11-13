@@ -22,7 +22,9 @@ import { SCHICHTEN, aufbauRechnen } from '../estrich.js';
 
 // Uebliche Saetze, Stand 2026. Sie stehen offen hier, damit man sie
 // nachschlagen und ueberschreiben kann; jeder Notar rechnet etwas anders.
-const NOTAR_PROZENT = 1.5;      // Notar und Grundbuch zusammen
+// 1,5 % Notar plus 0,5 % Grundbuch, wie im Kaufnebenkosten-Rechner der
+// Website und in den Baunebenkosten. Bis zum 10.11.2026 stand hier 1,5.
+const NOTAR_PROZENT = 2.0;      // Notar und Grundbuch zusammen
 const MAKLER_PROZENT = 3.57;    // haelftig geteilt, inklusive Umsatzsteuer
 
 /**
@@ -206,7 +208,16 @@ async function zeigeFussboden(rahmen) {
 // ------------------------------------------------------------ Kaufnebenkosten
 
 async function zeigeNebenkosten(rahmen) {
-  const gemerkt = (await einstellung('nebenkosten_eingabe')) || {};
+  // Eigener Schluessel. Bis zum 10.11.2026 lag die Eingabe unter
+  // 'nebenkosten_eingabe' -- demselben Namen, unter dem die Baunebenkosten
+  // ihre Zeilen ablegen. Wer den einen Rechner oeffnete, loeschte die
+  // Eingaben des anderen. Alte Werte werden einmal uebernommen, sofern sie
+  // von hier stammen (die Baunebenkosten haben 'zeilen', dieser Rechner nicht).
+  let gemerkt = await einstellung('kaufnebenkosten_eingabe');
+  if (!gemerkt) {
+    const alt = (await einstellung('nebenkosten_eingabe')) || {};
+    gemerkt = alt.zeilen ? {} : alt;
+  }
   const start = {
     preis: gemerkt.preis ?? 350000,
     land: gemerkt.land ?? 'rheinland-pfalz',
@@ -268,7 +279,7 @@ async function zeigeNebenkosten(rahmen) {
       knopf('In die Baufinanzierung übernehmen', () => { geheZu('#/finanzierung'); }, 'knopf-leise')
     );
 
-    await einstellung('nebenkosten_eingabe', eingaben);
+    await einstellung('kaufnebenkosten_eingabe', eingaben);
   }
 
   for (const f of [preis, land, notar, makler, weitere]) {
@@ -483,9 +494,9 @@ async function zeigeKredite(rahmen) {
   // Drei Angebote reichen: Mehr holt am Bau ohnehin fast niemand ein, und
   // nebeneinander passen mehr auch nicht auf ein Telefon.
   const start = gemerkt.angebote || [
-    { name: 'Hausbank', zins: 3.8, tilgung: 2.0 },
-    { name: 'Vermittler', zins: 3.55, tilgung: 2.0 },
-    { name: 'Direktbank', zins: 3.45, tilgung: 2.5 },
+    { name: 'Hausbank', zins: 4.2, tilgung: 2.0 },
+    { name: 'Vermittler', zins: 3.95, tilgung: 2.0 },
+    { name: 'Direktbank', zins: 3.85, tilgung: 2.5 },
   ];
   const felder = start.map((a) => ({
     name: el('input', { type: 'text', value: a.name, placeholder: 'Anbieter' }),

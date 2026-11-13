@@ -7,7 +7,7 @@
 
 import {
   el, feld, eingabe, auswahl, knopf, karte, kopfzeile, hinweisKasten,
-  leerzustand, melde, datumLang, heute, kontaktName, kontaktLang,
+  leerzustand, melde, datumLang, heute, inTagen, kontaktName, kontaktLang,
   anhaengen,
   kartengitter,
 } from '../hilfen.js';
@@ -259,7 +259,7 @@ function ruegeBlatt(maengel, kontakte) {
   );
 
   // Zwei Wochen sind die uebliche Groessenordnung fuer eine Nachbesserung.
-  const vorgabe = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+  const vorgabe = inTagen(14);
   const frist = el('input', { type: 'date', value: vorgabe });
   const zaehler = el('p', { klasse: 'unterzeile' });
 

@@ -55,7 +55,9 @@ export function istBeispielSatz(speicher, satz) {
 const tag = (versatz) => {
   const d = new Date();
   d.setDate(d.getDate() + versatz);
-  return d.toISOString().slice(0, 10);
+  // Ortsdatum, nicht UTC: sonst kurz nach Mitternacht der Vortag.
+  const zwei = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${zwei(d.getMonth() + 1)}-${zwei(d.getDate())}`;
 };
 
 /**

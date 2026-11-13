@@ -65,7 +65,7 @@ export async function zeige(rahmen) {
   const gemerkt = (await einstellung('tilgung_eingabe')) || {};
 
   const betragFeld = zahlfeld({ value: String(gemerkt.betrag ?? 400000) });
-  const zinsFeld = zahlfeld({ value: String(gemerkt.zinsProzent ?? 3.8) });
+  const zinsFeld = zahlfeld({ value: String(gemerkt.zinsProzent ?? ZINS_JE_BINDUNG[10]) });
   const modusFeld = auswahl(
     [['tilgung', 'Über die Tilgung'], ['rate', 'Über die Wunschrate']],
     gemerkt.modus || 'tilgung'
@@ -93,7 +93,7 @@ export async function zeige(rahmen) {
   let zinsSelbst = gemerkt.zinsProzent !== undefined;
   zinsFeld.addEventListener('input', () => { zinsSelbst = true; });
   bindungFeld.addEventListener('change', () => {
-    if (!zinsSelbst) zinsFeld.value = String(ZINS_JE_BINDUNG[+bindungFeld.value] ?? 3.8);
+    if (!zinsSelbst) zinsFeld.value = String(ZINS_JE_BINDUNG[+bindungFeld.value] ?? ZINS_JE_BINDUNG[10]).replace('.', ',');
   });
 
   async function rechne() {

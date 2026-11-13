@@ -26,7 +26,7 @@ import { angemeldet } from '../konto.js';
 import { daten, einstellung } from '../daten.js';
 import { projekteListe, projektAnlegen } from '../projekte.js';
 import { finanzierungsstand } from './finanzierung.js';
-import { postenRechnen } from './baukasse.js';
+import { postenRechnen, belegeOhnePosten } from './baukasse.js';
 import { terminePlanen } from './ablauf.js';
 import { STATUS } from './maengel.js';
 import { leitfadenStand } from '../leitfaden-daten.js';
@@ -62,7 +62,7 @@ export async function zeige(rahmen) {
   const auftrag = gerechnet.reduce((s, p) => s + p.massgeblich, 0);
   const gezahlt = belege.reduce((s, b) => s + (b.betrag || 0), 0);
   const mehr = gerechnet.reduce((s, p) => s + p.differenz, 0);
-  const rest = stand.gesamt - auftrag;
+  const rest = stand.gesamt - auftrag - belegeOhnePosten(posten, belege);
 
   // Zwei verschiedene Anfaenge, die man leicht verwechselt.
   //

@@ -15,7 +15,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, relative, sep } from 'node:path';
 import { neueKennung, umschreiben } from './www/daten.js';
-import { postenRechnen } from './www/module/baukasse.js';
+import { postenRechnen, belegeOhnePosten } from './www/module/baukasse.js';
 import { helferVon, stundenJeHelfer } from './www/module/tagebuch.js';
 import { angeboteRechnen, leistungsvergleich } from './www/module/angebote.js';
 import { todoStand, todosSortieren } from './www/module/todos.js';
@@ -61,6 +61,15 @@ const a = annuitaet({ betrag: 400000, zinsProzent: 3.8, tilgungProzent: 2.0, bin
 pruef('Rate 400.000 zu 3,8/2,0 = 1.933,33', Math.abs(a.rate - 1933.3333) < 0.01, 'ist ' + a.rate.toFixed(2));
 pruef('Restschuld nach 10 J zwischen 300k und 330k', a.restNachBindung > 300000 && a.restNachBindung < 330000, 'ist ' + Math.round(a.restNachBindung));
 pruef('Laufzeit zwischen 28 und 32 Jahren', a.laufzeitJahre > 28 && a.laufzeitJahre < 32, 'ist ' + a.laufzeitJahre.toFixed(1));
+// Vor Ende der Bindung getilgt: Zinsen nur bis zur letzten Rate.
+const frueh = annuitaet({ betrag: 300000, zinsProzent: 3.8, tilgungProzent: 5.0, bindungJahre: 20 });
+const fruehSim = simuliere({ betrag: 300000, zinsProzent: 3.8, rate: frueh.rate, bindungJahre: 20 });
+pruef('Frueh getilgt: Zinskosten wie in der Simulation',
+  Math.abs(frueh.zinsInBindung - fruehSim.zinsGesamt) < 300 && frueh.zinsInBindung < 100000,
+  Math.round(frueh.zinsInBindung) + ' gegen ' + Math.round(fruehSim.zinsGesamt));
+const normal = simuliere({ betrag: 400000, zinsProzent: 3.8, rate: 1933.3333, bindungJahre: 10 });
+pruef('Normalfall: Zinskosten der Bindung unveraendert',
+  Math.abs(a.zinsInBindung - normal.zinsInBindung) < 60, Math.round(a.zinsInBindung) + ' gegen ' + Math.round(normal.zinsInBindung));
 
 console.log('Tilgungssimulation');
 const s = simuliere({ betrag: 400000, zinsProzent: 3.8, rate: 1933.3333, bindungJahre: 10 });
@@ -86,10 +95,27 @@ const ring = terminePlanen([
   { id: 2, titel: 'B', dauer: 2, start: null, vorgaengerId: 1 },
 ]);
 pruef('Ringverweis haengt sich nicht auf', Array.isArray(ring) && ring.length === 2);
+pruef('Ringverweis wird gemeldet', ring.every((x) => x.ring === true && x.start === null));
+const ringMitRest = terminePlanen([
+  { id: 1, titel: 'A', dauer: 2, start: '2026-01-05', vorgaengerId: 2 },
+  { id: 2, titel: 'B', dauer: 2, start: null, vorgaengerId: 1 },
+  { id: 3, titel: 'C', dauer: 2, start: '2026-03-02', vorgaengerId: null },
+]);
+pruef('Ring mit altem Startdatum rechnet keine Termine', ringMitRest[0].ring && ringMitRest[0].ende === null && ringMitRest[1].ring);
+pruef('Schritt ausserhalb des Rings bleibt unberuehrt', !ringMitRest[2].ring && ringMitRest[2].ende === '2026-03-03');
+pruef('Gerade Kette ist kein Ring', geplant.every((x) => !x.ring));
 
 console.log('Zahleneingabe');
 pruef('1.250,50 wird 1250.5', zuZahl('1.250,50') === 1250.5);
 pruef('1250.5 bleibt 1250.5', zuZahl('1250.5') === 1250.5);
+pruef('400.000 ist vierhunderttausend', zuZahl('400.000') === 400000, zuZahl('400.000'));
+pruef('1.250.000 ist eineinviertel Millionen', zuZahl('1.250.000') === 1250000, zuZahl('1.250.000'));
+pruef('400.000 € mit Zeichen', zuZahl('400.000 €') === 400000);
+pruef('3.8 bleibt 3,8', zuZahl('3.8') === 3.8);
+pruef('3,125 bleibt 3,125', zuZahl('3,125') === 3.125);
+pruef('0.125 bleibt 0,125', zuZahl('0.125') === 0.125);
+pruef('1,234.56 englisch gelesen', zuZahl('1,234.56') === 1234.56, zuZahl('1,234.56'));
+pruef('-1.500 ist minus eintausendfuenfhundert', zuZahl('-1.500') === -1500);
 pruef('leer wird 0', zuZahl('') === 0);
 pruef('unlesbar wird 0', zuZahl('abc') === 0);
 
@@ -276,6 +302,20 @@ pruef('leerer Posten stuerzt nicht ab', p.differenz === 0 && p.massgeblich === 0
 // Bezahlt ohne feste Summe: Plan gilt als Massstab
 p = postenRechnen({ id:'a', geplant:5000, tatsaechlich:0, status:'geplant' }, [B('a', 5000)]);
 pruef('ohne Auftragssumme misst sich Bezahltes am Plan', p.statusName === 'Bezahlt');
+
+// Mehr bezahlt als geplant: Das Geld ist geflossen und muss ins Restbudget.
+p = postenRechnen({ id:'a', geplant:10000, tatsaechlich:0, status:'geplant' }, [B('a', 7000), B('a', 5000)]);
+pruef('Ueberzahlung ohne Auftragssumme: massgeblich 12.000', p.massgeblich === 12000, p.massgeblich);
+pruef('Ueberzahlung ohne Auftragssumme: +2.000 Mehrkosten', p.differenz === 2000, p.differenz);
+pruef('Ueberzahlung ohne Auftragssumme: bezahlt', p.statusName === 'Bezahlt');
+p = postenRechnen({ id:'a', geplant:10000, tatsaechlich:12500, status:'beauftragt' }, [B('a', 13000)]);
+pruef('Ueberzahlung ueber die Auftragssumme: +3.000', p.differenz === 3000 && p.massgeblich === 13000, p.differenz);
+p = postenRechnen({ id:'a', geplant:0, tatsaechlich:0, status:'geplant' }, [B('a', 500)]);
+pruef('Rechnung an Posten ohne Plan: bezahlt, 500 massgeblich', p.statusName === 'Bezahlt' && p.massgeblich === 500, p.statusName);
+p = postenRechnen({ id:'a', geplant:10000, tatsaechlich:0, status:'geplant' }, [B('a', 4000)]);
+pruef('Teilzahlung unter dem Plan aendert nichts', p.differenz === 0 && p.massgeblich === 10000);
+pruef('Rechnungen ohne Position werden gezaehlt',
+  belegeOhnePosten([{ id:'a' }], [B('a', 100), B(null, 250), B('weg', 50)]) === 300);
 
 // ---------------------------------------------------------------- Balkenplan
 
