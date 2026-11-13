@@ -42,7 +42,11 @@ try {
      Schluessel, den der Schalter in der App benutzt -- so ist das Bild
      wirklich das, was ein Nutzer mit dieser Wahl sieht, und keine
      nachtraeglich eingefaerbte Aufnahme. */
-  const thema = process.env.THEMA === 'dunkel' ? 'dunkel' : null;
+  //
+  // Ohne die Angabe fest "hell" und nicht "automatisch": Sonst folgt der
+  // kopflose Chrome dem Rechner, auf dem das Skript laeuft, und auf einem
+  // dunkel eingestellten kamen am 13.11.2026 dunkle Bilder heraus.
+  const thema = process.env.THEMA === 'dunkel' ? 'dunkel' : 'hell';
 
   await seite.vorschalten(`
     window.addEventListener('beforeinstallprompt', (e) => e.stopImmediatePropagation(), true);

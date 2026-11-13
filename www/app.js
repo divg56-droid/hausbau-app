@@ -36,10 +36,12 @@ function wortmarke() {
   zeichen.setAttribute('viewBox', '0 0 64 64');
   zeichen.setAttribute('aria-hidden', 'true');
   zeichen.innerHTML =
-    '<rect width="64" height="64" rx="12" fill="#1f2a30"></rect>' +
-    '<path d="M11 31 32 13 53 31Z" fill="#5fbabd"></path>' +
-    '<rect x="16" y="31" width="32" height="20" fill="none" stroke="#f5f7f6" stroke-width="4"></rect>' +
-    '<rect x="28" y="40" width="8" height="11" fill="#f5f7f6"></rect>';
+    // Haus im Sucher, dieselbe Zeichnung wie in index.html und auf der Website.
+    '<rect width="64" height="64" rx="12" fill="#0a5155"></rect>' +
+    '<path d="M13 23V13H23M41 13H51V23M51 41V51H41M23 51H13V41" fill="none" stroke="#f5f7f6" ' +
+    'stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"></path>' +
+    '<path d="M21 34 32 24 43 34V44H21Z" fill="#5fbabd"></path>' +
+    '<rect x="29" y="37" width="6" height="7" fill="#0a5155"></rect>';
 
 /* Die Wortmarke heisst ueberall BauZeuge.de, auch in der App.
  *

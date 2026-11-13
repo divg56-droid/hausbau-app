@@ -23,7 +23,10 @@ from PIL import Image, ImageDraw, ImageFont
 HIER = pathlib.Path(__file__).parent
 WURZEL = HIER.parent
 ZIEL = HIER / 'play'
-NACHBAR = WURZEL.parent / 'hausbauatlas'
+# Das Schwesterprojekt heisst seit dem PC-Umzug (10.11.2026) "website";
+# davor lag es als "hausbauatlas" daneben.
+NACHBAR = next((p for p in (WURZEL.parent / 'website', WURZEL.parent / 'hausbauatlas') if p.is_dir()),
+               WURZEL.parent / 'website')
 
 # Dieselbe Palette wie in www/stil.css und in der Website. Wer hier etwas
 # aendert, aendert es dort mit -- test.mjs prueft die Werte der App.
