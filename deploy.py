@@ -112,7 +112,7 @@ def dateien(mit_geheim: bool, nur: str | None) -> list[tuple[pathlib.Path, str]]
             ):
                 continue
             # Die Vorlage und die Pruefskripte haben auf dem Server nichts zu suchen.
-            if pfad.name in ("geheim.beispiel.php", "test_api.py"):
+            if pfad.name == "geheim.beispiel.php" or pfad.name.startswith("test_"):
                 continue
 
             ziel = praefix + pfad.relative_to(wurzel).as_posix()
