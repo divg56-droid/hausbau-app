@@ -78,13 +78,13 @@ jobs:
           #
           # geheim.php traegt die Zugangsdaten der Datenbank und steht nur auf
           # dem Server. daten/bilder/ gehoert dem Server allein. geheim.
-          # beispiel.php und test_api.py sind Werkzeug, kein Betrieb.
+          # beispiel.php und die Pruefskripte (test_*.py) sind Werkzeug, kein Betrieb.
           nicht() {
             case "$1" in
               server/daten/geheim.php)      return 0 ;;
               server/daten/bilder/*)        return 0 ;;
               */geheim.beispiel.php)        return 0 ;;
-              */test_api.py)                return 0 ;;
+              */test_*.py)                  return 0 ;;
             esac
             return 1
           }
