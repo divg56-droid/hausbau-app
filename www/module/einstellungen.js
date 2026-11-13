@@ -226,10 +226,10 @@ async function zeichne(rahmen) {
       el('p', {
         klasse: 'unterzeile',
         text:
-          'BauZeuge, Testversion. Ohne Konto bleibt alles auf diesem Gerät ' +
-          'und nichts wird übertragen. Mit Konto gehen die Daten zum Abgleich ' +
-          'an BauZeuge.de, und nur dorthin. Die Baukosten haben den ' +
-          'Stand 08.2026. ' +
+          'BauZeuge. Deine Daten liegen auf diesem Gerät und gehen zum ' +
+          'Abgleich an BauZeuge.de, und nur dorthin. Das Beispielprojekt ' +
+          'bleibt auf dem Gerät. Die Baukosten haben den ' +
+          'Stand 10.2026. ' +
           'Ergebnisse sind Prognosen auf Grundlage realer Marktdaten, keine Angebote.',
       }),
       /* Datenschutz und Impressum gehoeren in die App und nicht nur in den
@@ -458,7 +458,7 @@ async function csvPosten() {
   const { kostengruppeLang } = await import('../din276.js');
   await csvSicher(
     ['Position', 'Gewerk', 'Kostengruppe', 'Bezeichnung der Kostengruppe',
-      'Geplant', 'Tatsaechlich', 'Bezahlt', 'Abweichung', 'Status', 'Notiz'],
+      'Geplant', 'Tatsächlich', 'Bezahlt', 'Abweichung', 'Status', 'Notiz'],
     posten.map((p) => {
       const r = postenRechnen(p, belege);
       return [
@@ -537,7 +537,7 @@ async function csvAufgaben() {
 async function csvKontakte() {
   const kontakte = await daten.alle('kontakte');
   await csvSicher(
-    ['Name', 'Firma', 'Gewerk', 'Art', 'Strasse', 'PLZ und Ort', 'Telefon', 'E-Mail', 'Notiz'],
+    ['Name', 'Firma', 'Gewerk', 'Art', 'Straße', 'PLZ und Ort', 'Telefon', 'E-Mail', 'Notiz'],
     kontakte.map((k) => [
       k.name || '', k.firma || '', k.gewerk || '', k.art || '',
       k.strasse || '', k.plzOrt || '', k.telefon || '', k.epost || '', k.notiz || '',

@@ -25,6 +25,29 @@ export function blattSchliessen() {
 
 export const blattOffen = () => offene.length > 0;
 
+/* Was erst nach dem Sichern geschehen darf, je offenem Blatt.
+ *
+ * Gebraucht vom Fotofeld: Ein entferntes Foto darf erst geloescht werden,
+ * wenn der Datensatz ohne es gesichert ist. Bis zum 13.11.2026 loeschte der
+ * Tipp auf das Kreuz sofort -- wer danach abbrach, hatte einen Mangel, der
+ * auf ein geloeschtes Foto zeigte. Bei einem Beweisfoto ist das der
+ * schlechteste Ort fuer einen Fehlgriff.
+ *
+ * Liegt parallel zu "offene": derselbe Platz, dasselbe Blatt. */
+const nachSichern = [];
+
+/**
+ * Merkt etwas fuer den Moment vor, in dem das oberste Blatt gesichert wird.
+ * Gibt false, wenn kein Blatt offen ist -- dann muss der Aufrufer selbst
+ * handeln. Wird das Blatt ohne Sichern geschlossen, verfaellt die Vormerkung.
+ */
+export function nachDemSichern(tun) {
+  const liste = nachSichern[nachSichern.length - 1];
+  if (!liste) return false;
+  liste.push(tun);
+  return true;
+}
+
 /* Wechselt der Bildschirm, gehen offene Blaetter zu.
  *
  * Ein Blatt gehoert zu dem Bereich, aus dem es aufgegangen ist. Bleibt es
@@ -127,7 +150,10 @@ export function blattOeffnen(titel, felder, beimSichern, optionen = {}) {
        bewegung.hinaus() raeumt es selbst ab. */
     if (bewegung) bewegung.hinaus(); else ueberlagerung.remove();
     const stelle = offene.indexOf(schliessen);
-    if (stelle !== -1) offene.splice(stelle, 1);
+    if (stelle !== -1) {
+      offene.splice(stelle, 1);
+      nachSichern.splice(stelle, 1);
+    }
 
     // Beim Schliessen ueber Abbrechen, Sichern oder den dunklen Rand bleibt
     // der eigene Eintrag sonst im Verlauf liegen, und die Zuruecktaste
@@ -146,6 +172,12 @@ export function blattOeffnen(titel, felder, beimSichern, optionen = {}) {
   async function sichern() {
     try {
       await beimSichern();
+      // Erst jetzt, wo der Satz steht, das Vorgemerkte ausfuehren. Ein Fehler
+      // darin darf das Blatt nicht offen halten: Gesichert ist gesichert.
+      const stelle = offene.indexOf(schliessen);
+      for (const tun of stelle === -1 ? [] : nachSichern[stelle].splice(0)) {
+        try { await tun(); } catch (fehler) { console.error(fehler); }
+      }
       schliessen();
     } catch (fehler) {
       // Fehlertext ueber dem Blatt zeigen und offen lassen, damit die
@@ -162,6 +194,7 @@ export function blattOeffnen(titel, felder, beimSichern, optionen = {}) {
   document.addEventListener('keydown', beiTaste);
   document.body.append(ueberlagerung);
   offene.push(schliessen);
+  nachSichern.push([]);
 
   /* Hereinfahren und das Ziehen. Beides steckt in blattziehen.js, damit
      diese Datei weiter davon handelt, was ein Blatt ist, und nicht davon,

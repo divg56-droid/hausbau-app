@@ -289,7 +289,8 @@ async function zeichne(rahmen, art = 'anmelden') {
     const neuesWort = el('input', { type: 'password', autocomplete: 'new-password' });
     blattOeffnen('Passwort ändern oder festlegen', [
       feld('Bisheriges Passwort', alt,
-        'Leer lassen, wenn du dich bisher nur per Anmeldelink angemeldet hast.'),
+        'Leer lassen, wenn du noch keins hast – oder es vergessen hast und dich ' +
+        'gerade per Anmeldelink angemeldet hast.'),
       feld('Neues Passwort', neuesWort, 'Mindestens 10 Zeichen.'),
     ], async () => {
       await passwortAendern(alt.value, neuesWort.value);
@@ -503,9 +504,9 @@ function zeigeAnmeldung(rahmen, art, nachher) {
       el('p', {
         klasse: 'unterzeile',
         text:
-          'Ohne Konto arbeitet die App wie bisher: Alles bleibt auf diesem ' +
-          'Gerät, und nichts wird übertragen. Du kannst dich auch später noch ' +
-          'anmelden, deine vorhandenen Daten gehen dann mit hoch.',
+          'Ohne Konto siehst du das Beispielprojekt. Dein eigenes Bauvorhaben ' +
+          'gehört zu einem Konto, damit es beim nächsten Telefonwechsel nicht ' +
+          'verloren ist. Dafür reicht deine E-Mail-Adresse.',
       }),
     ]),
 

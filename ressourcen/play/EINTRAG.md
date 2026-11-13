@@ -3,7 +3,7 @@
 Alles, was in die Play Console eingetragen wird. Zum Abtippen ist nichts
 dabei — die Textblöcke sind zum Kopieren gedacht.
 
-Stand: 11.09.2026 · Paket `de.bauzeuge.app` · Fassung aus `version.json`
+Stand: 13.11.2026 · Paket `de.bauzeuge.app` · Fassung aus `version.json`
 
 ---
 
@@ -15,11 +15,11 @@ Stand: 11.09.2026 · Paket `de.bauzeuge.app` · Fassung aus `version.json`
 BauZeuge: Hausbau & Kosten
 ```
 
-**Kurzbeschreibung** (max. 80 Zeichen, hier 76) — steht unter dem Namen und
+**Kurzbeschreibung** (max. 80 Zeichen, hier 70) — steht unter dem Namen und
 entscheidet, ob jemand weiterliest.
 
 ```
-Baukosten, Mängel und Bautagebuch für dein Haus. Offline, ohne Konto.
+Baukosten, Mängel und Bautagebuch für dein Haus. Läuft auch ohne Netz.
 ```
 
 **Vollständige Beschreibung** (max. 4000 Zeichen, hier ca. 2100)
@@ -59,11 +59,14 @@ GFZ-Rechner, Baukostenrechner.
 
 DEINE DATEN BLEIBEN DEINE
 
-Ohne Konto verlässt kein Baudatum dein Gerät. Die App arbeitet vollständig
-offline — auf der Baustelle gibt es oft kein Netz, und das soll nichts machen.
+Zum Ansehen brauchst du nichts: Das Beispielprojekt ist gefüllt und zeigt
+jeden Bereich. Dein eigenes Bauvorhaben gehört zu einem Konto, für das deine
+E-Mail-Adresse reicht. So sind Kosten, Fotos und Mängel nicht weg, wenn das
+Telefon es ist, und Telefon und Rechner zeigen dasselbe. Die Daten liegen auf
+einem Server in Deutschland.
 
-Ein Konto ist freiwillig und nur dafür da, dieselben Daten am Telefon und am
-Rechner zu haben. Dann liegen sie auf einem Server in Deutschland.
+Erfassen kannst du auch ohne Netz: Auf der Baustelle gibt es oft keins, und
+das soll nichts machen. Abgeglichen wird, sobald wieder Empfang da ist.
 
 Keine Analysedienste. Die App fordert eine einzige Berechtigung an: Zugang
 zum Internet.
@@ -74,10 +77,10 @@ Kostenaufstellung, Tilgungsplan, Mängelliste und Adressliste als PDF. Tabellen
 als CSV und XLSX. Das Bautagebuch lässt sich über einen Link freigeben, damit
 Familie den Fortschritt sieht — ohne Helfernamen und ohne Arbeitsstunden.
 
-IN DER TESTPHASE KOSTENLOS
+30 TAGE MIT ALLEM
 
-BauZeuge wird gerade gebaut. Die App ist vollständig nutzbar und kostet nichts.
-Was du jetzt anlegst, bleibt erhalten.
+Die ersten 30 Tage sind alle Funktionen frei, ohne Zahlungsmittel. Mit dem
+Code aus dem Buch „Klartext Hausbau“ sind es drei Monate.
 
 Dieselbe App läuft auch im Browser unter www.bauzeuge.de/app/
 ```
@@ -140,11 +143,11 @@ alles drei erfüllt.
 
 | Datentyp | Erhoben | Geteilt | Zweck | Pflicht? |
 |---|---|---|---|---|
-| E-Mail-Adresse | Ja | Nein | Kontoverwaltung | Optional (nur mit Konto) |
-| Nutzer-IDs (Sitzungsmarke) | Ja | Nein | Kontoverwaltung | Optional |
+| E-Mail-Adresse | Ja | Nein | Kontoverwaltung | Erforderlich (fürs eigene Projekt) |
+| Nutzer-IDs (Sitzungsmarke) | Ja | Nein | Kontoverwaltung | Erforderlich |
 | Fotos | Ja | Nein | App-Funktionalität | Optional |
 | Dateien und Dokumente | Ja | Nein | App-Funktionalität | Optional |
-| Sonstige Nutzerinhalte (Baudaten) | Ja | Nein | App-Funktionalität | Optional |
+| Sonstige Nutzerinhalte (Baudaten) | Ja | Nein | App-Funktionalität | Erforderlich |
 | App-Interaktionen | Ja | Nein | Analyse (Auslastung) | Optional |
 | Absturzprotokolle | Nein | — | — | — |
 | Standort | Nein | — | — | — |
@@ -153,8 +156,12 @@ alles drei erfüllt.
 
 **Erläuterungen, die dazugehören**
 
-- *Optional*, weil ohne Konto nichts übertragen wird. Das ist bei Play als
-  „optional“ einzutragen, nicht als „erforderlich“.
+- *Erforderlich* seit dem 27.09.2026: Ein eigenes Bauvorhaben verlangt ein
+  Konto, und dessen Daten gehen zum Abgleich auf den Server. Ohne Konto gibt
+  es nur das Beispielprojekt, das auf dem Gerät bleibt. Bis dahin stand hier
+  „optional“ — **in der Play Console nachziehen**, sonst widerspricht das
+  Formular der App.
+- Fotos und Dateien bleiben *optional*: Niemand muss welche anhängen.
 - *App-Interaktionen*: die Tagessummen aus Abschnitt 7 der
   Datenschutzerklärung — Anzahl Anfragen und übertragene Bytes je Konto und
   Tag. Kein Seitenaufruf, keine Uhrzeit, keine IP.
@@ -228,6 +235,12 @@ Diese Schritte kann kein Skript übernehmen — sie brauchen das Konto.
    nachsehen.
 
 2. **App anlegen**: Name, Sprache Deutsch, kostenlos, App (kein Spiel).
+
+   **Vor dem Einführen einer Bezahlung prüfen:** Wer in einer Play-App
+   digitale Funktionen verkauft, muss dafür in der Regel die Abrechnung von
+   Google Play benutzen. Die Preise von /preise/ stehen deshalb bewusst
+   nicht im Store-Text. Das ist vor dem ersten Bezahlknopf zu klären, nicht
+   danach.
 3. **Play App Signing bestätigen.** Beim ersten Upload fragt Google, ob es den
    Signaturschlüssel verwahren soll. Ja. Unser Schlüssel
    (`ressourcen/schluessel/upload.p12`) ist dann der *Upload*-Schlüssel: Geht

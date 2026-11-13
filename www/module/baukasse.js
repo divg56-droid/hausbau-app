@@ -1010,7 +1010,7 @@ async function mehrkostenPdf(gerechnet, art) {
 /** Dieselben zwei Aufstellungen als CSV, untereinander mit einer Kennspalte. */
 async function mehrkostenTabelle(gerechnet, art) {
   try {
-    const kopf = ['Blickwinkel', 'Bereich', 'Geplant', 'Tatsaechlich', 'Abweichung'];
+    const kopf = ['Blickwinkel', 'Bereich', 'Geplant', 'Tatsächlich', 'Abweichung'];
     const zeilen = zusammenziehen(gerechnet, (p) => p.gewerk || 'Sonstiges')
       .map((e) => ['Gewerk', e.name, e.geplant, e.tatsaechlich, e.differenz]);
     if (art.zeigtKostengruppen) {
@@ -1227,7 +1227,7 @@ async function kostenPdf(gerechnet, art) {
 async function kostenTabelle(gerechnet, art) {
   try {
     const kopf = ['Kostengruppe', 'Bezeichnung der Kostengruppe', 'Position', 'Gewerk',
-      'Geplant', 'Tatsaechlich', 'Bezahlt', 'Abweichung', 'Status'];
+      'Geplant', 'Tatsächlich', 'Bezahlt', 'Abweichung', 'Status'];
     const zeilen = [...gerechnet]
         .sort((a, b) => String(a.kostengruppe || 'zzz').localeCompare(String(b.kostengruppe || 'zzz')))
         .map((p) => [

@@ -12,6 +12,7 @@
 
 import { el, knopf } from './hilfen.js';
 import { daten, bildAblegen, bildUrl, bildLoeschen } from './daten.js';
+import { nachDemSichern } from './blatt.js';
 
 /**
  * Baut eine Fotoreihe mit Aufnahme-Knopf.
@@ -62,7 +63,12 @@ export function fotofeld(ids, beiWechsel, optionen = {}) {
         {
           type: 'button', klasse: 'weg', 'aria-label': 'Foto entfernen',
           onclick: async () => {
-            await bildLoeschen(id);
+            // In einem Eingabeblatt erst beim Sichern loeschen: Wer danach
+            // abbricht, behaelt Datensatz und Foto, wie sie waren. Ausserhalb
+            // eines Blattes (Raumansicht) sichert beiWechsel sofort, dort
+            // darf auch sofort geloescht werden.
+            const imBlatt = reihe.closest('.blatt') && nachDemSichern(() => bildLoeschen(id));
+            if (!imBlatt) await bildLoeschen(id);
             ids.splice(ids.indexOf(id), 1);
             await zeichneReihe();
             beiWechsel(ids);

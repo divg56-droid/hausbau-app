@@ -154,7 +154,7 @@ export function installKarte({ vorDemStart = false, nachher } = {}) {
           ? 'Am besten jetzt, vor dem ersten Projekt: Die installierte App hat eigene Daten, ' +
             'getrennt von Safari. Was du hier im Browser anlegst, siehst du dort nicht.'
           : 'Die installierte App hat eigene Daten, getrennt von Safari. Deine Einträge von hier ' +
-            'nimmst du mit: Einstellungen, Sicherung erstellen, und in der App Sicherung einlesen.',
+            'nimmst du mit: dort mit derselben E-Mail-Adresse anmelden, dann gleicht sie ab.',
       }),
       vorDemStart ? null : el('div', { klasse: 'knopf-reihe' }, [spaeter]),
     ].filter(Boolean));
@@ -181,8 +181,8 @@ export function installKarte({ vorDemStart = false, nachher } = {}) {
       text: vorDemStart
         ? 'Am besten jetzt, vor dem ersten Projekt: Die App aus Google Play hat eigene Daten, ' +
           'getrennt von diesem Browser.'
-        : 'Die App hat eigene Daten, getrennt von diesem Browser. Mit Konto meldest du dich dort ' +
-          'an und hast alles. Ohne Konto: Einstellungen, Sicherung erstellen, und in der App einlesen.',
+        : 'Die App hat eigene Daten, getrennt von diesem Browser. Melde dich dort mit derselben ' +
+          'E-Mail-Adresse an, dann hast du alles.',
     }),
   ]);
   return karte;
