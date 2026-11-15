@@ -128,6 +128,12 @@ try {
 
   await seite.werten(`(async () => {
     localStorage.setItem('bauzeuge.installhinweis', 'installiert|' + Date.now());
+    // Fest hell: Ohne die Wahl folgt der kopflose Chrome dem Rechner, auf
+    // dem das Skript laeuft, und auf einem dunkel eingestellten kamen am
+    // 15.11.2026 dunkle Store-Bilder heraus. Ueber themaSetzen und nicht
+    // nur ueber localStorage: Die App ist schon geladen und liest den
+    // Schluessel kein zweites Mal.
+    (await import('./thema.js')).themaSetzen('hell');
     const d = await import('./daten.js');
     await d.einstellung('letzte_sicherung', new Date().toISOString().slice(0, 10));
     return true;
