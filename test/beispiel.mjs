@@ -92,7 +92,8 @@ try {
     const alle = await d.daten.alle('bilder');
     return { anzahl: alle.length, alleBeispiel: alle.every((b) => istBeispielSatz('bilder', b)) };
   })()`);
-  pruef('Die Beispielbilder sind als Beispiel markiert', bilder.anzahl === 3 && bilder.alleBeispiel, JSON.stringify(bilder));
+  // Sieben seit Fassung 4: drei Raumbilder, eines im Bautagebuch, drei Dokumente.
+  pruef('Die Beispielbilder sind als Beispiel markiert', bilder.anzahl === 7 && bilder.alleBeispiel, JSON.stringify(bilder));
 
   // Rechnungen: statt leerer Kaestchen passende Zeichen.
   await s.hin('baukasse/rechnungen', 1800);

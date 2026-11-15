@@ -30,6 +30,18 @@ const BILDER = [
   ['angebote', 'angebote', '.gruppenkarte, .karte:nth-of-type(3)'],
   ['maengel', 'maengel'],
   ['leitfaden', 'bauleitfaden'],
+  // Seit dem 15.11.2026 auch je ein Bild fuer den Kopf der Funktionsseiten
+  // (/funktionen/<name>/). Der Dateiname ist der Name der Seite dort.
+  ['baukasse/kosten', 'kostenaufstellung'],
+  ['baunebenkosten', 'baunebenkosten'],
+  ['finanzierung', 'baufinanzierung'],
+  ['ablauf', 'bauablauf'],
+  ['tagebuch', 'bautagebuch'],
+  ['raeume', 'raeume'],
+  ['todos', 'todos'],
+  ['dokumente', 'dokumente'],
+  ['kontakte', 'kontakte'],
+  ['konto', 'konto'],
 ];
 
 mkdirSync(ORDNER, { recursive: true });

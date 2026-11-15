@@ -25,7 +25,7 @@ export const BEISPIEL = 'beispielprojekt';
 // Fassung des Beispiels. Wer das Beispiel schon einmal geoeffnet hat,
 // behaelt es auf dem Geraet, auch wenn die App inzwischen ein besseres
 // mitbringt. Weicht die Fassung ab, wird es beim Oeffnen neu angelegt.
-const FASSUNG = 3;
+const FASSUNG = 4;
 const ZURUECK = 'beispiel_zurueck';
 
 // Speicher mit projektbezogenen Saetzen. Die Bilder des Beispiels tragen
@@ -257,6 +257,31 @@ async function fuellen() {
     });
   }
 
+  /* Firmen und Helfer.
+   *
+   * Bis zur Fassung 3 war das Beispiel hier leer, und damit auch das
+   * Bautagebuch und die Dokumente: Wer "Beispielprojekt ansehen" tippte,
+   * fand in drei Bereichen nur die Aufforderung, selbst etwas anzulegen.
+   * Ein Beispiel soll zeigen, wie es gefuellt aussieht.
+   *
+   * Erfundene Namen, erkennbar als Muster, und keine Telefonnummern: Eine
+   * ausgedachte Nummer gehoert am Ende doch jemandem. */
+  const kontaktIds = {};
+  for (const [schluessel, name, art, gewerk, epost, notiz] of [
+    ['elektro', 'Elektro Muster GmbH', 'firma', 'Elektro', 'buero@elektro-muster.example', 'Beauftragt nach Vergleich von drei Angeboten.'],
+    ['fenster', 'Fensterbau Beispiel', 'firma', 'Fenster', 'service@fensterbau-beispiel.example', 'Ansprechpartner für die undichte Fensterbank.'],
+    ['putz', 'Putz und Maler Probst', 'firma', 'Putz', 'info@maler-probst.example', ''],
+    ['sanitaer', 'Sanitär Kern', 'firma', 'Sanitär', 'kontakt@sanitaer-kern.example', ''],
+    ['thomas', 'Thomas (Schwager)', 'helfer', '', '', 'Hilft samstags.'],
+    ['jonas', 'Jonas (Nachbar)', 'helfer', '', '', ''],
+  ]) {
+    kontaktIds[schluessel] = await daten.sichern('kontakte', {
+      name, firma: '', art, gewerk, epost, telefon: '', notiz,
+      strasse: art === 'firma' ? 'Musterstraße 1' : '', plzOrt: art === 'firma' ? '12345 Musterstadt' : '',
+    });
+  }
+  const zustaendig = { Fenster: kontaktIds.fenster, Putz: kontaktIds.putz };
+
   // Zwei dokumentierte Maengel mit Raum, Gewerk, Frist und Beschreibung.
   for (const [titel, raum, gewerk, status, frist, beschreibung] of [
     ['Fensterbank Bad nicht dicht', 'Bad OG', 'Fenster', 'offen', tag(9),
@@ -266,6 +291,8 @@ async function fuellen() {
   ]) {
     await daten.sichern('maengel', {
       titel, raum, raumId: raumIds[raum] || null, gewerk, status, frist, beschreibung,
+      // Mit Firma, damit die Maengelruege im Beispiel einen Empfaenger hat.
+      kontaktId: zustaendig[gewerk] || null,
     });
   }
 
@@ -314,6 +341,39 @@ async function fuellen() {
       'Vor dem Estrich erneut fotografieren, dann mit den Heizrohren.', [bodenWohnen]],
   ]) {
     await daten.sichern('baudoku', { titel, phase, datum: tag(ab), notiz, bildIds });
+  }
+
+  // Das Bautagebuch der letzten Wochen: Wetter, was gemacht wurde, was
+  // liegenblieb, und wer wie lange geholfen hat. Ein Regentag ist dabei,
+  // weil genau der zeigt, wozu das Wetter im Tagebuch steht.
+  const schlitze = await bild('Küche: Schlitze für die Elektrik', 'wand');
+  for (const [ab, wetter, temperatur, gemacht, offen, wer, bildIds] of [
+    [-3, 'sonnig', 9, 'Elektro-Rohinstallation im Obergeschoss. Schlitze in Küche und Bad gestemmt, Dosen gesetzt.',
+      'Leerrohr zum Dachboden fehlt noch.', [['thomas', 6], ['jonas', 4.5]], [schlitze]],
+    [-8, 'regen', 7, 'Sanitär-Rohinstallation begonnen. Baustelle aufgeräumt, Schutt in den Container.',
+      'Außenarbeiten wegen Regen verschoben.', [['thomas', 5]], []],
+    [-12, 'bewoelkt', 11, 'Elektriker hat im Erdgeschoss angefangen. Dosen an der Arbeitsplatte angezeichnet und fotografiert.',
+      '', [['jonas', 3]], []],
+    [-60, 'sonnig', 22, 'Fenster und Haustür eingebaut, alle Fenster ausgeschäumt.',
+      'Fensterbank im Bad sitzt schief, mit dem Monteur besprochen.', [['thomas', 8], ['jonas', 8]], []],
+  ]) {
+    await daten.sichern('tagebuch', {
+      datum: tag(ab), wetter, temperatur, gemacht, offen, bildIds,
+      helfer: wer.map(([k, stunden]) => ({ id: kontaktIds[k], stunden, unterschriftId: null })),
+    });
+  }
+
+  // Drei Dokumente, je eines mit Bezug zu einer Position oder Firma.
+  for (const [titel, art, ab, notiz, bezug] of [
+    ['Baugenehmigung', 'Genehmigung', -165, 'Mit Auflagen zur Entwässerung, Seite 3.', {}],
+    ['Werkvertrag Rohbau', 'Vertrag', -155, 'Festpreis, Zahlungsplan in § 6.', { postenId: ids[2] }],
+    ['Angebot Elektro Muster GmbH', 'Vertrag', -60, 'Beauftragte Fassung mit 42 Steckdosen.', { kontaktId: kontaktIds.elektro }],
+  ]) {
+    await daten.sichern('dokumente', {
+      titel, art, datum: tag(ab), notiz,
+      bildIds: [await bild(titel, 'blatt')],
+      mangelId: null, postenId: null, kontaktId: null, ...bezug,
+    });
   }
 
   // Eine kurze Checkliste: die Vorlage fuer den Abnahmetermin, zum Teil abgehakt.
@@ -397,6 +457,21 @@ async function beispielbild(titel, art) {
     c.fillRect(150, 300, 30, 230);
     c.fillStyle = '#1f2a30';
     for (let y = 300; y < 530; y += 25) c.fillRect(150, y, 12, 2);
+  } else if (art === 'blatt') {
+    // Ein Blatt Papier auf dem Tisch, fuer die Dokumente: Kopfzeile,
+    // Textzeilen, unten ein Stempelfeld. Kein lesbarer Text -- ein
+    // erfundenes Schriftstueck soll nicht aussehen wie ein echtes.
+    c.fillStyle = '#c9cfcc';
+    c.fillRect(0, 0, breite, hoehe);
+    c.fillStyle = '#ffffff';
+    c.fillRect(170, 28, 460, 500);
+    c.fillStyle = '#0e6e72';
+    c.fillRect(210, 70, 210, 20);
+    c.fillStyle = '#d3dcd9';
+    for (let y = 130; y < 420; y += 30) c.fillRect(210, y, y % 90 === 40 ? 250 : 380, 10);
+    c.strokeStyle = '#0e6e72';
+    c.lineWidth = 4;
+    c.strokeRect(430, 440, 160, 60);
   } else if (art === 'boden') {
     c.fillStyle = '#9aa3a6';
     c.fillRect(0, 0, breite, hoehe);
